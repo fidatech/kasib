@@ -27,7 +27,7 @@ class TenantSetup
         Roles::createDefaults();
 
         $main = Branch::create([
-            'name' => $data['main_branch_name'] ?? 'Main branch',
+            'name' => $data['main_branch_name'] ?? $tenant->name,   // the one set of books of the business; branches come in a later version
             'code' => 'MAIN',
             'type' => Branch::MAIN,
         ]);
