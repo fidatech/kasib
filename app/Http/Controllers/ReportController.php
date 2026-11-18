@@ -333,7 +333,7 @@ class ReportController extends Controller
         }
 
         return $this->sheet('Customer & Supplier Balances', 'users', [['Account'], ['Category'], ['Phone'], ['Currency'], ['We owe them', 'end'], ['They owe us', 'end']], $rows, null, null,
-            [['name' => 'group', 'label' => 'Category', 'options' => $groups->mapWithKeys(fn (AccountGroup $g) => [$g->id => $g->label()])->all()]], ...$this->branchFilter()]);
+            [['name' => 'group', 'label' => 'Category', 'options' => $groups->mapWithKeys(fn (AccountGroup $g) => [$g->id => $g->label()])->all()], ...$this->branchFilter()]);
     }
 
     /** Money received with a payback date: what is overdue, and what falls due in the days ahead. */
