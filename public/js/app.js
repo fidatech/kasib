@@ -592,6 +592,35 @@ if (name) el.setAttribute('aria-label', name);
 });
 };
 pageInits.push(function (scope) { ERP.nameIcons(scope); });
+pageInits.push(function (scope) { $$('[data-recorder]', scope).forEach(function (button) {
+if (!navigator.mediaDevices || !window.MediaRecorder || !window.DataTransfer) { button.hidden = true; return; }
+var recorder = null;
+var chunks = [];
+var label = button.querySelector('[data-recorder-text]');
+button.addEventListener('click', function () {
+if (recorder) { recorder.stop(); return; }
+navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+chunks = [];
+recorder = new MediaRecorder(stream);
+recorder.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+recorder.onstop = function () {
+stream.getTracks().forEach(function (track) { track.stop(); });
+var type = (recorder.mimeType || 'audio/webm').split(';')[0];
+var ext = type.indexOf('mp4') > -1 ? 'm4a' : (type.indexOf('ogg') > -1 ? 'ogg' : 'webm');
+recorder = null;
+var form = button.closest('form');
+var input = form.querySelector('input[type=file]');
+var files = new DataTransfer();
+files.items.add(new File(chunks, 'voice-note-' + Date.now() + '.' + ext, { type: type }));
+input.files = files.files;
+form.submit();
+};
+recorder.start();
+button.classList.add('btn-danger');
+if (label) label.textContent = button.getAttribute('data-stop');
+}).catch(function () { ERP.toast(button.getAttribute('data-denied'), 'danger'); });
+});
+}); });
 pageInits.push(function (scope) { $$('select[data-quick-add]', scope).forEach(function (select) {
 if (select.closest('.modal')) return;
 var label = select.id ? $('label[for="' + select.id + '"]') : null;

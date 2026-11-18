@@ -7,6 +7,10 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\BudgetController;
+use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\ScheduleController;
+use App\Http\Controllers\StatementLinkController;
 use App\Http\Controllers\ConfirmationController;
 use App\Http\Controllers\OwnerController;
 use App\Http\Controllers\CapitalController;
@@ -198,6 +202,9 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
     // anyone who holds a receipt can check it, without signing in
     Route::get('check/{number}/{code}', ReceiptCheckController::class)->name('receipts.verify')->where(['number' => '[A-Z]{2}-[0-9]{6,}', 'code' => '[a-f0-9]{12}'])->middleware('throttle:30,1');
 
+    // a customer reads his own statement from the private link he was sent
+    Route::get('s/{token}', [StatementLinkController::class, 'show'])->name('statement.shared')->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1');
+
     Route::middleware('guest')->group(function () {
         Route::get('login', [LoginController::class, 'show'])->name('login');
         Route::post('login', [LoginController::class, 'store'])->name('login.store');
@@ -238,6 +245,8 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
         // accounts: one page for every account category, and the statement of one account
         $crud('accounts/{group}', PartyController::class, 'accounts');
         Route::get('accounts/{group}/{id}/statement', [PartyController::class, 'statement'])->name('accounts.statement')->whereNumber('id');
+        Route::post('accounts/{group}/{id}/link', [StatementLinkController::class, 'store'])->name('accounts.link')->whereNumber('id');
+        Route::delete('accounts/{group}/{id}/link', [StatementLinkController::class, 'destroy'])->name('accounts.unlink')->whereNumber('id');
         Route::get('accounts/{group}/{id}/notes', [PartyFileController::class, 'notes'])->name('accounts.notes')->whereNumber('id');
         Route::post('accounts/{group}/{id}/notes', [PartyFileController::class, 'storeNote'])->name('accounts.notes.store')->whereNumber('id');
         Route::post('notes/{note}/done', [PartyFileController::class, 'toggleNote'])->name('notes.toggle')->whereNumber('note');
@@ -312,6 +321,14 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
         Route::get('reports/cash-forecast', [ReportController::class, 'forecast'])->name('reports.forecast');
         Route::get('reports/rate-history', [ReportController::class, 'rates'])->name('reports.rates');
         Route::get('reports/depositors', [ReportController::class, 'depositors'])->name('reports.depositors');
+        Route::get('reports/zakat', [ReportController::class, 'zakat'])->name('reports.zakat');
+        Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
+        Route::post('schedules/{id}/send', [ScheduleController::class, 'send'])->name('schedules.send')->whereNumber('id');
+        $crud('schedules', ScheduleController::class, 'schedules');
+        Route::get('documents', [DocumentController::class, 'index'])->name('documents.index');
+        Route::post('documents', [DocumentController::class, 'store'])->name('documents.store');
+        Route::get('documents/{id}', [DocumentController::class, 'show'])->name('documents.show')->whereNumber('id');
+        Route::delete('documents/{id}', [DocumentController::class, 'destroy'])->name('documents.destroy')->whereNumber('id');
         Route::get('confirmations', [ConfirmationController::class, 'index'])->name('confirmations.index');
         Route::post('confirmations/send', [ConfirmationController::class, 'send'])->name('confirmations.send');
         Route::post('confirmations/{id}', [ConfirmationController::class, 'answer'])->name('confirmations.answer')->whereNumber('id');

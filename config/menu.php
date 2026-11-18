@@ -61,6 +61,7 @@ return [
         ['label' => 'Currency Position', 'route' => 'treasury.index', 'can' => 'accounts.view'],
         ['label' => 'Customer & Supplier Balances', 'route' => 'reports.balances', 'can' => 'reports.view'],
         ['label' => 'Due Payments', 'route' => 'reports.due', 'can' => 'reports.view'],
+        ['label' => 'Calendar', 'route' => 'calendar.index', 'can' => 'reports.view'],
         ['label' => 'Reminders', 'route' => 'reminders.index', 'can' => 'accounts.view'],
         ['label' => 'Balance Confirmations', 'route' => 'confirmations.index', 'can' => 'accounts.view'],
         ['label' => 'Cash Forecast', 'route' => 'reports.forecast', 'can' => 'reports.view'],
@@ -71,7 +72,9 @@ return [
         ['label' => 'Profit & Loss', 'route' => 'reports.profit', 'can' => 'reports.view', 'advanced' => true],
         ['label' => 'Balance Sheet', 'route' => 'reports.balance', 'can' => 'reports.view', 'advanced' => true],
         ['label' => 'Cancelled Papers', 'route' => 'journal.index', 'params' => ['cancelled' => 1], 'can' => 'journal.view'],
+        ['label' => 'Zakat Report', 'route' => 'reports.zakat', 'can' => 'reports.view', 'advanced' => true],
         ['label' => 'Export Center', 'route' => 'export.index', 'active' => 'export.*', 'can' => 'reports.view'],
+        ['label' => 'Scheduled Reports', 'route' => 'schedules.index', 'active' => 'schedules.*', 'can' => 'reports.view'],
         ['label' => 'All Reports', 'route' => 'reports.index', 'can' => 'reports.view'],
     ]],
 
@@ -83,6 +86,7 @@ return [
         ['label' => 'Sign-in History', 'route' => 'audit.index', 'params' => ['action' => 'signed in'], 'can' => 'audit.view'],
         ['label' => 'Two-step sign-in', 'route' => 'two-step.show'],
         ['label' => 'Active Sessions', 'route' => 'sessions.index'],
+        ['label' => 'Document Vault', 'route' => 'documents.index', 'active' => 'documents.*', 'can' => 'settings.view'],
         ['label' => 'Backup & Restore', 'route' => 'backups.index', 'active' => 'backups.*', 'can' => 'settings.manage'],
     ]],
 

@@ -18,8 +18,9 @@ class BooksEvening extends Command
     {
         foreach (Tenant::where('status', Tenant::ACTIVE)->orderBy('id')->get() as $tenant) {
             try {
-                if ($tenancy->run($tenant, fn () => Summary::tick())) {
-                    $this->info($tenant->slug.': summary sent');
+                [$summary, $reports] = $tenancy->run($tenant, fn () => [Summary::tick(), \App\Services\Schedules::tick()]);
+                if ($summary || $reports) {
+                    $this->info($tenant->slug.': '.($summary ? 'summary sent, ' : '').$reports.' reports sent');
                 }
             } catch (Throwable $e) {
                 report($e);

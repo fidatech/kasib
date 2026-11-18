@@ -34,6 +34,8 @@ class ReportController extends Controller
         'reports.forecast' => ['Cash Forecast', 'chart-line', 'The money expected in every currency after the paybacks and the recurring expenses ahead.'],
         'reports.depositors' => ['Depositor Insights', 'users', 'Who leaves the most money with the business, how it moved, and who has gone quiet.'],
         'reports.rates' => ['Rate History', 'chart-line', 'Every rate that was written, with its change from the one before.'],
+        'reports.zakat' => ['Zakat Report', 'scale-balanced', 'The wealth zakat is counted on at a date, per currency, and 2.5% of it.'],
+        'calendar.index' => ['Calendar', 'calendar-days', 'A month on a page: paybacks, reminders, recurring expenses and papers that expire.'],
         'reports.alerts' => ['Unusual Activity', 'triangle-exclamation', 'Large, dated back, after-hours and cancelled papers, and budgets nearly used up.'],
         'export.index' => ['Export Center', 'file-excel', 'One Excel workbook of a period, with a sheet for every module you tick.'],
         'treasury.index' => ['Currency Position', 'vault', 'The money of the business in every currency, and where it is.'],
@@ -431,6 +433,85 @@ class ReportController extends Controller
         }
 
         return $this->sheet('Depositor Insights', 'users', [['Account'], ['Category'], ['Papers', 'end'], ['Received', 'end'], ['Paid back', 'end'], ['We owe them now', 'end'], ['Share', 'end'], ['Last paper'], ['Days quiet', 'end']], $rows, $from, $to);
+    }
+
+    /**
+     * Zakat: a help for the yearly calculation, as the books stand today. Counted: cash and bank,
+     * what customers and suppliers owe the business, and the goods of open deals. Taken off: what
+     * the business owes. When the rest reaches the nisab, 2.5% of it is shown. The nisab is typed
+     * by the owner, and the rules themselves are for a scholar to confirm.
+     */
+    public function zakat(Request $request): View
+    {
+        Gate::authorize('reports.view');
+        $f = $request->validate(['nisab' => ['nullable', 'numeric', 'min:0']]);
+        $branch = Branch::main();
+        $base = Currency::base()->code;
+        $line = fn (string $name, string $currency, mixed $amount, mixed $value) => ['cells' => [$name, $currency, $currency === '' ? '' : money($amount), money($value)]];
+
+        $owedToUs = $weOwe = [];
+        $accounts = Account::with(['currency', 'total'])->where('branch_id', $branch->id)->whereNotNull('party_id')
+            ->whereHas('party.group', fn ($q) => $q->where('type', AccountGroup::PARTY))->get();
+        foreach ($accounts as $account) {
+            $balance = Num::money($account->total?->balance ?? 0);
+            if (Num::isPositive($balance)) {
+                $owedToUs[$account->currency->code] = [Num::add($owedToUs[$account->currency->code][0] ?? 0, $balance), $account->currency];
+            } elseif (Num::isNegative($balance)) {
+                $weOwe[$account->currency->code] = [Num::add($weOwe[$account->currency->code][0] ?? 0, Num::abs($balance)), $account->currency];
+            }
+        }
+        $booked = fn (string $nature, ?string $key = null) => Num::money(DB::table('account_balances as b')->join('accounts as a', 'a.id', '=', 'b.account_id')
+            ->join('account_categories as c', 'c.id', '=', 'a.account_category_id')->where('a.branch_id', $branch->id)->whereNull('a.party_id')
+            ->where('c.nature', $nature)->when($key, fn ($q) => $q->where('c.key', $key))->sum('b.base_balance'));
+
+        $rows = [['heading' => __('Wealth zakat is counted on')]];
+        $wealth = '0';
+        foreach (\App\Services\Days::totals($branch) as $total) {
+            if (! Num::isZero(Num::money($total['balance']))) {
+                $rows[] = $line(__('Cash and bank'), $total['currency']->code, $total['balance'], $total['base']);
+                $wealth = Num::add($wealth, $total['base']);
+            }
+        }
+        foreach ($owedToUs as $code => [$amount, $currency]) {
+            $value = \App\Services\Rates::toBase($amount, $currency, $branch);
+            $rows[] = $line(__('Owed to the business'), $code, $amount, $value);
+            $wealth = Num::add($wealth, $value);
+        }
+        $goods = $booked('asset', 'deal_goods');
+        if (! Num::isZero($goods)) {
+            $rows[] = $line(__('Goods of open deals'), '', 0, $goods);
+            $wealth = Num::add($wealth, $goods);
+        }
+        $rows[] = ['total' => true, 'cells' => [__('Total'), '', '', money($wealth)]];
+
+        $rows[] = ['heading' => __('Debts taken off')];
+        $debts = '0';
+        foreach ($weOwe as $code => [$amount, $currency]) {
+            $value = \App\Services\Rates::toBase($amount, $currency, $branch);
+            $rows[] = $line(__('Owed by the business'), $code, $amount, $value);
+            $debts = Num::add($debts, $value);
+        }
+        $other = Num::money(Num::neg($booked('liability')));
+        if (Num::isPositive($other)) {
+            $rows[] = $line(__('Other liabilities'), '', 0, $other);
+            $debts = Num::add($debts, $other);
+        }
+        $rows[] = ['total' => true, 'cells' => [__('Total'), '', '', money($debts)]];
+
+        $net = Num::money(Num::sub($wealth, $debts));
+        $nisab = Num::money($f['nisab'] ?? setting('zakat_nisab') ?? 0);
+        $rows[] = ['heading' => __('Zakat')];
+        $rows[] = ['total' => true, 'cells' => [__('Wealth less debts'), '', '', money($net)]];
+        $rows[] = ['cells' => [__('Nisab'), '', '', Num::isPositive($nisab) ? money($nisab) : __('Not written')]];
+        $due = Num::isPositive($net) && Num::cmp($net, $nisab) >= 0;
+        $rows[] = ['total' => true, 'cells' => [$due ? __('Zakat, 2.5%') : __('Below the nisab: no zakat is due'), '', '', $due ? money(Num::round(Num::mul($net, '0.025'), 2)) : '']];
+        if (isset($f['nisab']) && $request->user()->can('settings.manage')) {
+            \App\Services\Summary::remember('zakat_nisab', (string) $nisab);
+        }
+
+        return view('reports.sheet', ['title' => __('Zakat Report'), 'icon' => 'scale-balanced', 'columns' => [['Item'], ['Currency'], ['Amount', 'end'], [$base, 'end']], 'rows' => $rows,
+            'from' => null, 'to' => null, 'filters' => [], 'inputs' => [['name' => 'nisab', 'label' => __('Nisab, in :currency', ['currency' => $base]), 'value' => Num::isPositive($nisab) ? $nisab : '']],
+            'note' => __('This page is a help for the calculation, as the books stand today. Which wealth counts, which debts are taken off and the nisab of the year are for a qualified scholar to confirm before zakat is paid from it.')]);
     }
 
     private function sheet(string $title, string $icon, array $columns, array $rows, ?string $from, ?string $to, array $filters = []): View

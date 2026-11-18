@@ -7,7 +7,8 @@
 
 <div class="card">
     <div class="card-body">
-        @if ($from || $to || $filters)
+        @isset($note)<div class="alert alert-warning">{{ $note }}</div>@endisset
+        @if ($from || $to || $filters || ! empty($inputs))
             <form method="GET" class="row g-2 align-items-end mb-3 no-print">
                 @if ($from)
                     @include('partials.date-filter')
@@ -26,6 +27,12 @@
                                 <option value="{{ $value }}" @selected((string) ($filter['value'] ?? request()->query($filter['name'])) === (string) $value)>{{ $text }}</option>
                             @endforeach
                         </select>
+                    </div>
+                @endforeach
+                @foreach ($inputs ?? [] as $input)
+                    <div class="col-6 col-md-auto">
+                        <label class="form-label small mb-1" for="rp-{{ $input['name'] }}">{{ $input['label'] }}</label>
+                        <input type="text" inputmode="decimal" dir="ltr" class="form-control" id="rp-{{ $input['name'] }}" name="{{ $input['name'] }}" value="{{ $input['value'] }}">
                     </div>
                 @endforeach
                 <div class="col-auto"><button class="btn btn-light-secondary" type="submit">{{ __('Show') }}</button></div>

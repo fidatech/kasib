@@ -4,6 +4,22 @@
 <x-page-header :title="$party->name" :icon="$group->icon" :crumbs="[[$group->label(), route('accounts.index', ['group' => $group->key])], [__('Statement')]]" :subtitle="trim($group->label().' · '.$account->currency->code.($party->phone ? ' · '.$party->phone : ''))">
 </x-page-header>
 
+@if (! request()->boolean('print') && ! $group->isMoney() && \App\Support\Permissions::group(auth()->user(), $group->key, 'manage'))
+    <div class="card mb-3 no-print">
+        <div class="card-body d-flex flex-wrap gap-2 align-items-center">
+            <span class="fw-semibold"><x-icon name="link" class="me-1" /> {{ __('Private link for the customer') }}</span>
+            @if ($party->share_token)
+                <input type="text" readonly class="form-control form-control-sm" dir="ltr" style="max-width: 30rem" value="{{ route('statement.shared', ['token' => $party->share_token]) }}" onfocus="this.select()" aria-label="{{ __('Private link for the customer') }}">
+                <form method="POST" action="{{ route('accounts.link', ['group' => $group->key, 'id' => $party->id]) }}" class="d-inline" data-confirm="{{ __('Make a new link? The old one stops working.') }}" data-confirm-ok="{{ __('New link') }}">@csrf<button type="submit" class="btn btn-sm btn-light-secondary">{{ __('New link') }}</button></form>
+                <form method="POST" action="{{ route('accounts.unlink', ['group' => $group->key, 'id' => $party->id]) }}" class="d-inline">@csrf @method('DELETE')<button type="submit" class="btn btn-sm btn-light-secondary">{{ __('Switch it off') }}</button></form>
+            @else
+                <form method="POST" action="{{ route('accounts.link', ['group' => $group->key, 'id' => $party->id]) }}" class="d-inline">@csrf<button type="submit" class="btn btn-sm btn-outline-soft">{{ __('Make a link') }}</button></form>
+            @endif
+            <span class="small text-muted w-100">{{ __('Whoever has the link reads the balance and the lines of the last 90 days of this account, without signing in. Nothing can be changed from it.') }}</span>
+        </div>
+    </div>
+@endif
+
 <div class="card">
     <div class="card-body">
         <form method="GET" class="row g-2 align-items-end mb-3 no-print">

@@ -83,7 +83,7 @@ class PartyFileController extends Controller
     {
         [$type, $subject, , , $permission] = $this->subject($request);
         Gate::authorize($permission.'.manage');
-        $file = $request->validate(['file' => ['required', 'file', 'max:5120', 'mimes:jpg,jpeg,png,webp,pdf']])['file'];
+        $file = $request->validate(['file' => ['required', 'file', 'max:5120', 'mimes:jpg,jpeg,png,webp,pdf,mp3,m4a,mp4,ogg,oga,webm,wav,aac,weba']])['file'];
 
         // kept in the folder of the business, outside the public folder
         $path = $file->store('attachments/'.tenant()->id.'/'.$type.'/'.$subject->getKey(), 'local');

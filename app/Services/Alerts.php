@@ -19,7 +19,7 @@ class Alerts
 {
     public const KINDS = [
         'large' => 'Large amount', 'backdated' => 'Dated back', 'after_hours' => 'Outside working hours',
-        'cancelled' => 'Cancelled', 'budget' => 'Expense budget', 'rate' => 'Exchange rate', 'cash' => 'Cash differs from the books',
+        'cancelled' => 'Cancelled', 'budget' => 'Expense budget', 'rate' => 'Exchange rate', 'document' => 'Document expires', 'cash' => 'Cash differs from the books',
     ];
 
     public static function enabled(): bool

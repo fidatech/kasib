@@ -315,4 +315,103 @@ class InsightTest extends TestCase
 
         $this->get('/reports/depositors')->assertOk()->assertSee('Ahmad')->assertSee('8,000.00')->assertSee('88.9%')->assertSee('11.1%')->assertSee('The five largest hold')->assertDontSee('Silent');
     }
+
+    public function test_a_customer_reads_his_statement_from_a_private_link(): void
+    {
+        $this->business();
+        $owner = $this->owner();
+        $ahmad = $this->party('Ahmad');
+        Vouchers::moneyIn($ahmad, $this->cash(), today_iso(), '4000');
+
+        $this->get('/accounts/customers/'.$ahmad->id.'/statement')->assertOk()->assertSee('Make a link');
+        $this->post('/accounts/customers/'.$ahmad->id.'/link')->assertSessionHas('success');
+        $token = $ahmad->fresh()->share_token;
+        $this->assertSame(40, strlen($token));
+        $this->get('/accounts/customers/'.$ahmad->id.'/statement')->assertOk()->assertSee('/s/'.$token);
+
+        auth()->logout();
+        $this->get('/s/'.$token)->assertOk()->assertSee('Ahmad')->assertSee('4,000.00')->assertSee('We owe you');
+        $this->get('/s/'.str_repeat('a', 40))->assertNotFound();
+        $this->post('/accounts/customers/'.$ahmad->id.'/link')->assertRedirect();
+        $this->assertSame($token, $ahmad->fresh()->share_token);
+
+        // a new link ends the old one; switched off, nothing opens
+        $this->actingAs($owner);
+        $this->post('/accounts/customers/'.$ahmad->id.'/link')->assertSessionHas('success');
+        $this->get('/s/'.$token)->assertNotFound();
+        $this->delete('/accounts/customers/'.$ahmad->id.'/link')->assertSessionHas('success');
+        $this->assertNull($ahmad->fresh()->share_token);
+    }
+
+    public function test_voice_notes_and_the_document_vault(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $this->business();
+        $this->owner();
+        $ahmad = $this->party('Ahmad');
+        $fake = fn (string $name, string $mime) => \Illuminate\Http\UploadedFile::fake()->create($name, 100, $mime);
+
+        $this->post('/files/party/'.$ahmad->id, ['file' => $fake('voice.mp3', 'audio/mpeg')])->assertSessionHasNoErrors();
+        $this->post('/files/party/'.$ahmad->id, ['file' => $fake('tool.exe', 'application/x-msdownload')])->assertSessionHasErrors('file');
+        $this->get('/files/party/'.$ahmad->id)->assertOk()->assertSee('voice.mp3')->assertSee('<audio', false)->assertSee('Record a voice note');
+
+        $this->post('/documents', ['title' => 'Business licence', 'category' => 'licence', 'expires_on' => now()->addDays(5)->toDateString(), 'file' => $fake('licence.pdf', 'application/pdf')])->assertSessionHasNoErrors();
+        $this->post('/documents', ['title' => 'No file', 'category' => 'other'])->assertSessionHasErrors('file');
+        $document = \App\Models\Document::firstOrFail();
+        $this->get('/documents')->assertOk()->assertSee('Business licence')->assertSee('In 5 days');
+        $this->get('/documents?category=tax')->assertOk()->assertDontSee('Business licence');
+        $this->get('/documents/'.$document->id)->assertOk()->assertHeader('Content-Type', 'application/pdf');
+
+        // the owner is told once that it is about to expire, and it is on the calendar
+        $this->assertSame(1, \App\Services\Schedules::expiring());
+        $this->assertSame(0, \App\Services\Schedules::expiring());
+        $this->assertSame(1, Alert::where('kind', 'document')->count());
+        Vouchers::moneyIn($ahmad, $this->cash(), today_iso(), '900', now()->addDays(3)->toDateString());
+        $this->get('/calendar')->assertOk()->assertSee('Business licence')->assertSee('Ahmad');
+        $this->get('/calendar?month=1')->assertOk()->assertDontSee('Business licence');
+        $this->get('/calendar?month=-1')->assertOk();
+
+        $this->delete('/documents/'.$document->id)->assertSessionHas('success');
+        $this->assertSame(0, \App\Models\Document::count());
+    }
+
+    public function test_a_scheduled_report_leaves_by_email_on_its_day(): void
+    {
+        \Illuminate\Support\Facades\Mail::fake();
+        $this->business();
+        $this->owner();
+        $this->openingCash('AFN', '1000');
+        $this->post('/schedules', ['name' => 'Daily papers', 'email' => 'owner@example.com', 'content' => 'papers', 'frequency' => 'daily', 'day' => 1, 'hour' => now()->hour, 'is_active' => 1])->assertSessionHasNoErrors();
+        $schedule = \App\Models\ReportSchedule::firstOrFail();
+
+        $this->assertSame(1, \App\Services\Schedules::tick());
+        $this->assertSame(0, \App\Services\Schedules::tick());
+        $this->assertSame(today_iso(), $schedule->fresh()->last_sent_on->toDateString());
+
+        // every week: the tests run on a Friday, the seventh day
+        $schedule->update(['frequency' => 'weekly', 'day' => 1, 'last_sent_on' => null]);
+        $this->assertSame(0, \App\Services\Schedules::tick());
+        $schedule->update(['day' => 7]);
+        $this->assertSame(1, \App\Services\Schedules::tick());
+        $this->assertSame([now()->subDays(6)->toDateString(), today_iso()], \App\Services\Schedules::period($schedule->fresh()));
+
+        $this->post('/schedules/'.$schedule->id.'/send')->assertSessionHas('success');
+        $this->get('/schedules')->assertOk()->assertSee('Daily papers');
+    }
+
+    public function test_the_zakat_report_counts_wealth_less_debts(): void
+    {
+        $this->business();
+        $this->owner();
+        $this->openingCash('AFN', '100000');
+        $cash = $this->cash();
+        Vouchers::moneyIn($this->party('Ahmad'), $cash, today_iso(), '20000');
+        Vouchers::moneyOut($this->party('Karim'), $cash, today_iso(), '5000');
+
+        // 115,000 in the box and 5,000 owed to the business, less 20,000 it owes: 100,000
+        $this->get('/reports/zakat?nisab=50000')->assertOk()->assertSee('120,000.00')->assertSee('100,000.00')->assertSee('2,500.00')->assertSee('qualified scholar');
+        // the nisab is remembered
+        $this->get('/reports/zakat')->assertOk()->assertSee('2,500.00');
+        $this->get('/reports/zakat?nisab=200000')->assertOk()->assertSee('Below the nisab')->assertDontSee('2,500.00');
+    }
 }

@@ -9,11 +9,12 @@
         <div class="card-body">
             <div class="row g-2 align-items-end">
                 <div class="col-12 col-md-7">
-                    <label class="form-label" for="a-file">{{ __('Photo or PDF, up to 5 MB') }} <span class="req">*</span></label>
-                    <input type="file" class="form-control @error('file') is-invalid @enderror" id="a-file" name="file" accept="image/png,image/jpeg,image/webp,application/pdf" required>
+                    <label class="form-label" for="a-file">{{ __('Photo, PDF or voice note, up to 5 MB') }} <span class="req">*</span></label>
+                    <input type="file" class="form-control @error('file') is-invalid @enderror" id="a-file" name="file" accept="image/png,image/jpeg,image/webp,application/pdf,audio/*" required>
                     @error('file')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-auto"><button type="submit" class="btn btn-primary"><x-icon name="paperclip" class="me-1" /> {{ __('Attach') }}</button></div>
+                <div class="col-auto"><button type="button" class="btn btn-outline-soft" data-recorder data-start="{{ __('Record a voice note') }}" data-stop="{{ __('Stop and save') }}" data-denied="{{ __('The microphone could not be used.') }}"><x-icon name="microphone" class="me-1" /> <span data-recorder-text>{{ __('Record a voice note') }}</span></button></div>
             </div>
         </div>
     </form>
@@ -32,7 +33,12 @@
                 <tbody>
                     @foreach ($files as $file)
                         <tr>
-                            <td><a href="{{ route('attachments.show', ['type' => $type, 'id' => $subject->getKey(), 'file' => $file->id]) }}" target="_blank" rel="noopener">{{ $file->name }}</a></td>
+                            <td>
+                                <a href="{{ route('attachments.show', ['type' => $type, 'id' => $subject->getKey(), 'file' => $file->id]) }}" target="_blank" rel="noopener" data-no-soft>{{ $file->name }}</a>
+                                @if (str_starts_with((string) $file->mime, 'audio/') || in_array($file->mime, ['video/webm', 'video/mp4', 'application/ogg']))
+                                    <audio class="d-block mt-1" controls preload="none" src="{{ route('attachments.show', ['type' => $type, 'id' => $subject->getKey(), 'file' => $file->id]) }}"></audio>
+                                @endif
+                            </td>
                             <td class="text-end text-nowrap" dir="ltr">{{ human_size($file->size) }}</td>
                             <td>{{ $file->creator?->name }}</td>
                             <td class="text-nowrap">{{ fmt_date($file->created_at) }}</td>
