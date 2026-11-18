@@ -27,6 +27,9 @@ use App\Http\Controllers\DepreciationController;
 use App\Http\Controllers\ExchangeController;
 use App\Http\Controllers\HandoverController;
 use App\Http\Controllers\HawalaController;
+use App\Http\Controllers\InvoiceController as TradeInvoiceController;
+use App\Http\Controllers\ItemController;
+use App\Http\Controllers\TradeReportController;
 use App\Http\Controllers\RateAlertController;
 use App\Http\Controllers\ReconciliationController;
 use App\Http\Controllers\ExpenseCategoryController;
@@ -286,6 +289,21 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
         Route::post('hawalas/{id}/cancel', [HawalaController::class, 'cancel'])->name('hawalas.cancel')->whereNumber('id');
         $crud('hawalas', HawalaController::class, 'hawalas');
         $crud('rate-alerts', RateAlertController::class, 'rate-alerts');
+        // version 2, the Pro plan: items, sales, purchases and their returns
+        Route::middleware('pro')->group(function () use ($crud) {
+            Route::get('items/{id}/stock', [ItemController::class, 'stock'])->name('items.stock')->whereNumber('id');
+            Route::post('items/{id}/stock', [ItemController::class, 'count'])->name('items.count')->whereNumber('id');
+            $crud('items', ItemController::class, 'items');
+            Route::get('reports/sales-by-item', [TradeReportController::class, 'items'])->name('trade.reports.items');
+            Route::get('reports/stock', [TradeReportController::class, 'stock'])->name('trade.reports.stock');
+            Route::get('reports/sales-by-customer', [TradeReportController::class, 'parties'])->name('trade.reports.parties');
+            $kinds = 'sales|purchases|sale-returns|purchase-returns';
+            Route::get('trade/{kind}', [TradeInvoiceController::class, 'index'])->name('trade.index')->where('kind', $kinds);
+            Route::get('trade/{kind}/create', [TradeInvoiceController::class, 'create'])->name('trade.create')->where('kind', $kinds);
+            Route::post('trade/{kind}', [TradeInvoiceController::class, 'store'])->name('trade.store')->where('kind', $kinds);
+            Route::get('trade/{kind}/{id}', [TradeInvoiceController::class, 'show'])->name('trade.show')->where('kind', $kinds)->whereNumber('id');
+            Route::delete('trade/{kind}/{id}', [TradeInvoiceController::class, 'destroy'])->name('trade.destroy')->where('kind', $kinds)->whereNumber('id');
+        });
         Route::get('reconciliation', [ReconciliationController::class, 'index'])->name('reconciliation.index');
         Route::put('reconciliation', [ReconciliationController::class, 'update'])->name('reconciliation.update');
         Route::get('handovers', [HandoverController::class, 'index'])->name('handovers.index');

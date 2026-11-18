@@ -135,6 +135,11 @@ class Menu
     /** "Simple mode" hides the finance pages and the accounting reports; the books are kept in full all the same. */
     private static function shown(array $item): bool
     {
+        // 'pro': a page of version 2, shown to a business on the Pro plan
+        if (! empty($item['pro']) && (! tenant() || \App\Services\Billing::plan(tenant()) !== 'pro')) {
+            return false;
+        }
+
         return empty($item['advanced']) || setting('simple_mode', '0') !== '1';
     }
 

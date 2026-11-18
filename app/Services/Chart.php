@@ -19,6 +19,7 @@ class Chart
         'prepayment' => ['Prepayments', 'پیش پرداخت ها', 'asset'],
         'other_asset' => ['Other assets', 'سایر دارایی ها', 'asset'],
         'deal_goods' => ['Goods of open deals', 'اموال معاملات باز', 'asset'],
+        'inventory' => ['Inventory', 'موجودی اجناس', 'asset'],
         'tangible_asset' => ['Tangible assets', 'دارایی های ملموس', 'asset'],
         'tangible_depreciation' => ['Depreciation of tangible assets', 'استهلاک دارایی های ملموس', 'asset'],
         'intangible_asset' => ['Intangible assets', 'دارایی های غیر ملموس', 'asset'],
@@ -37,6 +38,7 @@ class Chart
         'retained_earnings' => ['Profit or loss of previous years', 'مفاد / ضرر سال های گذشته', 'equity'],
 
         'exchange_income' => ['Income from currency exchange', 'عواید تبادله اسعار', 'income'],
+        'sales_income' => ['Sales', 'فروشات', 'income'],
         'trade_income' => ['Profit from trade', 'مفاد تجارت', 'income'],
         'cash_excess' => ['Cash count excess', 'اضافی شمارش صندوق', 'income'],
         'other_income' => ['Other income', 'سایر عواید', 'income'],
@@ -49,6 +51,7 @@ class Chart
         'expense_staff' => ['Staff costs', 'مصارف کارمندان', 'expense'],
         'expense_marketing' => ['Marketing', 'مصارف بازاریابی', 'expense'],
         'expense_bills' => ['Payment of bills', 'پرداخت بل ها', 'expense'],
+        'cost_of_goods' => ['Cost of goods sold', 'قیمت تمام‌شده اجناس فروخته‌شده', 'expense'],
         'trade_loss' => ['Loss from trade', 'ضرر تجارت', 'expense'],
         'cash_shortage' => ['Cash count shortage', 'کمبود شمارش صندوق', 'expense'],
         'expense_other' => ['Other expenses', 'سایر مصارف', 'expense'],

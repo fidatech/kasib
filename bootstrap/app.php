@@ -32,7 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             append: [SetLocale::class, ExportTable::class, StripNumberCommas::class, ConvertShamsiDates::class, EnsureUserIsActive::class, \App\Http\Middleware\TrackSession::class],
             prepend: [InitializeTenancy::class],
         );
-        $middleware->alias(['central' => EnsureCentral::class, 'tenant' => EnsureTenant::class, 'staff' => \App\Http\Middleware\StaffMay::class]);
+        $middleware->alias(['central' => EnsureCentral::class, 'tenant' => EnsureTenant::class, 'staff' => \App\Http\Middleware\StaffMay::class, 'pro' => \App\Http\Middleware\RequirePro::class]);
         // the address is checked before anyone is asked to sign in
         $middleware->prependToPriorityList(AuthenticatesRequests::class, EnsureCentral::class);
         $middleware->prependToPriorityList(AuthenticatesRequests::class, EnsureTenant::class);

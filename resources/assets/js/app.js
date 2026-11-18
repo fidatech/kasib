@@ -670,6 +670,45 @@
     };
     pageInits.push(function (scope) { ERP.nameIcons(scope); });
 
+    // an invoice: the price of the chosen item is offered, and the amounts and the total follow what is typed
+    pageInits.push(function (scope) { $$('form[data-invoice]', scope).forEach(function (form) {
+        var baseId = form.getAttribute('data-base');
+        var currency = form.querySelector('[name=currency_id]');
+        var discount = form.querySelector('[name=discount]');
+        var totalBox = form.querySelector('[data-total]');
+        function num(v) { v = parseFloat(String(v || '').replace(/,/g, '')); return isNaN(v) ? 0 : v; }
+        function fmt(v) { return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function total() {
+            var sum = 0;
+            $$('tr[data-line]', form).forEach(function (tr) {
+                var amount = Math.round(num(tr.querySelector('input[data-qty]').value) * num(tr.querySelector('input[data-price]').value) * 100) / 100;
+                tr.querySelector('[data-amount]').textContent = amount ? fmt(amount) : '';
+                sum += amount;
+            });
+            var t = Math.max(0, sum - num(discount.value));
+            totalBox.textContent = fmt(t);
+            return t;
+        }
+        form.addEventListener('change', function (e) {
+            var select = e.target.closest && e.target.closest('select[data-item]');
+            if (select) {
+                var tr = select.closest('tr');
+                var option = select.options[select.selectedIndex];
+                var qty = tr.querySelector('input[data-qty]');
+                var price = tr.querySelector('input[data-price]');
+                if (option && option.value) {
+                    if (!qty.value) qty.value = '1';
+                    if (!price.value && currency.value === baseId && num(option.getAttribute('data-price'))) price.value = option.getAttribute('data-price');
+                }
+            }
+            total();
+        });
+        form.addEventListener('input', total);
+        var all = form.querySelector('[data-pay-all]');
+        if (all) all.addEventListener('click', function () { form.querySelector('[name=paid]').value = total().toFixed(2); });
+        total();
+    }); });
+
     // the tour of the screen: a ring around one part at a time, with a card that says what it is
     (function () {
         var tour = window.ERP_TOUR;

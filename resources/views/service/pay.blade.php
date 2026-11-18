@@ -1,4 +1,6 @@
 {{-- Where to pay, and the form "we paid". Shown on the licence page of a business. --}}
+@php $onPro = \App\Services\Billing::plan(tenant()) === 'pro'; @endphp
+<div class="alert alert-info mt-3 mb-0">{{ __('Your plan: :plan.', ['plan' => __($onPro ? 'Pro' : 'Starter')]) }} @unless ($onPro)<a href="{{ route('service.tickets') }}">{{ __('Ask for the Pro plan') }}</a> · {{ __('it adds sales, purchases and stock.') }}@endunless</div>
 <div class="card mt-3 mb-0" id="pay">
     <div class="card-header"><h2 class="h5 card-title mb-0">{{ __('Pay the subscription through HesabPay') }}</h2></div>
     <div class="card-body">

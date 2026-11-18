@@ -15,6 +15,7 @@
 | active    route-name pattern that highlights the entry (defaults to the route)
 | can       permission needed to see the entry
 | advanced  true: hidden while "Simple mode" is on in System Settings
+| pro       true: a page of version 2, shown only to a business on the Pro plan
 | dynamic   'account_groups': the children are the account categories of the business, one page
 |           each. A category added under Configuration appears here by itself.
 | url       instead of route: a page outside the system, opened in a new tab
@@ -40,6 +41,17 @@ return [
         ['label' => 'Hawala Tracking', 'route' => 'hawalas.index', 'active' => 'hawalas.*', 'can' => 'transactions.view'],
         ['label' => 'Cash Boxes & Handover', 'route' => 'handovers.index', 'active' => 'handovers.*', 'can' => 'transactions.view'],
         ['label' => 'Journal Entries', 'route' => 'journal.create', 'can' => 'journal.manage', 'advanced' => true],
+    ]],
+
+    ['label' => 'Sales & Purchases', 'icon' => 'file-invoice-dollar', 'pro' => true, 'children' => [
+        ['label' => 'Sales', 'route' => 'trade.index', 'params' => ['kind' => 'sales'], 'can' => 'transactions.view'],
+        ['label' => 'Purchases', 'route' => 'trade.index', 'params' => ['kind' => 'purchases'], 'can' => 'transactions.view'],
+        ['label' => 'Sale Returns', 'route' => 'trade.index', 'params' => ['kind' => 'sale-returns'], 'can' => 'transactions.view'],
+        ['label' => 'Purchase Returns', 'route' => 'trade.index', 'params' => ['kind' => 'purchase-returns'], 'can' => 'transactions.view'],
+        ['label' => 'Items', 'route' => 'items.index', 'active' => 'items.*', 'can' => 'transactions.view'],
+        ['label' => 'Stock on Hand', 'route' => 'trade.reports.stock', 'can' => 'reports.view'],
+        ['label' => 'Sales by Item', 'route' => 'trade.reports.items', 'can' => 'reports.view'],
+        ['label' => 'Sales by Customer', 'route' => 'trade.reports.parties', 'can' => 'reports.view'],
     ]],
 
     ['label' => 'Finance', 'icon' => 'landmark', 'advanced' => true, 'children' => [
