@@ -323,6 +323,7 @@ jobs:
           echo "Registration page: $(echo "$page" | grep -c 'js/register.js') x register.js, $(echo "$page" | grep -o '<option value=' | wc -l) options, $(echo "$page" | wc -c) bytes" | tee -a "$GITHUB_STEP_SUMMARY"
           home=$(curl -sS -L --max-time 25 "https://$DOMAIN/" 2>/dev/null || true)
           echo "Home page: $(echo "$home" | grep -o '<title>[^<]*</title>' | head -1), $(echo "$home" | grep -c 'site-hero') x site-hero, $(echo "$home" | wc -c) bytes" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "Demo on the home page: $(echo "$home" | grep -c 'site-demo-facts') box; its sign-in page answers $(curl -sS -o /dev/null -w '%{http_code}' -L --max-time 25 "https://demo.$DOMAIN/login" 2>/dev/null || true) and names the demo $(curl -sS -L --max-time 25 "https://demo.$DOMAIN/login" 2>/dev/null | grep -c 'demo@') time(s)" | tee -a "$GITHUB_STEP_SUMMARY"
           # no certificate for the domain yet: cPanel is asked to get one now (AutoSSL), which takes some minutes
           if [ "$PANEL" = cpanel ] && ! curl -s -o /dev/null --max-time 25 "https://$DOMAIN/"; then
             ssh server 'uapi --output=json SSL start_autossl_check' 2>/dev/null | grep -o '"status":[0-9]' | head -1 | sed 's/"status":1/cPanel was asked for a certificate (AutoSSL); try https again in some minutes./; s/"status":0/cPanel refused to start AutoSSL; ask the hosting company for a certificate./' | tee -a "$GITHUB_STEP_SUMMARY"
