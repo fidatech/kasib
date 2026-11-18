@@ -43,7 +43,7 @@ class CentralPanelTest extends TestCase
         $this->get('/admin/tenants')->assertOk();
     }
 
-    public function test_opening_a_hb_makes_its_database_main_branch_and_owner(): void
+    public function test_opening_a_business_makes_its_database_main_branch_and_owner(): void
     {
         $this->systemAdmin();
 
@@ -64,11 +64,8 @@ class CentralPanelTest extends TestCase
 
         $this->post('/login', ['email' => 'owner@acme.test', 'password' => 'password123'])->assertRedirect(route('dashboard'));
 
-        // the first thing the owner does is open the day
-        $this->get('/')->assertRedirect(route('days.open'));
-        $this->get('/day')->assertOk();
-        $this->post('/day')->assertRedirect(route('dashboard'));
-        $this->get('/')->assertOk()->assertSee('Main branch')->assertSee('Subscription')->assertSee('dash-top', false)->assertSee('quickbar-item', false)->assertSee('Profit Distribution')->assertSee('Purchases from DAB')->assertSee('Branch Reconciliation')->assertSee('Period Closing')->assertSee('Sanction Screening Page')->assertSee('/transactions/deposit/create', false)->assertSee('/transactions/withdrawal/create', false)->assertSee('/transactions/exchange/create', false)->assertSee('/remittances/create', false)->assertDontSee('quickbar-caret', false)->assertSee('id="ratesModal"', false)->assertSee('Exchange Rates')->assertSee('name="stay"', false)->assertDontSee('dc-quick', false)->assertSee('1405')->assertSee('data-clock', false)->assertDontSee('topbar-brand', false);
+        // the owner lands on the dashboard, with the account categories in the menu
+        $this->get('/')->assertOk()->assertSee('quickbar-item', false)->assertSee('Cash Accounts')->assertSee('Customers')->assertSee('Period Closing');
     }
 
     public function test_the_short_name_is_checked(): void
@@ -84,7 +81,7 @@ class CentralPanelTest extends TestCase
         $this->assertSame(1, Tenant::count());
     }
 
-    public function test_a_suspended_hb_cannot_be_opened(): void
+    public function test_a_suspended_business_cannot_be_opened(): void
     {
         $this->systemAdmin();
         $this->post('/admin/tenants', $this->form());
@@ -103,7 +100,7 @@ class CentralPanelTest extends TestCase
         $this->get('/login')->assertOk();
     }
 
-    public function test_the_licence_of_a_hb_can_be_changed(): void
+    public function test_the_licence_of_a_business_can_be_changed(): void
     {
         $this->systemAdmin();
         $this->post('/admin/tenants', $this->form());
@@ -203,7 +200,7 @@ class CentralPanelTest extends TestCase
         $this->assertFalse($cpanel->enabled());
     }
 
-    public function test_a_hb_registers_on_the_website_and_is_opened_when_the_administrator_approves(): void
+    public function test_a_business_registers_on_the_website_and_is_opened_when_the_administrator_approves(): void
     {
         config(['tenancy.base_domain' => 'hesabbook.test']);
         $this->central();

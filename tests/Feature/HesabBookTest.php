@@ -33,7 +33,7 @@ class HesabBookTest extends TestCase
 
     private function party(string $group, string $name): Party
     {
-        return Party::create(['account_group_id' => AccountGroup::byKey($group)->id, 'name' => $name]);
+        return Party::create(['account_group_id' => AccountGroup::byKey($group)->id, 'name' => $name])->fresh();
     }
 
     /** What the business owes the party in one currency (below zero: the party owes the business). */

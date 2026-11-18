@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Schema;
  *  parties         the accounts of a category as people know them: a cash box, a bank account, a
  *                  customer. A party has one ledger account for every currency it uses.
  *  vouchers        money in, money out, transfers, exchanges and income; each posts one journal entry.
+ *  notices         messages of the system to one of its users, shown under the bell of the navbar.
  */
 return new class extends Migration
 {
@@ -77,10 +78,22 @@ return new class extends Migration
             $table->index(['party_id', 'date']);
             $table->index('due_date');
         });
+
+        Schema::create('notices', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->string('title', 200);
+            $table->string('body', 500)->nullable();
+            $table->string('url', 255)->nullable();
+            $table->timestamp('read_at')->nullable();
+            $table->timestamp('created_at')->useCurrent();
+            $table->index(['user_id', 'read_at']);
+        });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('notices');
         Schema::dropIfExists('vouchers');
         Schema::table('accounts', function (Blueprint $table) {
             $table->dropConstrainedForeignId('party_id');

@@ -46,7 +46,7 @@ class Vouchers
         if ($party->group->isMoney()) {
             throw new UserError(__('Between two money accounts use a transfer or an exchange.'));
         }
-        if (! $party->is_active) {
+        if ($party->is_active === false) {
             throw new UserError(__(':name is switched off.', ['name' => $party->name]));
         }
 

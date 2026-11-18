@@ -160,7 +160,7 @@ class AdministrationTest extends TestCase
         $this->assertSame(Tenant::SUSPENDED, $tenant->fresh()->status);
     }
 
-    public function test_announcements_reach_the_hb_and_a_ticket_goes_back_and_forth(): void
+    public function test_announcements_reach_the_business_and_a_ticket_goes_back_and_forth(): void
     {
         $tenant = $this->sarafi();
         $this->central();
@@ -254,7 +254,7 @@ class AdministrationTest extends TestCase
         }
     }
 
-    public function test_the_support_staff_enter_a_hb_with_a_reason_that_its_owner_can_read(): void
+    public function test_the_support_staff_enter_a_business_with_a_reason_that_its_owner_can_read(): void
     {
         $tenant = $this->sarafi();
         $this->central();
