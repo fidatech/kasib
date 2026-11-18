@@ -624,9 +624,9 @@ class KasibTest extends TestCase
         $tenant = $this->business();
         $this->central();
         $this->systemAdmin();
-        $this->put('/admin/tenants/'.$tenant->id, ['name' => 'Acme business', 'plan' => 'Basic', 'max_users' => 3, 'max_accounts' => 2])->assertSessionHasNoErrors();
+        $this->put('/admin/tenants/'.$tenant->id, ['name' => 'Acme business', 'plan' => 'pro', 'max_users' => 3, 'max_accounts' => 2])->assertSessionHasNoErrors();
         $tenant->refresh();
-        $this->assertSame(['Basic', 3, 2], [$tenant->plan, (int) $tenant->max_users, (int) $tenant->max_accounts]);
+        $this->assertSame(['pro', 3, 2], [$tenant->plan, (int) $tenant->max_users, (int) $tenant->max_accounts]);
 
         $this->enter($tenant);
         $this->owner();
