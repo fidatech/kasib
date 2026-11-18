@@ -63,7 +63,25 @@ class DashboardController extends Controller
             $due = Voucher::where('kind', Voucher::MONEY_IN)->whereNull('cancelled_at')->whereNotNull('due_date')->whereDate('due_date', '<=', now()->addDays(7)->toDateString())->count();
         }
 
+        // what the business earned and spent, the money of the last days, and who stands where
+        $insight = null;
+        if ($seesMoney && $user->can('reports.view')) {
+            $months = \App\Services\Insights::months(6);
+            $this_ = end($months);
+            $last = $months[count($months) - 2];
+            $flow = \App\Services\Insights::flow(14);
+            $insight = [
+                'months' => $months, 'month' => $this_, 'flow' => $flow, 'parties' => \App\Services\Insights::parties(6),
+                'changes' => ['income' => \App\Services\Insights::change($this_['income'], $last['income']), 'expense' => \App\Services\Insights::change($this_['expense'], $last['expense']), 'profit' => \App\Services\Insights::change($this_['profit'], $last['profit'])],
+                'top_month' => max(1, ...array_map(fn ($m) => max((float) $m['income'], (float) $m['expense']), $months)),
+                'top_flow' => max(1, ...array_map(fn ($d) => max((float) $d['in'], (float) $d['out']), $flow)),
+                'low_stock' => \App\Services\Billing::plan(tenant()) === 'pro' ? \App\Models\Item::where('track_stock', true)->where('is_active', true)->whereNotNull('reorder_level')
+                    ->whereRaw('(select coalesce(sum(s.stock), 0) from item_stocks s where s.item_id = items.id and s.branch_id = ?) <= items.reorder_level', [(int) current_branch()?->id])->count() : null,
+            ];
+        }
+
         return view('dashboard', [
+            'insight' => $insight,
             'money' => $money, 'worth' => Num::money($worth), 'owed' => $owed, 'today' => $today, 'recent' => $recent, 'due' => $due,
             'base' => Currency::base()->code, 'seesMoney' => $seesMoney, 'seesPapers' => $seesPapers,
             'needsSetup' => $user->can('settings.manage') && setting('setup_done') !== '1',

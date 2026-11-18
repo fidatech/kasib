@@ -1294,6 +1294,130 @@
         if (tip) { e.preventDefault(); tip.focus(); }
     });
 
+
+    // ------------------------------------------------------------ amounts in tables
+    // Every figure of a list is set in one column width and in the colour of what it means: what came in
+    // green, what went out red, a balance by its sign. The heads of the columns say which is which.
+    var MONEY = /^[-−]?\(?\d[\d,٬]*(\.\d+)?\)?(\s?[A-Z]{3})?$/;
+    function toneOf(head) {
+        var tones = (window.ERP_TEXT || {}).tones || {}, text = (head || '').replace(/\s+/g, ' ').trim().toLowerCase(), found = '';
+        Object.keys(tones).forEach(function (tone) {
+            (tones[tone] || []).forEach(function (word) {
+                word = String(word).toLowerCase();
+                var tail = text.length - word.length - 1;
+                if (!found && word && (text === word || text.indexOf(word + ' ') === 0 || (tail >= 0 && text.lastIndexOf(' ' + word) === tail))) found = tone;
+            });
+        });
+        return found;
+    }
+    ERP.paintAmounts = function (scope) {
+        $$('table.table', scope).forEach(function (table) {
+            if (table.hasAttribute('data-rows') || table.closest('form[data-invoice]')) return;
+            var heads = $$('thead tr:last-child th', table).map(function (th) { return toneOf(th.textContent); });
+            $$('tbody tr, tfoot tr', table).forEach(function (row) {
+                var at = 0;
+                Array.prototype.forEach.call(row.children, function (cell) {
+                    var tone = heads[at] || '';
+                    at += cell.colSpan || 1;
+                    if (cell.tagName !== 'TD' || cell.children.length > 1 || cell.querySelector('input, select, a.btn, button')) return;
+                    var text = cell.textContent.replace(/\s+/g, ' ').trim();
+                    if (!MONEY.test(text) || !/[.,٬]/.test(text) && !/[A-Z]{3}$/.test(text) && !cell.classList.contains('text-end')) return;
+                    cell.classList.add('num');
+                    if (/amt-|text-danger|text-success/.test(cell.className)) return;
+                    var negative = /^[-−(]/.test(text), zero = !/[1-9]/.test(text);
+                    if (zero) cell.classList.add('amt-zero');
+                    else if (negative) cell.classList.add('amt-neg');
+                    else if (tone === 'in') cell.classList.add('amt-in');
+                    else if (tone === 'out') cell.classList.add('amt-out');
+                    else if (tone === 'sign') cell.classList.add('amt-pos');
+                    else if (tone === 'debit') cell.classList.add('amt-debit');
+                    else if (tone === 'credit') cell.classList.add('amt-credit');
+                });
+            });
+        });
+    };
+    pageInits.push(function (scope) { ERP.paintAmounts(scope); });
+
+    // ------------------------------------------------------------ the filter bar
+    // The first choices stay in sight and the rest fold behind "More filters"; what is switched on is
+    // listed under the bar as chips, each taken off with one tap.
+    ERP.filterBars = function (scope) {
+        var T = window.ERP_TEXT || {};
+        $$('form.filter-bar', scope).forEach(function (form) {
+            if (form.hasAttribute('data-filter-ready')) return;
+            form.setAttribute('data-filter-ready', '1');
+            var cells = Array.prototype.filter.call(form.children, function (el) { return el.querySelector('input:not([type="hidden"]), select'); });
+            var submit = Array.prototype.filter.call(form.children, function (el) { return !el.querySelector('input:not([type="hidden"]), select') && el.querySelector('button, .btn'); })[0];
+            var chips = [];
+            cells.forEach(function (cell, index) {
+                var fields = $$('select, input:not([type="hidden"])', cell).filter(function (f) { return f.name; });
+                var label = (cell.querySelector('label') || {}).textContent || '';
+                var active = false;
+                fields.forEach(function (field) {
+                    var value = field.value, shown = value, first = '';
+                    if (field.tagName === 'SELECT') {
+                        first = field.options.length ? field.options[0].value : '';
+                        shown = field.selectedIndex >= 0 ? field.options[field.selectedIndex].textContent.trim() : '';
+                        // a choice is applied as soon as it is made
+                        if (!field.hasAttribute('onchange')) field.addEventListener('change', function () { form.requestSubmit ? form.requestSubmit() : form.submit(); });
+                        if (value === first) return;
+                    } else if (field.type === 'checkbox' || field.type === 'radio') {
+                        if (!field.checked) return;
+                        shown = '';
+                    } else if (value === '' || field.name === 'from' || field.name === 'to') {
+                        return;
+                    }
+                    active = true;
+                    chips.push({ field: field, first: first, label: (label || field.getAttribute('aria-label') || field.getAttribute('placeholder') || '').replace(/[*:…]/g, '').trim(), value: shown });
+                });
+                if (index >= 4 && !active) cell.classList.add('filter-extra');
+            });
+            var hidden = $$('.filter-extra', form).length;
+            if (hidden) {
+                var more = document.createElement('div');
+                more.className = 'col-auto';
+                var button = document.createElement('button');
+                button.type = 'button'; button.className = 'btn btn-outline-soft filter-more';
+                button.innerHTML = '<span></span><span class="filter-count"></span>';
+                button.firstChild.textContent = T.moreFilters || 'More filters';
+                button.lastChild.textContent = hidden;
+                button.addEventListener('click', function () {
+                    var open = form.classList.toggle('is-open');
+                    button.firstChild.textContent = open ? (T.fewerFilters || 'Fewer filters') : (T.moreFilters || 'More filters');
+                    button.lastChild.style.display = open ? 'none' : '';
+                });
+                more.appendChild(button);
+                form.insertBefore(more, submit || null);
+            }
+            if (chips.length) {
+                var strip = document.createElement('div');
+                strip.className = 'filter-chips no-print';
+                chips.forEach(function (chip) {
+                    var el = document.createElement('span'); el.className = 'filter-chip';
+                    var name = document.createElement('small'); name.textContent = chip.label ? chip.label + ':' : '';
+                    var text = document.createElement('span'); text.textContent = chip.value || chip.label;
+                    var x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', (T.removeFilter || 'Remove') + ' ' + chip.label);
+                    x.addEventListener('click', function () {
+                        if (chip.field.type === 'checkbox' || chip.field.type === 'radio') chip.field.checked = false; else chip.field.value = chip.first;
+                        form.requestSubmit ? form.requestSubmit() : form.submit();
+                    });
+                    if (chip.label && chip.value) el.appendChild(name);
+                    el.appendChild(text); el.appendChild(x); strip.appendChild(el);
+                });
+                if (chips.length > 1) {
+                    var clear = document.createElement('button'); clear.type = 'button'; clear.className = 'filter-clear'; clear.textContent = T.clearFilters || 'Clear all';
+                    clear.addEventListener('click', function () {
+                        chips.forEach(function (chip) { if (chip.field.type === 'checkbox' || chip.field.type === 'radio') chip.field.checked = false; else chip.field.value = chip.first; });
+                        form.requestSubmit ? form.requestSubmit() : form.submit();
+                    });
+                    strip.appendChild(clear);
+                }
+                form.parentNode.insertBefore(strip, form.nextSibling);
+            }
+        });
+    };
+    pageInits.push(function (scope) { ERP.filterBars(scope); });
+
     // -------------------------------------------------------------------- boot
     ERP.initPage = function (scope) {
         body.classList.toggle('no-large-title', !$('.app-content h1'));

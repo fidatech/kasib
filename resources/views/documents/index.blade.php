@@ -43,7 +43,7 @@
 
 <div class="card">
     <div class="card-body">
-        <form method="GET" class="row g-2 mb-3 no-print">
+        <form method="GET" class="filter-bar row g-2 mb-3 no-print">
             <div class="col-12 col-md"><input type="search" class="form-control" name="q" value="{{ $term }}" placeholder="{{ __('Search…') }}" aria-label="{{ __('Search') }}"></div>
             <div class="col col-md-auto">
                 <select class="form-select" name="category" aria-label="{{ __('Kind') }}" onchange="this.form.submit()">

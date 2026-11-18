@@ -5,7 +5,7 @@
 
 <div class="card">
     <div class="card-body">
-        <form method="GET" class="row g-2 align-items-end mb-3">
+        <form method="GET" class="filter-bar row g-2 align-items-end mb-3">
             @include('partials.date-filter', ['from' => request('from'), 'to' => request('to')])
             <div class="col-6 col-md-auto">
                 <label class="form-label small mb-1">{{ __('User') }}</label>

@@ -44,7 +44,7 @@
 
 <div class="card">
     <div class="card-body">
-        <form method="GET" class="row g-2 align-items-end mb-3 no-print">
+        <form method="GET" class="filter-bar row g-2 align-items-end mb-3 no-print">
             @include('partials.branch-filter')
             @include('partials.date-filter')
             <div class="col-12 col-md-3">

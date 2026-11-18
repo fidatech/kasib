@@ -296,13 +296,13 @@ class KasibTest extends TestCase
         $user = $this->owner();
         $sections = fn () => array_column(Menu::for($user), 'label');
 
-        $this->assertContains('Finance', $sections());
+        $this->assertContains('Accounting', $sections());
         $this->put('/settings', ['company_name' => 'Acme business', 'simple_mode' => 1])->assertSessionHasNoErrors()->assertRedirect('/settings');
-        $this->assertNotContains('Finance', $sections());
-        $this->assertContains('Transactions', $sections());
+        $this->assertNotContains('Accounting', $sections());
+        $this->assertContains('Receipts & Payments', $sections());
 
         $this->put('/settings', ['company_name' => 'Acme business', 'simple_mode' => 0])->assertSessionHasNoErrors();
-        $this->assertContains('Finance', $sections());
+        $this->assertContains('Accounting', $sections());
     }
 
     public function test_a_deal_works_out_its_own_profit_or_loss(): void

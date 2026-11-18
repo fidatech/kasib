@@ -20,7 +20,7 @@
 
 <div class="card">
     <div class="card-body">
-        <form method="GET" class="row g-2 mb-3">
+        <form method="GET" class="filter-bar row g-2 mb-3">
             <div class="col-12 col-md">
                 <input type="search" class="form-control" name="q" value="{{ $term }}" placeholder="{{ __('Search…') }}" aria-label="{{ __('Search') }}">
             </div>

@@ -11,7 +11,7 @@
     <div class="card-body">
         @if (! empty($filters))
             {{-- every paper can be found by its date, its accounts, its currency, its user, its amount and its words --}}
-            <form method="GET" class="row g-2 align-items-end mb-3 no-print">
+            <form method="GET" class="filter-bar row g-2 align-items-end mb-3 no-print">
                 @include('partials.date-filter', ['from' => request()->query('from'), 'to' => request()->query('to')])
                 @foreach ($filters as $filter)
                     <div class="col-6 col-md-auto">

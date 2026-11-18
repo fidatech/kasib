@@ -12,7 +12,7 @@
 
 <div class="card">
     <div class="card-body">
-        <form method="GET" class="row g-2 align-items-end mb-3 no-print">
+        <form method="GET" class="filter-bar row g-2 align-items-end mb-3 no-print">
             <div class="col-6 col-md-auto">
                 <label class="form-label small mb-1" for="c-status">{{ __('Status') }}</label>
                 <select class="form-select" id="c-status" name="status">

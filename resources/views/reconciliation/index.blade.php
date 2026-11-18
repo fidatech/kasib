@@ -5,7 +5,7 @@
 
 <div class="card">
     <div class="card-body">
-        <form method="GET" class="row g-2 align-items-end mb-3 no-print">
+        <form method="GET" class="filter-bar row g-2 align-items-end mb-3 no-print">
             <div class="col-12 col-md-3">
                 <label class="form-label small mb-1" for="r-account">{{ __('Account') }}</label>
                 <select class="form-select" id="r-account" name="account" required>

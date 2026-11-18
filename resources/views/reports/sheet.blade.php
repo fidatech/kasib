@@ -9,7 +9,7 @@
     <div class="card-body">
         @isset($note)<div class="alert alert-warning">{{ $note }}</div>@endisset
         @if ($from || $to || $filters || ! empty($inputs))
-            <form method="GET" class="row g-2 align-items-end mb-3 no-print">
+            <form method="GET" class="filter-bar row g-2 align-items-end mb-3 no-print">
                 @if ($from)
                     @include('partials.date-filter')
                 @elseif ($to)
