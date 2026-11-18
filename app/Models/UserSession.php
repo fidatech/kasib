@@ -19,9 +19,17 @@ class UserSession extends Model
         return $this->belongsTo(User::class);
     }
 
-    public static function token(string $sessionId): string
+    public static function token(string $key): string
     {
-        return hash('sha256', $sessionId);
+        return hash('sha256', $key);
+    }
+
+    /** The fingerprint of the browser this request comes from, or '' when it is not on the list yet. */
+    public static function current(\Illuminate\Http\Request $request): string
+    {
+        $key = $request->hasSession() ? (string) $request->session()->get('tracked', '') : '';
+
+        return $key === '' ? '' : self::token($key);
     }
 
     /** "Chrome on Windows", as far as the browser says. */

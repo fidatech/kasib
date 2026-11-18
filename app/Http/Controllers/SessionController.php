@@ -21,7 +21,7 @@ class SessionController extends Controller
 
         return view('sessions.index', [
             'sessions' => UserSession::with('user')->when(! $all, fn ($q) => $q->where('user_id', $request->user()->id))->orderByDesc('last_seen_at')->limit(500)->get(),
-            'current' => UserSession::token($request->session()->getId()),
+            'current' => UserSession::current($request),
             'all' => $all,
         ]);
     }
@@ -31,7 +31,7 @@ class SessionController extends Controller
     {
         $session = UserSession::with('user')->findOrFail((int) $request->route('id'));
         abort_unless((int) $session->user_id === (int) $request->user()->id || $request->user()->can('users.manage'), 403);
-        abort_if($session->token === UserSession::token($request->session()->getId()), 422, __('Use "Sign out" for the browser you are in.'));
+        abort_if($session->token === UserSession::current($request), 422, __('Use "Sign out" for the browser you are in.'));
         $session->delete();
         audit('signed out', null, $session->user?->name.' · '.$session->device().' · '.$session->ip);
 
@@ -41,7 +41,7 @@ class SessionController extends Controller
     /** Every other browser of the signed-in user. */
     public function others(Request $request): RedirectResponse
     {
-        $count = UserSession::where('user_id', $request->user()->id)->where('token', '!=', UserSession::token($request->session()->getId()))->delete();
+        $count = UserSession::where('user_id', $request->user()->id)->where('token', '!=', UserSession::current($request))->delete();
         audit('signed out', null, $request->user()->name.' · '.$count);
 
         return back()->with('success', __(':count other browsers were signed out.', ['count' => $count]));

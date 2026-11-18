@@ -20,10 +20,10 @@ class TrackSession
             return $next($request);
         }
         $user = Auth::guard('web')->user();
-        $token = UserSession::token($request->session()->getId());
-        $row = UserSession::where('token', $token)->first();
+        $token = UserSession::current($request);
+        $row = $token === '' ? null : UserSession::where('token', $token)->first();
 
-        if (! $row && $request->session()->get('tracked') === $token) {
+        if ($token !== '' && ! $row) {
             // it was listed, and somebody removed it: signed out from elsewhere
             Auth::guard('web')->logout();
             $request->session()->invalidate();
@@ -31,9 +31,10 @@ class TrackSession
 
             return $request->expectsJson() ? response()->json(['message' => __('You were signed out.')], 401) : redirect()->route('login')->with('warning', __('You were signed out from another browser.'));
         }
-        if (! $row) {
-            UserSession::create(['user_id' => $user->id, 'token' => $token, 'ip' => $request->ip(), 'agent' => mb_substr((string) $request->userAgent(), 0, 255), 'last_seen_at' => now()]);
-            $request->session()->put('tracked', $token);
+        if (! $row || (int) $row->user_id !== (int) $user->id) {
+            $key = \Illuminate\Support\Str::random(40);
+            UserSession::create(['user_id' => $user->id, 'token' => UserSession::token($key), 'ip' => $request->ip(), 'agent' => mb_substr((string) $request->userAgent(), 0, 255), 'last_seen_at' => now()]);
+            $request->session()->put('tracked', $key);
         } elseif ($row->last_seen_at === null || $row->last_seen_at->lt(now()->subMinute())) {
             $row->update(['last_seen_at' => now(), 'ip' => $request->ip()]);
         }

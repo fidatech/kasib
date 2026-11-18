@@ -818,12 +818,12 @@ class HesabBookTest extends TestCase
         // somebody else's session is not his to end; a user who manages users may end it
         $cashier = $this->userWith(['transactions.view']);
         $this->delete('/sessions/'.$mine->id)->assertForbidden();
-        $this->get('/sessions')->assertOk()->assertDontSee($owner->name);
+        $this->get('/sessions')->assertOk()->assertViewHas('sessions', fn ($list) => $list->count() === 1 && (int) $list->first()->user_id === (int) $cashier->id);
 
         // a session that was taken off the list ends at its next request
-        $this->owner();
+        $again = $this->owner();
         $this->get('/')->assertOk();
-        \App\Models\UserSession::where('user_id', $owner->id)->delete();
+        \App\Models\UserSession::where('user_id', $again->id)->delete();
         $this->get('/')->assertRedirect('/login');
         $this->assertGuest();
     }
