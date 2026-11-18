@@ -99,6 +99,7 @@ Route::get('robots.txt', fn () => response("User-agent: *\n".(config('app.indexa
 // the public website of the system, on the central addresses: what it is, what it costs, the request form
 Route::middleware('central')->name('site.')->group(function () {
     Route::get('register', [\App\Http\Controllers\SiteController::class, 'register'])->name('register');
+    Route::get('register/check', [\App\Http\Controllers\SiteController::class, 'check'])->name('register.check')->middleware('throttle:40,1');
     Route::post('register', [\App\Http\Controllers\SiteController::class, 'store'])->name('register.store')->middleware('throttle:10,60');
     Route::get('register/{token}', [\App\Http\Controllers\SiteController::class, 'status'])->name('status')->where('token', '[a-z0-9]{32}');
     Route::get('open', [\App\Http\Controllers\SiteController::class, 'open'])->name('open');

@@ -27,7 +27,7 @@
                     @foreach ($signups as $signup)
                         <tr>
                             <td><span class="fw-semibold">{{ $signup->name }}</span>@if ($signup->name_local)<div class="small text-muted" dir="rtl">{{ $signup->name_local }}</div>@endif
-                                <div class="small text-muted">{{ implode(' · ', array_filter([$signup->licence_no, $signup->province])) }}</div></td>
+                                <div class="small text-muted">{{ implode(' · ', array_filter([$signup->licence_no, $signup->city, $signup->province])) }}</div></td>
                             <td dir="ltr">@if ($signup->tenant)<a href="//{{ $signup->tenant->domain }}" target="_blank" rel="noopener">{{ $signup->tenant->domain }}</a>@else{{ $signup->domain() }}@endif</td>
                             <td>{{ $signup->owner_name }}<div class="small text-muted" dir="ltr">{{ $signup->owner_phone }} · {{ $signup->owner_email }}</div>@if ($signup->message)<div class="small">{{ $signup->message }}</div>@endif</td>
                             <td>{{ $signup->branches }}</td>

@@ -209,13 +209,27 @@ class CentralPanelTest extends TestCase
         // the public website: what the system is, the prices and the form; search engines may list it
         $this->get('/')->assertOk()->assertSee('Register your business')->assertSee('$200')->assertSee('$400')->assertSee('Starter')->assertSee('Pro')->assertSee('Already a client?')->assertDontSee('Da Afghanistan Bank')->assertDontSee('noindex');
         $this->get('/register')->assertOk()->assertSee('Send the request');
+        // the provinces and their cities come from the database, in the language of the page
+        $this->assertSame([34, 405], [\App\Models\Central\Province::count(), \App\Models\Central\City::count()]);
+        $this->get('/register')->assertOk()->assertSee('Kandahar')->assertSee('Spin Boldak')->assertSee('select2.min.js')->assertSee('register.js');
+        app()->setLocale('ps');
+        $this->assertSame(['ننګرهار', 'جلال‌آباد'], [\App\Models\Central\Province::where('name', 'Nangarhar')->first()->label(), \App\Models\Central\City::where('name', 'Jalalabad')->first()->label()]);
+        app()->setLocale('en');
+        foreach (['vendor/jquery/jquery.min.js', 'vendor/select2/select2.min.js', 'vendor/select2/select2.min.css', 'vendor/select2/i18n/fa.js', 'vendor/select2/i18n/ps.js', 'js/register.js', 'css/register.css'] as $file) {
+            $this->assertFileExists(public_path($file));
+        }
+        // the form asks while the visitor types whether the address is free
+        $this->getJson('/register/check?slug=kabul')->assertOk()->assertJsonPath('free', true);
+        $this->getJson('/register/check?slug=admin')->assertOk()->assertJsonPath('free', false);
+        $this->getJson('/register/check?slug=a+b')->assertOk()->assertJsonPath('free', false);
         $this->get('/robots.txt')->assertOk()->assertSee('Allow: /');
 
-        $form = ['name' => 'Kabul Exchange', 'slug' => 'Kabul', 'licence_no' => 'DAB-55', 'province' => 'Kabul', 'branches' => 2, 'owner_name' => 'Karim Khan',
+        $form = ['name' => 'Kabul Exchange', 'slug' => 'Kabul', 'licence_no' => 'DAB-55', 'province' => 'Kabul', 'city' => 'Paghman', 'branches' => 2, 'owner_name' => 'Karim Khan',
             'owner_email' => 'karim@kabul.test', 'owner_phone' => '0700123456', 'password' => 'a-good-password', 'password_confirmation' => 'a-good-password', 'message' => 'Call after noon.'];
         // what is refused: a taken or reserved address, a short password, the box only robots fill
         $this->post('/register', ['slug' => 'admin'] + $form)->assertSessionHasErrors('slug');
         $this->post('/register', ['slug' => 'a b'] + $form)->assertSessionHasErrors('slug');
+        $this->post('/register', ['province' => 'Atlantis'] + $form)->assertSessionHasErrors('province');
         $this->post('/register', ['password' => 'short', 'password_confirmation' => 'short'] + $form)->assertSessionHasErrors('password');
         $this->post('/register', ['website' => 'http://spam.test'] + $form)->assertRedirect('/');
         $this->assertSame(0, \App\Models\Central\Signup::count());

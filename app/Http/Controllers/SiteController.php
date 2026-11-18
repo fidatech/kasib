@@ -27,7 +27,20 @@ class SiteController extends Controller
 
     public function register(): View
     {
-        return view('site.register', ['prices' => Billing::prices(), 'company' => SettingsController::company(), 'trial' => Billing::trialDays(), 'plans' => Billing::plans()]);
+        return view('site.register', ['prices' => Billing::prices(), 'company' => SettingsController::company(), 'trial' => Billing::trialDays(), 'plans' => Billing::plans(),
+            'provinces' => \App\Models\Central\Province::with('cities')->orderBy('sort')->get()]);
+    }
+
+    /** Asked by the form while the visitor types: is this address free? */
+    public function check(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $slug = strtolower(trim((string) $request->query('slug')));
+        if (! preg_match('/^[a-z][a-z0-9-]{2,39}$/', $slug)) {
+            return response()->json(['free' => false, 'message' => __('The address starts with a letter and has 3 to 40 small letters, digits or dashes.')]);
+        }
+        $taken = in_array($slug, config('tenancy.reserved_slugs'), true) || Tenant::where('slug', $slug)->exists() || Signup::where('slug', $slug)->where('status', 'pending')->exists();
+
+        return response()->json(['free' => ! $taken, 'message' => $taken ? __('This address is taken; choose another.') : __('This address is free.')]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -43,7 +56,8 @@ class SiteController extends Controller
             'slug' => ['required', 'string', 'regex:/^[a-z][a-z0-9-]{2,39}$/', Rule::notIn(config('tenancy.reserved_slugs')), Rule::unique(Tenant::class, 'slug'),
                 Rule::unique(Signup::class, 'slug')->where('status', 'pending')],
             'licence_no' => ['nullable', 'string', 'max:60'],
-            'province' => ['nullable', 'string', 'max:100'],
+            'province' => ['nullable', 'string', 'max:100', Rule::exists(\App\Models\Central\Province::class, 'name')],
+            'city' => ['nullable', 'string', 'max:100'],
             'branches' => ['nullable', 'integer', 'min:0', 'max:500'],
             'plan' => ['nullable', Rule::in(array_keys(Billing::PLANS))],
             'ref' => ['nullable', 'string', 'max:60'],
