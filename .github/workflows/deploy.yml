@@ -276,7 +276,7 @@ jobs:
       - name: Migrate and switch on
         if: env.ACTION == 'deploy'
         run: |
-          ssh server "PHP='$REMOTE_PHP' FOLDER='$REMOTE_PATH' bash -s" <<'SH'
+          ssh server "PHP='$REMOTE_PHP' FOLDER='$REMOTE_PATH' DOMAIN='$DOMAIN' bash -s" <<'SH'
           set -e
           cd "$FOLDER"
           mkdir -p storage/app/private storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
@@ -296,6 +296,12 @@ jobs:
           else
             echo "::warning::No crontab on the server; add this cron job in the hosting panel: $line"
           fi
+          # the website keeps compiled PHP in memory (OPcache), apart from the command line: it is emptied through a
+          # file that lives for one request, or the old pages go on showing after the new code is in place
+          once="opcache-$RANDOM$RANDOM$RANDOM.php"
+          printf '%s' '<?php echo function_exists("opcache_reset") && opcache_reset() ? "emptied" : "not in use"; echo " (validate_timestamps=".ini_get("opcache.validate_timestamps").", revalidate_freq=".ini_get("opcache.revalidate_freq").", sapi=".PHP_SAPI.")"; @unlink(__FILE__);' > "public/$once"
+          echo "OPcache of the website: $(curl -s --max-time 20 "https://$DOMAIN/$once" | head -c 200)"
+          rm -f "public/$once"
           "$PHP" artisan up
           echo "Deployed: $("$PHP" artisan --version)"
           SH
@@ -311,6 +317,11 @@ jobs:
             echo "$url answers $code $(head -c 200 curl.err)" | tee -a "$GITHUB_STEP_SUMMARY"
           done
           rm -f curl.err
+          # is it the new code that answers? the registration page must carry what this version put on it
+          page=$(curl -sS -L --max-time 25 "https://$DOMAIN/register" 2>/dev/null || true)
+          echo "Registration page: $(echo "$page" | grep -c 'js/register.js') x register.js, $(echo "$page" | grep -o '<option value=' | wc -l) options, $(echo "$page" | wc -c) bytes" | tee -a "$GITHUB_STEP_SUMMARY"
+          home=$(curl -sS -L --max-time 25 "https://$DOMAIN/" 2>/dev/null || true)
+          echo "Home page: $(echo "$home" | grep -o '<title>[^<]*</title>' | head -1), $(echo "$home" | grep -c 'site-hero') x site-hero, $(echo "$home" | wc -c) bytes" | tee -a "$GITHUB_STEP_SUMMARY"
           # no certificate for the domain yet: cPanel is asked to get one now (AutoSSL), which takes some minutes
           if [ "$PANEL" = cpanel ] && ! curl -s -o /dev/null --max-time 25 "https://$DOMAIN/"; then
             ssh server 'uapi --output=json SSL start_autossl_check' 2>/dev/null | grep -o '"status":[0-9]' | head -1 | sed 's/"status":1/cPanel was asked for a certificate (AutoSSL); try https again in some minutes./; s/"status":0/cPanel refused to start AutoSSL; ask the hosting company for a certificate./' | tee -a "$GITHUB_STEP_SUMMARY"
