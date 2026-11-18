@@ -51,7 +51,7 @@ class CentralPanelTest extends TestCase
         $this->post('/admin/tenants', $this->form())->assertRedirect(route('admin.tenants.index'));
 
         $tenant = Tenant::where('slug', 'acme')->firstOrFail();
-        $this->assertSame('acme.hesabbook.test', $tenant->domain);
+        $this->assertSame('acme.kasib.test', $tenant->domain);
         $this->assertSame('hb_acme', $tenant->database);
         $this->assertSame(2, $tenant->max_branches);
         $this->assertFileExists(app(Tenancy::class)->sqliteFile('hb_acme'));
@@ -93,7 +93,7 @@ class CentralPanelTest extends TestCase
         $this->central();
         $this->post('/admin/tenants/'.$tenant->id.'/status', ['status' => 'suspended'])->assertRedirect();
         $this->assertSame('suspended', $tenant->fresh()->status);
-        $this->get('http://acme.hesabbook.test/login')->assertStatus(503);
+        $this->get('http://acme.kasib.test/login')->assertStatus(503);
 
         $this->post('/admin/tenants/'.$tenant->id.'/status', ['status' => 'active']);
         $this->enter($tenant->fresh());
@@ -113,13 +113,13 @@ class CentralPanelTest extends TestCase
         $tenant->refresh();
         $this->assertSame('Acme Exchange', $tenant->name);
         $this->assertSame(5, $tenant->max_branches);
-        $this->assertSame('acme.hesabbook.test', $tenant->domain);
+        $this->assertSame('acme.kasib.test', $tenant->domain);
         $this->assertSame('400.00', $tenant->branch_price);
     }
 
     public function test_an_unknown_address_is_not_found(): void
     {
-        $this->get('http://nobody.hesabbook.test/login')->assertNotFound();
+        $this->get('http://nobody.kasib.test/login')->assertNotFound();
     }
 
     public function test_the_panel_cannot_be_opened_on_the_address_of_a_sarafi(): void
@@ -202,7 +202,7 @@ class CentralPanelTest extends TestCase
 
     public function test_a_business_registers_on_the_website_and_is_opened_when_the_administrator_approves(): void
     {
-        config(['tenancy.base_domain' => 'hesabbook.test']);
+        config(['tenancy.base_domain' => 'kasib.test']);
         $this->central();
 
         // the public website: what the system is, the prices and the form; search engines may list it
@@ -226,7 +226,7 @@ class CentralPanelTest extends TestCase
         $this->assertSame(['kabul', 'pending', 2], [$signup->slug, $signup->status, $signup->branches]);
         $this->assertNotSame('a-good-password', $signup->password);
         $this->assertSame(0, \App\Models\Central\Tenant::count());
-        $this->get('/register/'.$signup->token)->assertOk()->assertSee('We have your request')->assertSee('kabul.hesabbook.test');
+        $this->get('/register/'.$signup->token)->assertOk()->assertSee('We have your request')->assertSee('kabul.kasib.test');
         $this->get('/register/'.str_repeat('a', 32))->assertNotFound();
         $this->post('/register', ['owner_email' => 'other@kabul.test'] + $form)->assertSessionHasErrors('slug');   // the address is asked for already
 
@@ -250,13 +250,13 @@ class CentralPanelTest extends TestCase
         // approval opens the business, and its owner signs in with the password chosen on the website
         $this->post('/admin/signups/'.$signup->id.'/approve', ['slug' => 'kabul', 'licence_expires_on' => '2027-11-13', 'max_branches' => 2])->assertSessionHasNoErrors()->assertSessionHas('success');
         $tenant = \App\Models\Central\Tenant::sole();
-        $this->assertSame(['kabul.hesabbook.test', 'Kabul Exchange', 'DAB-55', 2, '0700123456'], [$tenant->domain, $tenant->name, $tenant->licence_no, $tenant->max_branches, $tenant->owner_phone]);
+        $this->assertSame(['kabul.kasib.test', 'Kabul Exchange', 'DAB-55', 2, '0700123456'], [$tenant->domain, $tenant->name, $tenant->licence_no, $tenant->max_branches, $tenant->owner_phone]);
         $this->assertSame(['approved', $tenant->id, null, $admin->id], [$signup->fresh()->status, $signup->fresh()->tenant_id, $signup->fresh()->password, $signup->fresh()->decided_by]);
-        $this->get('/admin/signups?status=approved')->assertOk()->assertSee('kabul.hesabbook.test');
+        $this->get('/admin/signups?status=approved')->assertOk()->assertSee('kabul.kasib.test');
         $this->get('/admin/signups?status=rejected')->assertOk()->assertSee('No licence of the bank.');
         $this->get('/register/'.$signup->token)->assertOk()->assertSee('Your business is ready');
         $this->get('/register/'.$bad->token)->assertOk()->assertSee('No licence of the bank.');
-        $this->get('/open?address=kabul')->assertRedirect('http://kabul.hesabbook.test/login');
+        $this->get('/open?address=kabul')->assertRedirect('http://kabul.kasib.test/login');
         $this->get('/open?address=nobody')->assertRedirect('/#signin')->assertSessionHas('danger');
 
         $this->enter($tenant);

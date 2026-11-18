@@ -56,7 +56,7 @@ class Schedules
         $business = (string) (setting('company_name') ?: tenant()?->name);
         try {
             $workbook = ExportCenter::build($from, $to, $modules);
-            $file = (Str::slug($business) ?: 'hesabbook').'-'.$from.'-'.$to.'.xlsx';
+            $file = (Str::slug($business) ?: 'kasib').'-'.$from.'-'.$to.'.xlsx';
             Mail::raw($business."\n".$schedule->name."\n".fmt_date($from).' – '.fmt_date($to), function ($message) use ($schedule, $business, $workbook, $file) {
                 $message->to($schedule->email)->subject($business.' · '.$schedule->name)
                     ->attachData($workbook, $file, ['mime' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);

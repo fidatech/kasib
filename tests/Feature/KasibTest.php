@@ -17,7 +17,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /** The accounts of every category, the daily papers and the reports of a business. */
-class HesabBookTest extends TestCase
+class KasibTest extends TestCase
 {
     use RefreshDatabase;
 

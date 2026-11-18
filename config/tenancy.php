@@ -11,8 +11,8 @@
 */
 
 return [
-    'central_domains' => array_values(array_filter(array_map('trim', explode(',', (string) env('CENTRAL_DOMAINS', 'localhost,127.0.0.1,admin.hesabbook.test'))))),
-    'base_domain' => env('TENANT_BASE_DOMAIN', 'hesabbook.test'),
+    'central_domains' => array_values(array_filter(array_map('trim', explode(',', (string) env('CENTRAL_DOMAINS', 'localhost,127.0.0.1,admin.kasib.test'))))),
+    'base_domain' => env('TENANT_BASE_DOMAIN', 'kasib.test'),
     'database_prefix' => env('TENANT_DATABASE_PREFIX', 'hb_'),
     'sqlite_path' => storage_path('tenants'),
     'cpanel' => [
@@ -30,7 +30,7 @@ return [
         'port' => env('BACKUP_FTP_PORT', 21),
         'user' => env('BACKUP_FTP_USER'),
         'password' => env('BACKUP_FTP_PASSWORD'),
-        'path' => env('BACKUP_FTP_PATH', 'hesabbook-backups'),
+        'path' => env('BACKUP_FTP_PATH', 'kasib-backups'),
         'ssl' => (bool) env('BACKUP_FTP_SSL', true),
     ],
     'reserved_slugs' => ['admin', 'www', 'api', 'app', 'mail', 'dab', 'central'],

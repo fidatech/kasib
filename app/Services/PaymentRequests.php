@@ -36,7 +36,7 @@ class PaymentRequests
         // the company is told by email; a mail that cannot leave never stops the request
         try {
             if ($to = CentralSetting::read('company_email')) {
-                Mail::raw($tenant->name.' ('.$tenant->domain.")\nHesabPay: ".$request->reference."\n$".$request->amount, fn ($m) => $m->to($to)->subject('HesabBook · payment request · '.$tenant->name));
+                Mail::raw($tenant->name.' ('.$tenant->domain.")\nHesabPay: ".$request->reference."\n$".$request->amount, fn ($m) => $m->to($to)->subject('Kasib · payment request · '.$tenant->name));
             }
         } catch (Throwable $e) {
             report($e);

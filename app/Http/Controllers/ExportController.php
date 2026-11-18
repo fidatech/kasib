@@ -30,7 +30,7 @@ class ExportController extends Controller
             'modules.*' => [Rule::in(array_keys(ExportCenter::MODULES))],
         ]);
         audit('exported', null, 'Export Center '.$data['from'].' – '.$data['to'].' ('.implode(', ', $data['modules']).')');
-        $name = (Str::slug((string) (setting('company_name') ?: tenant()?->name)) ?: 'hesabbook').'-'.$data['from'].'-'.$data['to'].'.xlsx';
+        $name = (Str::slug((string) (setting('company_name') ?: tenant()?->name)) ?: 'kasib').'-'.$data['from'].'-'.$data['to'].'.xlsx';
 
         return response(ExportCenter::build($data['from'], $data['to'], $data['modules']), 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

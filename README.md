@@ -1,4 +1,4 @@
-# HesabBook
+# Kasib
 
 A simple accounting system for any business, by Fida Technologies. The people of a business
 work with plain forms (money in, money out, exchange); the system keeps a full double-entry
@@ -110,7 +110,7 @@ Sign in at `http://localhost:8000/admin` and add a business, or use the command:
 php artisan tenants:create acme --name="Acme Trading" --owner-name="Owner" --owner-email=owner@example.com
 ```
 
-The business is then at `acme.hesabbook.test` (see `TENANT_BASE_DOMAIN` in `.env`). On a
+The business is then at `acme.kasib.test` (see `TENANT_BASE_DOMAIN` in `.env`). On a
 development machine, point that name at 127.0.0.1 in the hosts file.
 
 After every update of the system:

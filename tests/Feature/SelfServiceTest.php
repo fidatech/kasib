@@ -27,7 +27,7 @@ class SelfServiceTest extends TestCase
 
     public function test_with_the_free_trial_on_a_business_opens_as_soon_as_it_registers(): void
     {
-        config(['tenancy.base_domain' => 'hesabbook.test']);
+        config(['tenancy.base_domain' => 'kasib.test']);
         $this->central();
         $form = ['name' => 'Kabul Exchange', 'slug' => 'kabul', 'owner_name' => 'Karim Khan', 'owner_email' => 'karim@kabul.test', 'owner_phone' => '0700123456',
             'password' => 'a-good-password', 'password_confirmation' => 'a-good-password'];
@@ -43,7 +43,7 @@ class SelfServiceTest extends TestCase
         $tenant = Tenant::sole();
         $this->assertSame(['approved', $tenant->id, null], [$signup->status, (int) $signup->tenant_id, $signup->password]);
         $this->assertSame(['kabul', 'trial', now()->addDays(10)->toDateString()], [$tenant->slug, $tenant->plan, $tenant->licence_expires_on->toDateString()]);
-        $this->get('/register/'.$signup->token)->assertOk()->assertSee('kabul.hesabbook.test');
+        $this->get('/register/'.$signup->token)->assertOk()->assertSee('kabul.kasib.test');
 
         // the owner signs in with the password he chose
         $this->enter($tenant);

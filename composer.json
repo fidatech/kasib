@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "fidatech/hesabbook",
+    "name": "fidatech/kasib",
     "type": "project",
-    "description": "HesabBook: simple multi-tenant accounting for any business, by Fida Technologies.",
+    "description": "Kasib: simple multi-tenant accounting for any business, by Fida Technologies.",
     "keywords": [
         "accounting",
         "multi-currency",

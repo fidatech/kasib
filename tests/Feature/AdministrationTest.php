@@ -262,7 +262,7 @@ class AdministrationTest extends TestCase
 
         $this->post('/admin/tenants/'.$tenant->id.'/enter', ['reason' => ''])->assertSessionHasErrors('reason');
         $link = $this->post('/admin/tenants/'.$tenant->id.'/enter', ['reason' => 'Ticket TKT-00001'])->assertRedirect()->headers->get('Location');
-        $this->assertStringContainsString('acme.hesabbook.test/support-enter?', $link);
+        $this->assertStringContainsString('acme.kasib.test/support-enter?', $link);
         $this->assertTrue(AdminLog::where('action', 'entered')->where('description', 'Ticket TKT-00001')->exists());
         parse_str((string) parse_url($link, PHP_URL_QUERY), $ticket);
 

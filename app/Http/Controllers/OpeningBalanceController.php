@@ -40,7 +40,7 @@ class OpeningBalanceController extends Controller
 
         return response(Xlsx::build($rows, 'Opening balances'), 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="hesabbook-opening-balances.xlsx"',
+            'Content-Disposition' => 'attachment; filename="kasib-opening-balances.xlsx"',
         ]);
     }
 
