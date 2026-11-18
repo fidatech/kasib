@@ -128,7 +128,11 @@ class PartyController extends CrudController
 
     protected function rowLinks(Model $record): array
     {
-        return [['label' => __('Statement'), 'url' => route('accounts.statement', $this->routeParams() + ['id' => $record->id])]];
+        return [
+            ['label' => __('Statement'), 'url' => route('accounts.statement', $this->routeParams() + ['id' => $record->id])],
+            ['label' => __('Notes'), 'url' => route('accounts.notes', $this->routeParams() + ['id' => $record->id])],
+            ['label' => __('Files'), 'url' => route('attachments.index', ['type' => 'party', 'id' => $record->id])],
+        ];
     }
 
     protected function beforeSave(array $data, ?Model $record, Request $request): array

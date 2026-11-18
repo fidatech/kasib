@@ -66,6 +66,8 @@ class DashboardController extends Controller
         return view('dashboard', [
             'money' => $money, 'worth' => Num::money($worth), 'owed' => $owed, 'today' => $today, 'recent' => $recent, 'due' => $due,
             'base' => Currency::base()->code, 'seesMoney' => $seesMoney, 'seesPapers' => $seesPapers,
+            'needsSetup' => $user->can('settings.manage') && setting('setup_done') !== '1',
+            'reminders' => $seesMoney ? \App\Models\PartyNote::due()->count() : 0,
         ]);
     }
 }

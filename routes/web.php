@@ -29,11 +29,15 @@ use App\Http\Controllers\JournalEntryController;
 use App\Http\Controllers\LiabilityController;
 use App\Http\Controllers\MoneyInController;
 use App\Http\Controllers\MoneyOutController;
+use App\Http\Controllers\OpeningBalanceController;
 use App\Http\Controllers\PartyController;
+use App\Http\Controllers\PartyFileController;
 use App\Http\Controllers\PreferenceController;
 use App\Http\Controllers\RateController;
+use App\Http\Controllers\RecurringExpenseController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\SetupController;
 use App\Http\Controllers\ShareholderController;
 use App\Http\Controllers\TransferController;
 use App\Http\Controllers\TreasuryController;
@@ -211,6 +215,20 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
         // accounts: one page for every account category, and the statement of one account
         $crud('accounts/{group}', PartyController::class, 'accounts');
         Route::get('accounts/{group}/{id}/statement', [PartyController::class, 'statement'])->name('accounts.statement')->whereNumber('id');
+        Route::get('accounts/{group}/{id}/notes', [PartyFileController::class, 'notes'])->name('accounts.notes')->whereNumber('id');
+        Route::post('accounts/{group}/{id}/notes', [PartyFileController::class, 'storeNote'])->name('accounts.notes.store')->whereNumber('id');
+        Route::post('notes/{note}/done', [PartyFileController::class, 'toggleNote'])->name('notes.toggle')->whereNumber('note');
+        Route::get('reminders', [PartyFileController::class, 'reminders'])->name('reminders.index');
+
+        // photos and PDFs kept with an account or a paper
+        Route::get('files/{type}/{id}', [PartyFileController::class, 'attachments'])->name('attachments.index')->whereNumber('id')->whereIn('type', ['party', 'voucher']);
+        Route::post('files/{type}/{id}', [PartyFileController::class, 'attach'])->name('attachments.store')->whereNumber('id')->whereIn('type', ['party', 'voucher']);
+        Route::get('files/{type}/{id}/{file}', [PartyFileController::class, 'file'])->name('attachments.show')->whereNumber(['id', 'file'])->whereIn('type', ['party', 'voucher']);
+        Route::delete('files/{type}/{id}/{file}', [PartyFileController::class, 'detach'])->name('attachments.destroy')->whereNumber(['id', 'file'])->whereIn('type', ['party', 'voucher']);
+
+        // the first setup of a new business
+        Route::get('setup', [SetupController::class, 'show'])->name('setup.show');
+        Route::post('setup', [SetupController::class, 'store'])->name('setup.store');
 
         // transactions: the daily papers
         $paper('money-in', MoneyInController::class, 'money-in');
@@ -219,6 +237,8 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
         $paper('exchanges', ExchangeController::class, 'exchanges');
         $paper('income', IncomeController::class, 'income');
         $paper('expenses', ExpenseController::class, 'expenses');
+        Route::post('recurring-expenses/run', [RecurringExpenseController::class, 'run'])->name('recurring-expenses.run');
+        $crud('recurring-expenses', RecurringExpenseController::class, 'recurring-expenses');
         Route::get('journal', [JournalController::class, 'index'])->name('journal.index');
         Route::get('journal/entries', [JournalEntryController::class, 'create'])->name('journal.create');
         Route::post('journal/entries', [JournalEntryController::class, 'store'])->name('journal.store');
@@ -234,6 +254,9 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
 
         // finance
         Route::get('chart-of-accounts', [ChartController::class, 'index'])->name('chart.index');
+        Route::get('opening-balances', [OpeningBalanceController::class, 'index'])->name('opening.index');
+        Route::get('opening-balances/template', [OpeningBalanceController::class, 'template'])->name('opening.template');
+        Route::post('opening-balances', [OpeningBalanceController::class, 'store'])->name('opening.store');
         $crud('shareholders', ShareholderController::class, 'shareholders');
         $paper('capital', CapitalController::class, 'capital');
         $paper('distributions', DistributionController::class, 'distributions');

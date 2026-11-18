@@ -34,12 +34,14 @@ return [
         ['label' => 'Exchanges', 'route' => 'exchanges.index', 'active' => 'exchanges.*', 'can' => 'transactions.view'],
         ['label' => 'Income', 'route' => 'income.index', 'active' => 'income.*', 'can' => 'transactions.view'],
         ['label' => 'Expenses', 'route' => 'expenses.index', 'active' => 'expenses.*', 'can' => 'expenses.view'],
+        ['label' => 'Recurring Expenses', 'route' => 'recurring-expenses.index', 'active' => 'recurring-expenses.*', 'can' => 'expenses.view'],
         ['label' => 'Deals', 'route' => 'deals.index', 'active' => 'deals.*', 'can' => 'transactions.view'],
         ['label' => 'Journal Entries', 'route' => 'journal.create', 'can' => 'journal.manage', 'advanced' => true],
     ]],
 
     ['label' => 'Finance', 'icon' => 'landmark', 'advanced' => true, 'children' => [
         ['label' => 'Chart of Accounts', 'route' => 'chart.index', 'can' => 'accounts.view'],
+        ['label' => 'Opening Balances', 'route' => 'opening.index', 'active' => 'opening.*', 'can' => 'accounts.view'],
         ['label' => 'Shareholders', 'route' => 'shareholders.index', 'active' => 'shareholders.*', 'can' => 'capital.view'],
         ['label' => 'Capital & Drawings', 'route' => 'capital.index', 'active' => 'capital.*', 'can' => 'capital.view'],
         ['label' => 'Profit Distribution', 'route' => 'distributions.index', 'active' => 'distributions.*', 'can' => 'capital.view'],
@@ -55,6 +57,7 @@ return [
         ['label' => 'Currency Position', 'route' => 'treasury.index', 'can' => 'accounts.view'],
         ['label' => 'Customer & Supplier Balances', 'route' => 'reports.balances', 'can' => 'reports.view'],
         ['label' => 'Due Payments', 'route' => 'reports.due', 'can' => 'reports.view'],
+        ['label' => 'Reminders', 'route' => 'reminders.index', 'can' => 'accounts.view'],
         ['label' => 'Trial Balance', 'route' => 'reports.trial', 'can' => 'reports.view', 'advanced' => true],
         ['label' => 'Profit & Loss', 'route' => 'reports.profit', 'can' => 'reports.view', 'advanced' => true],
         ['label' => 'Balance Sheet', 'route' => 'reports.balance', 'can' => 'reports.view', 'advanced' => true],
@@ -72,6 +75,7 @@ return [
     ]],
 
     ['label' => 'Configuration', 'icon' => 'gear', 'children' => [
+        ['label' => 'First Setup', 'route' => 'setup.show', 'can' => 'settings.manage'],
         ['label' => 'System Settings', 'route' => 'settings.index', 'active' => 'settings.*', 'can' => 'settings.view'],
         ['label' => 'Account Categories', 'route' => 'account-categories.index', 'active' => 'account-categories.*', 'can' => 'accounts.view'],
         ['label' => 'Currencies', 'route' => 'currencies.index', 'active' => 'currencies.*', 'can' => 'currencies.view'],

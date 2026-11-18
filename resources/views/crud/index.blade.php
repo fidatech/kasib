@@ -11,6 +11,9 @@
         @endforeach
     @endisset
     @if ($canManage)
+        @foreach ($headerForms ?? [] as $button)
+            <form method="POST" action="{{ $button['url'] }}" class="d-inline">@csrf<button type="submit" class="btn btn-outline-soft">{{ $button['label'] }}</button></form>
+        @endforeach
         <a class="btn btn-primary" href="{{ route($route.'.create', $routeParams) }}"><x-icon name="plus" class="me-1" /> {{ __('Add :name', ['name' => $singular]) }}</a>
     @endif
 </x-page-header>

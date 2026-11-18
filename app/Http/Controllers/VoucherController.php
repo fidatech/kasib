@@ -62,7 +62,7 @@ abstract class VoucherController extends PaperController
 
     protected function shared(): array
     {
-        return parent::shared() + ['ownDate' => true, 'filters' => $this->filters()];
+        return parent::shared() + ['ownDate' => true, 'filters' => $this->filters(), 'attach' => true];
     }
 
     /** The pick lists above the list. Every paper can be found by date, currency, account, user, amount and words. */

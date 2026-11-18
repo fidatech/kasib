@@ -3,6 +3,18 @@
 @section('content')
 <x-page-header :title="__('Dashboard')" icon="gauge-high" :subtitle="(setting('company_name') ?: tenant()?->name).' · '.fmt_date(today_iso())" />
 
+@if ($needsSetup)
+    <div class="alert alert-info d-flex flex-wrap gap-2 align-items-center justify-content-between">
+        <span><x-icon name="wand-magic-sparkles" class="me-1" /> {{ __('Welcome. Three choices and the system is set up for your kind of business.') }}</span>
+        <a class="btn btn-sm btn-primary" href="{{ route('setup.show') }}">{{ __('First Setup') }}</a>
+    </div>
+@endif
+@if ($reminders)
+    <div class="alert alert-warning d-flex flex-wrap gap-2 align-items-center justify-content-between">
+        <span><x-icon name="bell" class="me-1" /> {{ __(':count reminders are due.', ['count' => $reminders]) }}</span>
+        <a class="btn btn-sm btn-outline-soft" href="{{ route('reminders.index') }}">{{ __('Reminders') }}</a>
+    </div>
+@endif
 @if ($seesMoney)
     <div class="row g-3">
         @foreach ($money as $row)

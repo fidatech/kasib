@@ -470,6 +470,132 @@ class HesabBookTest extends TestCase
         @unlink($file);
     }
 
+    public function test_opening_balances_come_in_from_an_excel_file_all_or_nothing(): void
+    {
+        $this->business();
+        $this->owner();
+        $this->rates(['USD' => '70']);
+        $sheet = fn (array $rows) => \Illuminate\Http\UploadedFile::fake()->createWithContent('opening.xlsx', \App\Support\Xlsx::build(array_merge(
+            [['bold' => true, 'cells' => \App\Services\OpeningBalances::COLUMNS]], array_map(fn (array $cells) => ['cells' => $cells], $rows))));
+
+        $this->get('/opening-balances')->assertOk();
+        $this->get('/opening-balances/template')->assertOk()->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        // one wrong row: nothing of the file is taken
+        $this->from('/opening-balances')->post('/opening-balances', ['file' => $sheet([['Customers', 'Ahmad Trading', '', 'AFN', ['n' => '100'], 'we owe'], ['Nobody', 'X', '', 'AFN', ['n' => '5'], '']])])->assertSessionHas('danger');
+        $this->assertSame(0, Party::where('is_system', false)->count());
+
+        $this->post('/opening-balances', ['file' => $sheet([
+            ['Customers', 'Ahmad Trading', '0700123456', 'AFN', ['n' => '150000'], 'we owe'],
+            ['Suppliers', 'Karim Ltd', '', 'USD', ['n' => '500'], 'owes us'],
+            ['Bank', 'AIB current account', '', 'AFN', ['n' => '80000'], ''],
+            ['Cash', 'Cash', '', 'AFN', ['n' => '20000'], ''],
+        ])])->assertSessionHasNoErrors()->assertRedirect('/opening-balances');
+
+        $this->assertSame(3, Party::where('is_system', false)->count());
+        $this->assertSame('150000.00', $this->owed(Party::where('name', 'Ahmad Trading')->firstOrFail(), 'AFN'));
+        $this->assertSame('-500.00', $this->owed(Party::where('name', 'Karim Ltd')->firstOrFail(), 'USD'));
+        $this->assertSame('20000.00', Ledger::balance($this->cash()));
+        $this->assertSame('0700123456', Party::where('name', 'Ahmad Trading')->value('phone'));
+        $this->get('/opening-balances')->assertOk()->assertSee('Ahmad Trading');
+        $this->booksBalance();
+
+        // a CSV file works too
+        $csv = \Illuminate\Http\UploadedFile::fake()->createWithContent('more.csv', "Category,Name,Phone,Currency,Balance,Side\nCustomers,Nazir,,AFN,2500,owes us\n");
+        $this->post('/opening-balances', ['file' => $csv])->assertSessionHasNoErrors();
+        $this->assertSame('-2500.00', $this->owed(Party::where('name', 'Nazir')->firstOrFail(), 'AFN'));
+    }
+
+    public function test_the_first_setup_prepares_the_system_for_the_kind_of_business(): void
+    {
+        $this->business();
+        $this->owner();
+        $usd = $this->currency('USD');
+
+        $this->get('/')->assertOk()->assertSee('Three choices and the system is set up');
+        $this->get('/setup')->assertOk()->assertSee('Trade and import');
+        $this->post('/setup', ['business_type' => 'trade', 'currencies' => [$usd->id], 'calendar' => 'gregorian', 'simple_mode' => 0])->assertSessionHasNoErrors()->assertRedirect('/');
+
+        $this->assertSame('party', AccountGroup::byKey('partners')->type);
+        $this->assertTrue(AccountCategory::where('nature', 'expense')->where('name', 'Customs')->exists());
+        $this->assertSame(['AFN', 'USD'], Currency::where('is_active', true)->orderBy('sort')->pluck('code')->all());
+        $this->assertSame(['trade', 'gregorian', '1'], [setting('business_type'), setting('calendar'), setting('setup_done')]);
+        $this->get('/')->assertOk()->assertDontSee('Three choices and the system is set up')->assertSee('Partners');
+        $this->get('/accounts/partners')->assertOk();
+
+        // done twice, nothing is made twice
+        $this->post('/setup', ['business_type' => 'trade', 'currencies' => [$usd->id], 'calendar' => 'shamsi'])->assertSessionHasNoErrors();
+        $this->assertSame(1, AccountGroup::where('key', 'partners')->count());
+        $this->assertSame(1, AccountCategory::where('name', 'Customs')->count());
+    }
+
+    public function test_notes_remind_and_files_are_kept_with_accounts_and_papers(): void
+    {
+        \Illuminate\Support\Facades\Storage::fake('local');
+        $this->business();
+        $this->owner();
+        $ahmad = $this->party('customers', 'Ahmad');
+
+        $this->get('/accounts/customers/'.$ahmad->id.'/notes')->assertOk();
+        $this->post('/accounts/customers/'.$ahmad->id.'/notes', ['note' => 'Said he will pay on Thursday', 'remind_on' => today_iso()])->assertSessionHasNoErrors();
+        $this->post('/accounts/customers/'.$ahmad->id.'/notes', ['note' => 'Prefers USD'])->assertSessionHasNoErrors();
+        $note = \App\Models\PartyNote::whereNotNull('remind_on')->firstOrFail();
+        $this->get('/')->assertOk()->assertSee('1 reminders are due.');
+        $this->get('/reminders')->assertOk()->assertSee('Said he will pay on Thursday')->assertSee('Ahmad');
+        $this->post('/notes/'.$note->id.'/done')->assertSessionHasNoErrors();
+        $this->assertNotNull($note->fresh()->done_at);
+        $this->get('/')->assertOk()->assertDontSee('reminders are due.');
+
+        // a file with the account
+        $this->get('/files/party/'.$ahmad->id)->assertOk();
+        $this->post('/files/party/'.$ahmad->id, ['file' => \Illuminate\Http\UploadedFile::fake()->create('tazkira.pdf', 120, 'application/pdf')])->assertSessionHasNoErrors();
+        $file = \App\Models\Attachment::firstOrFail();
+        $this->assertSame(['party', 'tazkira.pdf'], [$file->subject_type, $file->name]);
+        \Illuminate\Support\Facades\Storage::disk('local')->assertExists($file->path);
+        $this->get('/files/party/'.$ahmad->id.'/'.$file->id)->assertOk();
+        // only what may be opened in a browser is taken
+        $this->post('/files/party/'.$ahmad->id, ['file' => \Illuminate\Http\UploadedFile::fake()->create('run.exe', 10)])->assertSessionHasErrors('file');
+
+        // and with a paper; a file of one record is not found under another
+        $voucher = Vouchers::moneyIn($ahmad, $this->cash(), today_iso(), '100');
+        $this->get('/files/voucher/'.$voucher->id)->assertOk()->assertSee($voucher->number);
+        $this->get('/files/voucher/'.$voucher->id.'/'.$file->id)->assertNotFound();
+        $this->delete('/files/party/'.$ahmad->id.'/'.$file->id)->assertSessionHasNoErrors();
+        \Illuminate\Support\Facades\Storage::disk('local')->assertMissing($file->path);
+        $this->assertSame(0, \App\Models\Attachment::count());
+    }
+
+    public function test_a_recurring_expense_is_recorded_once_a_month_by_itself(): void
+    {
+        $this->business();
+        $owner = $this->owner();
+        $this->openingCash('AFN', '5000');
+        $cash = $this->cash();
+
+        $this->get('/recurring-expenses')->assertOk();
+        $this->post('/recurring-expenses', ['account_category_id' => AccountCategory::byKey('expense_rent')->id, 'paid_account_id' => $cash->id, 'amount' => '1000', 'day' => 1, 'description' => 'Shop rent', 'is_active' => 1])->assertSessionHasNoErrors();
+        // its day has not come yet this month
+        $this->post('/recurring-expenses', ['account_category_id' => AccountCategory::byKey('expense_telephone')->id, 'paid_account_id' => $cash->id, 'amount' => '300', 'day' => 28, 'is_active' => 1])->assertSessionHasNoErrors();
+
+        $this->post('/recurring-expenses/run')->assertSessionHasNoErrors();
+        $this->assertSame(1, \App\Models\Expense::count());
+        $this->assertSame('4000.00', Ledger::balance($cash));
+        // the same month again: nothing more
+        $this->assertSame(0, \App\Services\OpeningBalances::runRecurring());
+        $this->assertSame(1, \App\Models\Expense::count());
+        // next month it is due again
+        $this->travelTo(now()->addMonth());
+        $this->assertSame(2, \App\Services\OpeningBalances::runRecurring());
+        $this->assertSame('2700.00', Ledger::balance($cash));
+
+        // one that cannot be paid is left, and the owner is told
+        $this->post('/recurring-expenses', ['account_category_id' => AccountCategory::byKey('expense_staff')->id, 'paid_account_id' => $cash->id, 'amount' => '90000', 'day' => 1, 'description' => 'Salaries', 'is_active' => 1])->assertSessionHasNoErrors();
+        $this->assertSame(0, \App\Services\OpeningBalances::runRecurring());
+        $this->assertSame('2700.00', Ledger::balance($cash));
+        $this->assertTrue(\App\Models\Notice::where('user_id', $owner->id)->where('body', 'like', 'Salaries%')->exists());
+        $this->booksBalance();
+    }
+
     public function test_a_user_sees_only_what_the_role_allows(): void
     {
         $this->business();
