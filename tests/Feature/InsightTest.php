@@ -268,7 +268,7 @@ class InsightTest extends TestCase
         $this->post('/handovers', ['from' => $box->id, 'to' => $main->id, 'counted' => [$boxAccount->id => '2900'], 'note' => 'End of shift'])->assertSessionHasNoErrors()->assertRedirect('/handovers');
         $handover = \App\Models\Handover::firstOrFail();
         $this->assertSame('-100.00', $handover->lines[0]['difference']);
-        $this->assertSame('100.00', (string) $boxAccount->fresh()->total->balance);
+        $this->assertSame('100.00', \App\Support\Num::money($boxAccount->fresh()->total->balance));
         $this->assertSame(1, Alert::where('kind', 'cash')->count());
 
         // the one who hands over does not accept his own handover
