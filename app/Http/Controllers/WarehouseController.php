@@ -25,6 +25,14 @@ class WarehouseController extends CrudController
 
     protected array $search = ['name', 'address'];
 
+    /** A branch that never bought anything has no warehouse yet: its main one is made when the list is first opened. */
+    public function index(\Illuminate\Http\Request $request): \Illuminate\View\View
+    {
+        Warehouse::main();
+
+        return parent::index($request);
+    }
+
     protected function fields(?Model $record): array
     {
         return [
