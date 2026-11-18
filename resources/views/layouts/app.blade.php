@@ -21,7 +21,7 @@
         </main>
         <footer class="app-footer">
             <span>© {{ date('Y') }} {{ config('app.name') }}</span>
-            <nav><span class="text-muted">{{ __('app.by') }} <a href="https://fida.af" target="_blank" rel="noopener">Fida Technologies</a></span></nav>
+            @unless (white_label())<nav><span class="text-muted">{{ __('app.by') }} <a href="https://fida.af" target="_blank" rel="noopener">Fida Technologies</a></span></nav>@endunless
         </footer>
     </div>
 </div>

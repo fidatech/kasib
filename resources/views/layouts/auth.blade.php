@@ -20,7 +20,7 @@
         </div>
         <div class="auth-mobile-hero"><span class="amh-logo"><x-brand-logo :size="44" /></span><strong>{{ config('app.name') }}</strong><small>{{ __('app.auth.hero_kicker') }}</small></div>
         @yield('content')
-        <footer class="mt-4 small text-muted">© {{ date('Y') }} {{ config('app.name') }} · <a href="https://fida.af" target="_blank" rel="noopener">Fida Technologies</a></footer>
+        <footer class="mt-4 small text-muted">© {{ date('Y') }} {{ config('app.name') }}@unless (white_label()) · <a href="https://fida.af" target="_blank" rel="noopener">Fida Technologies</a>@endunless</footer>
     </main>
 </div>
 @include('partials.flash')

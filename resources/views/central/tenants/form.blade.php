@@ -15,6 +15,8 @@
         $field('plan', 'Plan', ['col' => 3, 'help' => 'starter or pro. Empty counts as starter.']),
         $field('max_users', 'Users allowed', ['col' => 3, 'type' => 'number', 'help' => 'Empty means no limit']),
         $field('max_accounts', 'Accounts allowed', ['col' => 3, 'type' => 'number', 'help' => 'Empty means no limit']),
+        $field('brand_name', 'White label: its own name', ['col' => 6, 'help' => 'Shown to its users instead of the name of the system, and the name of the company is left out. Empty: no white label.']),
+        $field('seller_code', 'Code of its seller', ['col' => 6, 'value' => old('seller_code', $tenant?->seller_id ? \App\Models\Central\Seller::find($tenant->seller_id)?->code : null), 'help' => 'Empty: sold by the company itself.']),
         $field('licence_expires_on', 'Licence until', ['col' => 3, 'type' => 'date', 'value' => old('licence_expires_on', $tenant?->licence_expires_on?->format('Y-m-d'))]),
     ];
     $owner = [

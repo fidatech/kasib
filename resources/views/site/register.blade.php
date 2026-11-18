@@ -13,6 +13,7 @@
                 @if ($errors->any())
                     <div class="alert alert-danger" role="alert">{{ __('Please correct the boxes marked below.') }}</div>
                 @endif
+                <input type="hidden" name="ref" value="{{ old('ref', request('ref')) }}">
                 <div class="site-trap" aria-hidden="true"><label for="website">Website</label><input type="text" id="website" name="website" tabindex="-1" autocomplete="off"></div>
 
                 <h2 class="site-form-head">{{ __('The plan') }}</h2>

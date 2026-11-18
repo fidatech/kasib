@@ -43,6 +43,10 @@ class InitializeTenancy
         }
 
         $this->tenancy->initialize($tenant);
+        // white label: its users see its own name wherever the name of the system would stand
+        static $system = null;
+        $system ??= config('app.name');
+        config(['app.name' => filled($tenant->brand_name) ? $tenant->brand_name : $system]);
 
         return $next($request);
     }

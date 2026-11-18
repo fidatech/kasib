@@ -73,6 +73,8 @@ class TenantController extends Controller
         $data = $request->validate($this->rules($tenant));
 
         $data['domain'] = strtolower($data['domain'] ?? '') ?: $tenant->domain;
+        $data['seller_id'] = ! empty($data['seller_code']) ? \App\Models\Central\Seller::where('code', $data['seller_code'])->value('id') : null;
+        unset($data['seller_code']);
         $tenant->update($data);
         AdminLog::record('updated', $tenant);
 
@@ -103,6 +105,8 @@ class TenantController extends Controller
             'max_branches' => ['nullable', 'integer', 'min:0', 'max:1000'],
             'plan' => ['nullable', Rule::in(array_keys(\App\Services\Billing::PLANS))],
             'max_users' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            'brand_name' => ['nullable', 'string', 'max:150'],
+            'seller_code' => ['nullable', 'string', 'max:40', Rule::exists(\App\Models\Central\Seller::class, 'code')],
             'max_accounts' => ['nullable', 'integer', 'min:1', 'max:10000000'],
             'licence_expires_on' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:2000'],

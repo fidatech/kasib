@@ -61,6 +61,7 @@ class PaymentRequests
                 'number' => sprintf('RCP-%06d', ((int) Payment::max('id')) + 1),
             ]);
             Billing::settle($invoice);
+            Commissions::forPayment($payment);
             $request->update(['status' => 'approved', 'invoice_id' => $invoice->id, 'payment_id' => $payment->id, 'decided_by' => $adminId, 'decided_at' => now()]);
             AdminLog::record('payment', $tenant, $payment->number.' $'.$payment->amount.' hesabpay (request '.$request->id.')');
 

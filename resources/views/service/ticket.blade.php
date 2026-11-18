@@ -9,7 +9,7 @@
     <div class="talk">
         @foreach ($ticket->messages as $message)
             <div class="talk-msg {{ $message->side === 'client' ? 'is-me' : '' }}">
-                <div class="talk-head"><strong>{{ $message->side === 'support' ? 'Fida Technologies · '.$message->author : $message->author }}</strong><span dir="ltr">{{ $message->created_at?->format('Y-m-d H:i') }}</span></div>
+                <div class="talk-head"><strong>{{ $message->side === 'support' ? (white_label() ? __('Support') : 'Fida Technologies · '.$message->author) : $message->author }}</strong><span dir="ltr">{{ $message->created_at?->format('Y-m-d H:i') }}</span></div>
                 <div class="talk-body">{{ $message->body }}</div>
             </div>
         @endforeach

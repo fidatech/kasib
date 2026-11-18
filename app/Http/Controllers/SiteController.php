@@ -46,6 +46,7 @@ class SiteController extends Controller
             'province' => ['nullable', 'string', 'max:100'],
             'branches' => ['nullable', 'integer', 'min:0', 'max:500'],
             'plan' => ['nullable', Rule::in(array_keys(Billing::PLANS))],
+            'ref' => ['nullable', 'string', 'max:60'],
             'owner_name' => ['required', 'string', 'max:150'],
             'owner_email' => ['required', 'email', 'max:190'],
             'owner_phone' => ['required', 'string', 'min:7', 'max:40'],
@@ -81,6 +82,7 @@ class SiteController extends Controller
                 'notes' => trim(__('Free trial from the website.').' '.$signup->owner_phone.' '.$signup->message),
             ]);
             $tenant->forceFill(['owner_name' => $signup->owner_name, 'owner_phone' => $signup->owner_phone, 'owner_email' => $signup->owner_email])->save();
+            \App\Services\Commissions::attach($tenant, $signup->ref);
             $signup->update(['status' => 'approved', 'tenant_id' => $tenant->id, 'decided_at' => now(), 'password' => null]);
             \App\Models\Central\AdminLog::record('created', $tenant, 'Free trial of '.$days.' days, opened from the website');
         } catch (\Throwable $e) {

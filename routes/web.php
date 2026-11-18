@@ -141,6 +141,7 @@ Route::middleware('central')->prefix('admin')->name('admin.')->group(function ()
             Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
             Route::get('invoices/{id}', [InvoiceController::class, 'show'])->name('invoices.show')->whereNumber('id');
             Route::get('payments', [$c.'PaymentController', 'index'])->name('payments.index');
+            Route::get('sellers', [$c.'SellerController', 'index'])->name('sellers.index');
             Route::get('payment-requests', [$c.'PaymentRequestController', 'index'])->name('payment-requests.index');
             Route::get('payment-requests/{id}/picture', [$c.'PaymentRequestController', 'picture'])->name('payment-requests.picture')->whereNumber('id');
             Route::get('payments/{id}/receipt', [$c.'PaymentController', 'receipt'])->name('payments.receipt')->whereNumber('id');
@@ -150,6 +151,10 @@ Route::middleware('central')->prefix('admin')->name('admin.')->group(function ()
             Route::post('invoices/{id}/status', [InvoiceController::class, 'status'])->name('invoices.status')->whereNumber('id');
             Route::put('prices', [InvoiceController::class, 'prices'])->name('prices.update');
             Route::post('payments', [$c.'PaymentController', 'store'])->name('payments.store');
+            Route::post('sellers', [$c.'SellerController', 'store'])->name('sellers.store');
+            Route::put('sellers/{id}', [$c.'SellerController', 'update'])->name('sellers.update')->whereNumber('id');
+            Route::post('sellers/reward', [$c.'SellerController', 'reward'])->name('sellers.reward');
+            Route::post('commissions/{id}/paid', [$c.'SellerController', 'paid'])->name('sellers.paid')->whereNumber('id');
             Route::post('payment-requests/{id}/approve', [$c.'PaymentRequestController', 'approve'])->name('payment-requests.approve')->whereNumber('id');
             Route::post('payment-requests/{id}/reject', [$c.'PaymentRequestController', 'reject'])->name('payment-requests.reject')->whereNumber('id');
             Route::delete('payments/{id}', [$c.'PaymentController', 'destroy'])->name('payments.destroy')->whereNumber('id');
@@ -213,6 +218,9 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
 
     // a business whose licence ended sends its payment from the page that says so (answered by the tenancy middleware)
     Route::post('paid', fn () => redirect('/'))->name('service.paid')->middleware('throttle:6,60');
+
+    // someone who came over from a linked business hands in the pass he was given there
+    Route::get('enter/{token}', [\App\Http\Controllers\BusinessLinkController::class, 'enter'])->name('businesses.enter')->where('token', '[A-Za-z0-9]{48}')->middleware('throttle:20,1');
 
     // a customer reads his own statement from the private link he was sent
     Route::get('s/{token}', [StatementLinkController::class, 'show'])->name('statement.shared')->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1');
@@ -299,6 +307,10 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
             Route::get('reports/sales-by-item', [TradeReportController::class, 'items'])->name('trade.reports.items');
             Route::get('reports/stock', [TradeReportController::class, 'stock'])->name('trade.reports.stock');
             Route::get('reports/sales-by-customer', [TradeReportController::class, 'parties'])->name('trade.reports.parties');
+            Route::get('businesses', [\App\Http\Controllers\BusinessLinkController::class, 'index'])->name('businesses.index');
+            Route::post('businesses', [\App\Http\Controllers\BusinessLinkController::class, 'store'])->name('businesses.store')->middleware('throttle:6,10');
+            Route::post('businesses/{id}/open', [\App\Http\Controllers\BusinessLinkController::class, 'open'])->name('businesses.open')->whereNumber('id');
+            Route::delete('businesses/{id}', [\App\Http\Controllers\BusinessLinkController::class, 'destroy'])->name('businesses.destroy')->whereNumber('id');
             Route::post('branches/switch', [BranchController::class, 'switch'])->name('branches.switch');
             $crud('branches', BranchController::class, 'branches');
             Route::post('branch-transfers/{id}/cancel', [BranchTransferController::class, 'cancel'])->name('branch-transfers.cancel')->whereNumber('id');

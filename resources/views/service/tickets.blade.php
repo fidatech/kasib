@@ -1,7 +1,7 @@
 @extends('layouts.app', ['title' => __('Support')])
 
 @section('content')
-<x-page-header :title="__('Support')" icon="headset" :subtitle="__('Ask Fida Technologies for help. The answer comes here.')">
+<x-page-header :title="__('Support')" icon="headset" :subtitle="white_label() ? __('Ask for help. The answer comes here.') : __('Ask Fida Technologies for help. The answer comes here.')">
     <button type="button" class="btn btn-primary" data-bs-toggle="collapse" data-bs-target="#newTicket" aria-controls="newTicket" aria-expanded="{{ $errors->any() ? 'true' : 'false' }}"><x-icon name="plus" class="me-1" /> {{ __('New question') }}</button>
 </x-page-header>
 

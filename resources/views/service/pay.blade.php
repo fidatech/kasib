@@ -1,6 +1,10 @@
 {{-- Where to pay, and the form "we paid". Shown on the licence page of a business. --}}
 @php $onPro = \App\Services\Billing::plan(tenant()) === 'pro'; @endphp
 <div class="alert alert-info mt-3 mb-0">{{ __('Your plan: :plan.', ['plan' => __($onPro ? 'Pro' : 'Starter')]) }} @unless ($onPro)<a href="{{ route('service.tickets') }}">{{ __('Ask for the Pro plan') }}</a> · {{ __('it adds sales, purchases and stock.') }}@endunless</div>
+@php $reward = \App\Models\Central\CentralSetting::read('referral_reward'); @endphp
+@if (! white_label() && \App\Support\Num::isPositive($reward ?: 0))
+    <div class="alert alert-success mt-3 mb-0">{{ __('Bring another business and earn :amount when it pays for the first time. Your link:', ['amount' => '$'.($reward + 0)]) }} <span dir="ltr" class="fw-semibold">{{ (request()->isSecure() ? 'https://' : 'http://').config('tenancy.central_domains')[0].'/register?ref='.tenant()->slug }}</span></div>
+@endif
 <div class="card mt-3 mb-0" id="pay">
     <div class="card-header"><h2 class="h5 card-title mb-0">{{ __('Pay the subscription through HesabPay') }}</h2></div>
     <div class="card-body">

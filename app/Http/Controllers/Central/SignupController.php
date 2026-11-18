@@ -60,6 +60,7 @@ class SignupController extends Controller
         }
         $tenant->forceFill(['owner_name' => $signup->owner_name, 'owner_phone' => $signup->owner_phone, 'owner_email' => $signup->owner_email])->save();
         $signup->update(['status' => 'approved', 'slug' => $data['slug'], 'tenant_id' => $tenant->id, 'decided_by' => $request->user('admin')->id, 'decided_at' => now(), 'password' => null]);
+        \App\Services\Commissions::attach($tenant, $signup->ref);
         AdminLog::record('created', $tenant, 'Approved the request of the website');
 
         return redirect()->route('admin.signups.index', ['status' => 'approved'])->with('success', __(':name is ready at :domain.', ['name' => $tenant->name, 'domain' => $tenant->domain]));

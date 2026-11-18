@@ -49,6 +49,7 @@ class PaymentController extends Controller
             if ($payment->invoice) {
                 Billing::settle($payment->invoice);
             }
+            \App\Services\Commissions::forPayment($payment);
 
             return $payment;
         });
@@ -63,6 +64,7 @@ class PaymentController extends Controller
         $payment = Payment::with('invoice.tenant')->findOrFail((int) $request->route('id'));
         if (! $payment->isCancelled()) {
             $payment->update(['cancelled_at' => now()]);
+            \App\Services\Commissions::cancelFor($payment);
             if ($payment->invoice) {
                 Billing::settle($payment->invoice);
             }

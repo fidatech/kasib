@@ -113,6 +113,14 @@ if (! function_exists('tenant')) {
     }
 }
 
+if (! function_exists('white_label')) {
+    /** True in a business that shows its own name and leaves the name of the company out. */
+    function white_label(): bool
+    {
+        return filled(tenant()?->brand_name);
+    }
+}
+
 if (! function_exists('current_branch')) {
     /** The branch the signed-in user works in. Everything they record goes into its books. */
     function current_branch(): ?\App\Models\Branch
