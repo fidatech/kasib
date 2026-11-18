@@ -36,6 +36,7 @@ use App\Http\Controllers\PreferenceController;
 use App\Http\Controllers\RateController;
 use App\Http\Controllers\RecurringExpenseController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SessionController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SetupController;
 use App\Http\Controllers\ShareholderController;
@@ -214,6 +215,9 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
         Route::get('password', [PreferenceController::class, 'password'])->name('password.edit');
         Route::put('password', [PreferenceController::class, 'updatePassword'])->name('password.update');
         Route::post('refresh', [PreferenceController::class, 'refresh'])->name('system.refresh');
+        Route::get('sessions', [SessionController::class, 'index'])->name('sessions.index');
+        Route::post('sessions/others', [SessionController::class, 'others'])->name('sessions.others');
+        Route::delete('sessions/{id}', [SessionController::class, 'destroy'])->name('sessions.destroy')->whereNumber('id');
         Route::get('two-step', [TwoStepController::class, 'show'])->name('two-step.show');
         Route::post('two-step', [TwoStepController::class, 'start'])->name('two-step.start');
         Route::post('two-step/confirm', [TwoStepController::class, 'confirm'])->name('two-step.confirm')->middleware('throttle:10,1');

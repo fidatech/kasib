@@ -83,7 +83,7 @@
                 </div>
             </div>
             <div class="card-footer d-flex flex-wrap gap-3 justify-content-between align-items-center">
-                <span class="small text-muted">{{ __('Main branch :first the first year, then :renewal a year.', ['first' => '$'.($prices['main_first'] + 0), 'renewal' => '$'.($prices['main_renewal'] + 0)]) }}</span>
+                <span class="small text-muted">{{ __('The subscription is :first the first year, then :renewal a year.', ['first' => '$'.($prices['main_first'] + 0), 'renewal' => '$'.($prices['main_renewal'] + 0)]) }}</span>
                 <button type="submit" class="btn btn-primary btn-lg">{{ __('Send the request') }}</button>
             </div>
         </form>

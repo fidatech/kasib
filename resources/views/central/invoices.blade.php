@@ -40,7 +40,7 @@
                         </table>
                     </div>
                 @else
-                    <div class="col-12 text-muted small">{{ __('Main branch: the first-year price once, then hosting every year. Every further branch the same, at its own two prices.') }}</div>
+                    <div class="col-12 text-muted small">{{ __('The first-year price once (the system and its setup), then the yearly price every year. The plan of a business, its users and accounts allowed, is set on the business itself.') }}</div>
                 @endif
             </div>
             <div class="card-footer text-end"><button class="btn btn-primary" type="submit" @disabled($quote && ! $quote['lines'])><x-icon name="receipt" class="me-1" /> {{ __('Make invoice') }}</button></div>

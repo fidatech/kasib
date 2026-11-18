@@ -49,14 +49,9 @@
         <p class="site-lead">{{ __('In US dollars, for a year. The first year covers the setup; the years after are the hosting.') }}</p>
         <div class="site-prices">
             <article class="site-price">
-                <h3>{{ __('Main branch') }}</h3>
+                <h3>{{ __('Subscription') }}</h3>
                 <p class="site-amount"><span dir="ltr">${{ $prices['main_first'] + 0 }}</span> <small>{{ __('first year') }}</small></p>
                 <p>{{ __('then :amount a year for hosting', ['amount' => '$'.($prices['main_renewal'] + 0)]) }}</p>
-            </article>
-            <article class="site-price">
-                <h3>{{ __('Each further branch') }}</h3>
-                <p class="site-amount"><span dir="ltr">${{ $prices['branch_first'] + 0 }}</span> <small>{{ __('first year') }}</small></p>
-                <p>{{ __('then :amount a year for hosting', ['amount' => '$'.($prices['branch_renewal'] + 0)]) }}</p>
             </article>
         </div>
     </div>

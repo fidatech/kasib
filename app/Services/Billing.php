@@ -20,7 +20,7 @@ class Billing
     public const DEFAULTS = ['main_first' => '500', 'main_renewal' => '100', 'branch_first' => '100', 'branch_renewal' => '50'];
 
     public const LABELS = [
-        'main_first' => 'Main branch, first year', 'main_renewal' => 'Main branch, hosting for a year',
+        'main_first' => 'Subscription, first year (the system and its setup)', 'main_renewal' => 'Subscription for a year',
         'branch_first' => 'A further branch, first year', 'branch_renewal' => 'A further branch, hosting for a year',
     ];
 

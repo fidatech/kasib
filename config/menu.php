@@ -73,6 +73,7 @@ return [
         ['label' => 'Audit Log', 'route' => 'audit.index', 'can' => 'audit.view'],
         ['label' => 'Sign-in History', 'route' => 'audit.index', 'params' => ['action' => 'signed in'], 'can' => 'audit.view'],
         ['label' => 'Two-step sign-in', 'route' => 'two-step.show'],
+        ['label' => 'Active Sessions', 'route' => 'sessions.index'],
         ['label' => 'Backup & Restore', 'route' => 'backups.index', 'active' => 'backups.*', 'can' => 'settings.manage'],
     ]],
 

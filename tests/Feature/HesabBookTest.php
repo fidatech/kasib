@@ -798,6 +798,64 @@ class HesabBookTest extends TestCase
         $this->booksBalance();
     }
 
+    public function test_a_user_sees_where_he_is_signed_in_and_signs_another_browser_out(): void
+    {
+        $this->business();
+        $owner = $this->owner();
+
+        $this->get('/')->assertOk();
+        $this->assertSame(1, \App\Models\UserSession::where('user_id', $owner->id)->count());
+        // a second browser of the same user
+        $other = \App\Models\UserSession::create(['user_id' => $owner->id, 'token' => \App\Models\UserSession::token('another-browser'), 'ip' => '10.0.0.9', 'agent' => 'Mozilla/5.0 (Windows NT 10.0) Chrome/130.0', 'last_seen_at' => now()]);
+        $this->get('/sessions')->assertOk()->assertSee('This browser')->assertSee('Chrome · Windows')->assertSee('10.0.0.9');
+        $this->delete('/sessions/'.$other->id)->assertSessionHasNoErrors();
+        $this->assertNull(\App\Models\UserSession::find($other->id));
+
+        // the browser one is in is signed out with "Sign out", not from the list
+        $mine = \App\Models\UserSession::where('user_id', $owner->id)->firstOrFail();
+        $this->delete('/sessions/'.$mine->id)->assertStatus(422);
+
+        // somebody else's session is not his to end; a user who manages users may end it
+        $cashier = $this->userWith(['transactions.view']);
+        $this->delete('/sessions/'.$mine->id)->assertForbidden();
+        $this->get('/sessions')->assertOk()->assertDontSee($owner->name);
+
+        // a session that was taken off the list ends at its next request
+        $this->owner();
+        $this->get('/')->assertOk();
+        \App\Models\UserSession::where('user_id', $owner->id)->delete();
+        $this->get('/')->assertRedirect('/login');
+        $this->assertGuest();
+    }
+
+    public function test_an_exchange_without_an_amount_received_uses_the_usual_rate(): void
+    {
+        $this->business();
+        $this->owner();
+        $this->rates(['USD' => '70']);
+        $this->openingCash('AFN', '100000');
+        $afn = $this->cash('AFN');
+        $usd = $this->cash('USD');
+        $buy = fn (array $more) => $this->post('/exchanges', ['date' => today_iso(), 'account_id' => $afn->id, 'other_account_id' => $usd->id] + $more)->assertSessionHasNoErrors();
+        $last = fn () => Voucher::where('kind', 'exchange')->orderByDesc('id')->firstOrFail();
+
+        // no exchange yet: the rate of the business (1 AFN = 1/70 USD)
+        $buy(['amount' => '7000']);
+        $this->assertSame('100.00', $last()->other_amount);
+        // a rate typed by hand
+        $buy(['amount' => '7100', 'rate' => '0.014']);
+        $this->assertSame('99.40', $last()->other_amount);
+        // both amounts typed: the rate follows from them
+        $buy(['amount' => '7200', 'other_amount' => '100']);
+        $this->assertSame('100.00', $last()->other_amount);
+        // nothing typed now: the average of the exchanges before it
+        $usual = \App\Http\Controllers\ExchangeController::usualRate($afn, $usd);
+        $this->assertSame(\App\Support\Num::round(\App\Support\Num::div(\App\Support\Num::sum(Voucher::where('kind', 'exchange')->pluck('rate')), 3), 6), $usual);
+        $buy(['amount' => '1000']);
+        $this->assertSame(\App\Support\Num::money(\App\Support\Num::mul('1000', $usual)), $last()->other_amount);
+        $this->booksBalance();
+    }
+
     public function test_a_user_sees_only_what_the_role_allows(): void
     {
         $this->business();

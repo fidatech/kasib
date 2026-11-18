@@ -44,14 +44,39 @@ class ExchangeController extends VoucherController
             $this->moneyField('account_id', 'Given from', 'The account the money leaves.'),
             $this->amountField('amount', 'Amount given'),
             ['default' => null] + $this->moneyField('other_account_id', 'Received into', 'An account of the other currency.'),
-            $this->amountField('other_amount', 'Amount received'),
+            $this->amountField('other_amount', 'Amount received', 'Leave it empty to have it worked out from the rate.', false),
+            ['name' => 'rate', 'label' => 'Rate', 'type' => 'decimal', 'col' => 4, 'rules' => ['nullable', 'numeric', 'gt:0'],
+                'help' => 'How much is received for one unit given. Empty: the average of the last five exchanges between these two currencies, or the rate of the business.'],
             $this->detailsField(),
         ];
     }
 
+    /**
+     * The rate an exchange between these two accounts usually has: the average of the last five
+     * exchanges the same way, or, when there were none, the rate of the business.
+     */
+    public static function usualRate(\App\Models\Account $from, \App\Models\Account $to): string
+    {
+        $last = Voucher::where('kind', Voucher::EXCHANGE)->whereNull('cancelled_at')->where('currency_id', $from->currency_id)->where('other_currency_id', $to->currency_id)
+            ->orderByDesc('id')->limit(5)->pluck('rate');
+        if ($last->isNotEmpty()) {
+            return Num::round(Num::div(Num::sum($last), $last->count()), 6);
+        }
+
+        return \App\Services\Rates::cross(\App\Models\Branch::main(), $from->currency, $to->currency);
+    }
+
     protected function record(array $data, Request $request): string
     {
-        $voucher = Vouchers::exchange($this->money($data['account_id']), $this->money($data['other_account_id']), $data['date'], $data['amount'], $data['other_amount'], $data['description'] ?? null);
+        $from = $this->money($data['account_id']);
+        $to = $this->money($data['other_account_id']);
+        // the amount received: as typed, or worked out from the rate; the rate: as typed, or the usual one
+        $received = $data['other_amount'] ?? null;
+        if (! Num::isPositive($received ?? 0)) {
+            $rate = Num::isPositive($data['rate'] ?? 0) ? $data['rate'] : self::usualRate($from, $to);
+            $received = Num::money(Num::mul($data['amount'], $rate));
+        }
+        $voucher = Vouchers::exchange($from, $to, $data['date'], $data['amount'], $received, $data['description'] ?? null);
 
         // a deal far from the rates of the business is probably a typing mistake: it is saved, and pointed out
         $worth = \App\Services\Rates::toBase($voucher->amount, $voucher->currency, \App\Models\Branch::main());

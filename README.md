@@ -48,6 +48,8 @@ receipt, a backup file that was downloaded can be uploaded and restored (only a 
 made itself, checked by its fingerprint), old backups are thinned (7 days, 4 weeks, 12 months),
 and each nightly backup can be sent to an FTP place outside the server (`BACKUP_FTP_*` in `.env`).
 The QR code and the two-step codes are written in the project itself: no package is needed.
+Every user sees the browsers he is signed in from and can sign the others out; an exchange
+without an amount received uses the average rate of the last five between the two currencies.
 
 ## Stack
 

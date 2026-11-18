@@ -83,6 +83,7 @@ class LoginController extends Controller
 
     public function destroy(Request $request): RedirectResponse
     {
+        \App\Models\UserSession::where('token', \App\Models\UserSession::token($request->session()->getId()))->delete();
         Auth::logout();
 
         $request->session()->invalidate();
