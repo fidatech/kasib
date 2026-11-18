@@ -22,12 +22,12 @@ class SiteController extends Controller
 {
     public function home(): View
     {
-        return view('site.home', ['prices' => Billing::prices(), 'company' => SettingsController::company()]);
+        return view('site.home', ['prices' => Billing::prices(), 'company' => SettingsController::company(), 'trial' => Billing::trialDays()]);
     }
 
     public function register(): View
     {
-        return view('site.register', ['prices' => Billing::prices(), 'company' => SettingsController::company()]);
+        return view('site.register', ['prices' => Billing::prices(), 'company' => SettingsController::company(), 'trial' => Billing::trialDays()]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -56,7 +56,35 @@ class SiteController extends Controller
         $signup = Signup::create(['token' => Str::lower(Str::random(32)), 'password' => Hash::make($data['password']), 'branches' => (int) ($data['branches'] ?? 0),
             'status' => 'pending', 'ip' => $request->ip()] + collect($data)->except(['password', 'branches'])->all());
 
+        $this->openTrial($signup, $request);
+
         return redirect()->route('site.status', ['token' => $signup->token]);
+    }
+
+    /**
+     * The free trial: when it is switched on, the business is opened at once, with a licence
+     * that ends after the days of the trial. Not more than three from one address in a day;
+     * whatever cannot be opened by itself waits for the administrator like any request.
+     */
+    private function openTrial(Signup $signup, Request $request): void
+    {
+        $days = Billing::trialDays();
+        if ($days === null || Signup::where('ip', $request->ip())->where('created_at', '>=', now()->subDay())->count() > 3) {
+            return;
+        }
+        try {
+            $tenant = app(\App\Tenancy\TenantManager::class)->create([
+                'name' => $signup->name, 'name_local' => $signup->name_local, 'slug' => $signup->slug, 'licence_no' => $signup->licence_no,
+                'licence_expires_on' => now()->addDays($days)->toDateString(), 'plan' => 'trial',
+                'owner_name' => $signup->owner_name, 'owner_email' => $signup->owner_email, 'owner_password' => $signup->password,   // already hashed
+                'notes' => trim(__('Free trial from the website.').' '.$signup->owner_phone.' '.$signup->message),
+            ]);
+            $tenant->forceFill(['owner_name' => $signup->owner_name, 'owner_phone' => $signup->owner_phone, 'owner_email' => $signup->owner_email])->save();
+            $signup->update(['status' => 'approved', 'tenant_id' => $tenant->id, 'decided_at' => now(), 'password' => null]);
+            \App\Models\Central\AdminLog::record('created', $tenant, 'Free trial of '.$days.' days, opened from the website');
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     /** The applicant follows the request here: waiting, approved (with the address) or rejected (with the reason). */

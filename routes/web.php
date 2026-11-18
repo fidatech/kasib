@@ -136,6 +136,8 @@ Route::middleware('central')->prefix('admin')->name('admin.')->group(function ()
             Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
             Route::get('invoices/{id}', [InvoiceController::class, 'show'])->name('invoices.show')->whereNumber('id');
             Route::get('payments', [$c.'PaymentController', 'index'])->name('payments.index');
+            Route::get('payment-requests', [$c.'PaymentRequestController', 'index'])->name('payment-requests.index');
+            Route::get('payment-requests/{id}/picture', [$c.'PaymentRequestController', 'picture'])->name('payment-requests.picture')->whereNumber('id');
             Route::get('payments/{id}/receipt', [$c.'PaymentController', 'receipt'])->name('payments.receipt')->whereNumber('id');
         });
         Route::middleware('staff:billing.manage')->group(function () use ($c) {
@@ -143,6 +145,8 @@ Route::middleware('central')->prefix('admin')->name('admin.')->group(function ()
             Route::post('invoices/{id}/status', [InvoiceController::class, 'status'])->name('invoices.status')->whereNumber('id');
             Route::put('prices', [InvoiceController::class, 'prices'])->name('prices.update');
             Route::post('payments', [$c.'PaymentController', 'store'])->name('payments.store');
+            Route::post('payment-requests/{id}/approve', [$c.'PaymentRequestController', 'approve'])->name('payment-requests.approve')->whereNumber('id');
+            Route::post('payment-requests/{id}/reject', [$c.'PaymentRequestController', 'reject'])->name('payment-requests.reject')->whereNumber('id');
             Route::delete('payments/{id}', [$c.'PaymentController', 'destroy'])->name('payments.destroy')->whereNumber('id');
         });
         Route::get('income', [$c.'IncomeController', 'index'])->name('income.index')->middleware('staff:reports');
@@ -202,6 +206,9 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
     // anyone who holds a receipt can check it, without signing in
     Route::get('check/{number}/{code}', ReceiptCheckController::class)->name('receipts.verify')->where(['number' => '[A-Z]{2}-[0-9]{6,}', 'code' => '[a-f0-9]{12}'])->middleware('throttle:30,1');
 
+    // a business whose licence ended sends its payment from the page that says so (answered by the tenancy middleware)
+    Route::post('paid', fn () => redirect('/'))->name('service.paid')->middleware('throttle:6,60');
+
     // a customer reads his own statement from the private link he was sent
     Route::get('s/{token}', [StatementLinkController::class, 'show'])->name('statement.shared')->where('token', '[A-Za-z0-9]{40}')->middleware('throttle:30,1');
 
@@ -218,6 +225,9 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
         // the service of Fida Technologies, seen from inside the business
         Route::get('service/licence', [\App\Http\Controllers\ServiceController::class, 'licence'])->name('service.licence');
         Route::get('service/invoices/{id}', [\App\Http\Controllers\ServiceController::class, 'invoice'])->name('service.invoice')->whereNumber('id');
+        Route::post('service/pay', [\App\Http\Controllers\ServiceController::class, 'pay'])->name('service.pay')->middleware('throttle:10,60');
+        Route::get('service/hesabpay-qr', [\App\Http\Controllers\ServiceController::class, 'qr'])->name('service.qr');
+        Route::get('help', [\App\Http\Controllers\HelpController::class, 'index'])->name('help.index');
         Route::get('service/support', [\App\Http\Controllers\ServiceController::class, 'tickets'])->name('service.tickets');
         Route::post('service/support', [\App\Http\Controllers\ServiceController::class, 'open'])->name('service.tickets.open');
         Route::get('service/support/{id}', [\App\Http\Controllers\ServiceController::class, 'ticket'])->name('service.ticket')->whereNumber('id');

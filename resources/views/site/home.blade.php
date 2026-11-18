@@ -47,6 +47,7 @@
     <div class="site-wrap">
         <h2>{{ __('Prices') }}</h2>
         <p class="site-lead">{{ __('In US dollars, for a year. The first year covers the setup; the years after are the hosting.') }}</p>
+        @if ($trial ?? null)<p class="site-lead"><strong>{{ __('Free for :days days. Your system opens at once; nothing is paid now.', ['days' => $trial]) }}</strong> <a href="{{ url('/register') }}">{{ __('Register your business') }}</a></p>@endif
         <div class="site-prices">
             <article class="site-price">
                 <h3>{{ __('Subscription') }}</h3>

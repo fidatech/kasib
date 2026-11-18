@@ -102,5 +102,7 @@ return [
         ['label' => 'Income & Expense Categories', 'route' => 'expense-categories.index', 'active' => 'expense-categories.*', 'can' => 'accounts.view'],
     ]],
 
+    ['label' => 'Help', 'icon' => 'circle-question', 'route' => 'help.index'],
+
     // support, licence and invoices open from the menu of the profile in the navbar
 ];

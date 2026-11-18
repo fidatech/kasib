@@ -592,6 +592,68 @@ if (name) el.setAttribute('aria-label', name);
 });
 };
 pageInits.push(function (scope) { ERP.nameIcons(scope); });
+(function () {
+var tour = window.ERP_TOUR;
+if (!tour || !tour.steps || !tour.steps.length) return;
+var key = 'hb.tour.' + tour.user;
+var ring = null, card = null, at = 0;
+function seen() { try { return localStorage.getItem(key) === '1'; } catch (e) { return true; } }
+function end() {
+if (ring) ring.remove();
+if (card) card.remove();
+ring = card = null;
+try { localStorage.setItem(key, '1'); } catch (e) { /* private window */ }
+}
+function button(text, cls, fn) {
+var b = document.createElement('button');
+b.type = 'button'; b.className = 'btn btn-sm ' + cls; b.textContent = text;
+b.addEventListener('click', fn);
+return b;
+}
+function show(i, dir) {
+var el = null;
+while (i >= 0 && i < tour.steps.length) {
+el = document.querySelector(tour.steps[i].el);
+if (el && el.getClientRects().length) break;
+i += dir;
+}
+if (i < 0 || i >= tour.steps.length) { end(); return; }
+at = i;
+if (!ring) {
+ring = document.createElement('div'); ring.className = 'tour-ring';
+card = document.createElement('div'); card.className = 'tour-card'; card.setAttribute('role', 'dialog');
+document.body.appendChild(ring); document.body.appendChild(card);
+}
+var r = el.getBoundingClientRect();
+ring.style.top = (r.top - 4) + 'px'; ring.style.left = (r.left - 4) + 'px';
+ring.style.width = (r.width + 8) + 'px'; ring.style.height = (r.height + 8) + 'px';
+card.textContent = '';
+var title = document.createElement('div'); title.className = 'tour-title'; title.textContent = tour.steps[i].title;
+var text = document.createElement('div'); text.className = 'tour-text'; text.textContent = tour.steps[i].text;
+var actions = document.createElement('div'); actions.className = 'tour-actions';
+var count = document.createElement('span'); count.className = 'tour-count'; count.textContent = (i + 1) + ' / ' + tour.steps.length;
+actions.appendChild(count);
+actions.appendChild(button(T.tourSkip || 'Skip', 'btn-light-secondary', end));
+if (i > 0) actions.appendChild(button(T.tourBack || 'Back', 'btn-light-secondary', function () { show(at - 1, -1); }));
+actions.appendChild(button(i === tour.steps.length - 1 ? (T.tourDone || 'Done') : (T.tourNext || 'Next'), 'btn-primary', function () { show(at + 1, 1); }));
+card.appendChild(title); card.appendChild(text); card.appendChild(actions);
+var w = card.offsetWidth, h = card.offsetHeight, top, left;
+if (r.height > window.innerHeight * 0.6) {           // a tall part (the menu): the card stands beside it
+top = Math.max(8, r.top + 24);
+left = r.right + 12 + w <= window.innerWidth ? r.right + 12 : r.left - w - 12;
+} else {
+top = r.bottom + 12 + h <= window.innerHeight ? r.bottom + 12 : r.top - h - 12;
+left = r.left;
+}
+card.style.top = Math.max(8, Math.min(top, window.innerHeight - h - 8)) + 'px';
+card.style.left = Math.max(8, Math.min(left, window.innerWidth - w - 8)) + 'px';
+}
+ERP.tour = { start: function () { show(0, 1); }, end: end };
+document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('[data-tour-start]')) show(0, 1); });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && ring) end(); });
+window.addEventListener('resize', function () { if (ring) show(at, 1); });
+if (tour.auto && !seen()) setTimeout(function () { show(0, 1); }, 700);
+})();
 pageInits.push(function (scope) { $$('[data-recorder]', scope).forEach(function (button) {
 if (!navigator.mediaDevices || !window.MediaRecorder || !window.DataTransfer) { button.hidden = true; return; }
 var recorder = null;

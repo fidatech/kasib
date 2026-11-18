@@ -68,6 +68,7 @@
                 @endcan
                 @can('settings.view')
                     <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ route('help.index') }}"><x-icon name="circle-question" /> {{ __('Help') }}</a></li>
                     <li><a class="dropdown-item" href="{{ route('service.tickets') }}"><x-icon name="headset" /> {{ __('Support') }}</a></li>
                     <li><a class="dropdown-item" href="{{ route('service.licence') }}"><x-icon name="file-invoice-dollar" /> {{ __('Licence and Invoices') }}</a></li>
                     <li><a class="dropdown-item" href="{{ route('closing.index') }}"><x-icon name="lock" /> {{ __('Period Closing') }}</a></li>

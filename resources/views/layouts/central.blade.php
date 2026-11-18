@@ -29,6 +29,7 @@
                         'Billing' => [
                             ['Invoices', 'receipt', 'admin.invoices.index', 'admin.invoices.*', 'billing.view'],
                             ['Payments', 'money-bill-wave', 'admin.payments.index', 'admin.payments.*', 'billing.view'],
+                            ['Payment requests', 'wallet', 'admin.payment-requests.index', 'admin.payment-requests.*', 'billing.view', $admin->allows('billing.view') ? \App\Models\Central\PaymentRequest::where('status', 'pending')->count() : 0],
                             ['Income reports', 'chart-column', 'admin.income.index', 'admin.income.*', 'reports'],
                         ],
                         'Da Afghanistan Bank' => [

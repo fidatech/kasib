@@ -62,6 +62,37 @@ class Billing
         Licence::check($tenant);
     }
 
+    /**
+     * The invoice of the next year of a business: from the day its licence ends (or today, when
+     * that day has passed) for one year. Used when a business pays from inside the system.
+     */
+    public static function invoiceNextYear(Tenant $tenant, ?string $note = null): Invoice
+    {
+        $quote = self::quote($tenant);
+        $from = $tenant->licence_expires_on && $tenant->licence_expires_on->toDateString() > now()->toDateString() ? $tenant->licence_expires_on->copy() : now()->startOfDay();
+        $main = collect($quote['lines'])->first(fn (array $line) => str_starts_with($line['key'], 'main_'));
+
+        return \Illuminate\Support\Facades\DB::connection((new Invoice)->getConnectionName())->transaction(fn () => Invoice::create([
+            'tenant_id' => $tenant->id, 'from_date' => $from->toDateString(), 'to_date' => $from->copy()->addYear()->toDateString(), 'note' => $note,
+            'number' => sprintf('INV-%06d', ((int) Invoice::max('id')) + 1),
+            'main_branch_price' => $main['amount'] ?? '0', 'branch_price' => self::prices()['branch_renewal'],
+            'branches' => $quote['branches'], 'new_branches' => $quote['new_branches'], 'lines' => $quote['lines'], 'total' => $quote['total'],
+        ]));
+    }
+
+    /** The free trial of the website: null when it is off, or the number of days a new business gets. */
+    public static function trialDays(): ?int
+    {
+        return CentralSetting::read('trial_enabled') === '1' ? max(1, min(90, (int) (CentralSetting::read('trial_days') ?: 14))) : null;
+    }
+
+    /** @return array{number: string, name: string, qr: bool, afn_rate: string} where a business pays */
+    public static function hesabpay(): array
+    {
+        return ['number' => (string) CentralSetting::read('hesabpay_number'), 'name' => (string) CentralSetting::read('hesabpay_name'),
+            'qr' => (bool) CentralSetting::read('hesabpay_qr'), 'afn_rate' => (string) CentralSetting::read('afn_rate')];
+    }
+
     /** @return array<string, string> the four prices */
     public static function prices(): array
     {
@@ -85,7 +116,9 @@ class Billing
     public static function quote(Tenant $tenant, bool $onlyNew = false): array
     {
         $prices = self::prices();
-        $branches = (int) app(Tenancy::class)->run($tenant, fn () => Branch::where('type', Branch::DEPENDENT)->where('is_active', true)->count());
+        // asked from inside the business itself, its database is open already
+        $count = fn () => Branch::where('type', Branch::DEPENDENT)->where('is_active', true)->count();
+        $branches = (int) ((int) app(Tenancy::class)->tenant?->id === (int) $tenant->id ? $count() : app(Tenancy::class)->run($tenant, $count));
         $earlier = Invoice::where('tenant_id', $tenant->id)->where('status', '!=', 'cancelled');
         $first = ! (clone $earlier)->exists();
         $billed = (int) (clone $earlier)->max('branches');

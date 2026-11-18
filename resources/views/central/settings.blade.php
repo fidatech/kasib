@@ -86,6 +86,46 @@
                 </div>
             </div>
         </div>
+
+        {{-- the free trial of the website, where a business pays, and the help videos --}}
+        <div class="col-12 col-xl-4">
+            <div class="card mb-0 h-100">
+                <div class="card-header"><div class="set-head"><span class="set-icon"><x-icon name="user-plus" /></span><div><h2 class="h5">{{ __('Free trial') }}</h2><small>{{ __('A visitor of the website opens his own business and tries the system') }}</small></div></div></div>
+                <div class="card-body">
+                    <input type="hidden" name="trial_enabled" value="0">
+                    <label class="switch-row form-check form-switch mb-3" for="t-on">
+                        <input class="form-check-input" type="checkbox" role="switch" id="t-on" name="trial_enabled" value="1" @checked(old('trial_enabled', $trial['enabled']))>
+                        <span>{{ __('Open a business by itself when someone registers') }}</span>
+                    </label>
+                    <label class="form-label" for="t-days">{{ __('Days of the trial') }}</label>
+                    <input type="text" inputmode="numeric" dir="ltr" autocomplete="off" class="form-control @error('trial_days') is-invalid @enderror" id="t-days" name="trial_days" value="{{ old('trial_days', $trial['days']) }}" style="max-width:120px">
+                    <div class="form-text">{{ __('While it is off, a request waits for the administrator as before. After the trial the business is locked like any licence that ended, until it pays.') }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-4">
+            <div class="card mb-0 h-100">
+                <div class="card-header"><div class="set-head"><span class="set-icon"><x-icon name="wallet" /></span><div><h2 class="h5">HesabPay</h2><small>{{ __('Where a business pays its subscription') }}</small></div></div></div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6"><label class="form-label" for="h-number">{{ __('HesabPay number') }}</label><input type="text" dir="ltr" class="form-control" id="h-number" name="hesabpay_number" value="{{ old('hesabpay_number', $hesabpay['number']) }}"></div>
+                        <div class="col-6"><label class="form-label" for="h-name">{{ __('Name on the account') }}</label><input type="text" class="form-control" id="h-name" name="hesabpay_name" value="{{ old('hesabpay_name', $hesabpay['name']) }}"></div>
+                        <div class="col-6"><label class="form-label" for="h-rate">{{ __('Afghani for one dollar') }}</label><input type="text" inputmode="decimal" dir="ltr" class="form-control @error('afn_rate') is-invalid @enderror" id="h-rate" name="afn_rate" value="{{ old('afn_rate', $hesabpay['afn_rate']) }}"></div>
+                        <div class="col-6"><label class="form-label" for="h-qr">{{ __('QR code (picture)') }}</label><input type="file" class="form-control @error('hesabpay_qr') is-invalid @enderror" id="h-qr" name="hesabpay_qr" accept="image/png,image/jpeg,image/webp"></div>
+                    </div>
+                    <div class="form-text">{{ __('Shown to a business on its licence page, with a form to send the transaction number and a picture of the payment.') }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-4">
+            <div class="card mb-0 h-100">
+                <div class="card-header"><div class="set-head"><span class="set-icon"><x-icon name="circle-question" /></span><div><h2 class="h5">{{ __('Help videos') }}</h2><small>{{ __('Shown on the help page of every business') }}</small></div></div></div>
+                <div class="card-body">
+                    <textarea class="form-control @error('help_videos') is-invalid @enderror" name="help_videos" rows="6" dir="ltr" placeholder="Money in and money out | https://youtu.be/...">{{ old('help_videos', $videos) }}</textarea>
+                    <div class="form-text">{{ __('One video on a line: the title, a | sign, and the address of the video.') }}</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="save-bar"><span class="text-muted small">{{ __('Changes apply to every business from the next invoice.') }}</span><button class="btn btn-primary" type="submit"><x-icon name="check" class="me-1" /> {{ __('Save') }}</button></div>

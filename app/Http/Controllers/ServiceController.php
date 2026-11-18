@@ -30,7 +30,43 @@ class ServiceController extends Controller
             'invoices' => Invoice::where('tenant_id', $tenant->id)->where('status', '!=', 'cancelled')->orderByDesc('id')->get(),
             'payments' => Payment::where('tenant_id', $tenant->id)->whereNull('cancelled_at')->orderByDesc('paid_on')->orderByDesc('id')->get(),
             'company' => \App\Http\Controllers\Central\SettingsController::company(),
+        ] + self::payData($tenant));
+    }
+
+    /** What the "pay" card needs: where to pay, how much, and what was sent already. */
+    public static function payData(\App\Models\Central\Tenant $tenant): array
+    {
+        $open = Invoice::where('tenant_id', $tenant->id)->where('status', 'unpaid')->orderBy('id')->first();
+        $due = $open ? \App\Support\Num::money(\App\Support\Num::sub($open->total, Billing::paidOn($open))) : Billing::quote($tenant)['total'];
+
+        return [
+            'hesabpay' => Billing::hesabpay(), 'due' => $due,
+            'dueFor' => $open ? __('Invoice :number', ['number' => $open->number]) : __('The subscription of the next year'),
+            'requests' => \App\Models\Central\PaymentRequest::where('tenant_id', $tenant->id)->orderByDesc('id')->limit(10)->get(),
+        ];
+    }
+
+    /** "We paid": the number of the HesabPay transaction and a picture of it go to the company. */
+    public function pay(Request $request): RedirectResponse
+    {
+        Gate::authorize('settings.manage');
+        $data = $request->validate([
+            'amount' => ['required', 'numeric', 'gt:0', 'max:10000000'], 'reference' => ['required', 'string', 'min:3', 'max:120'],
+            'picture' => ['required', 'file', 'max:5120', 'mimes:jpg,jpeg,png,webp'],
         ]);
+        \App\Services\PaymentRequests::submit(tenant(), $data['amount'], $data['reference'], $data['picture'], $request->user()->name);
+        audit('created', null, 'Payment request '.$data['reference'].' $'.$data['amount']);
+
+        return redirect()->to(route('service.licence').'#pay')->with('success', __('We have it. The licence moves on as soon as the payment is checked.'));
+    }
+
+    /** The QR code of the HesabPay account of the company. */
+    public function qr(): \Illuminate\Http\Response
+    {
+        $path = \App\Models\Central\CentralSetting::read('hesabpay_qr');
+        abort_unless($path && \Illuminate\Support\Facades\Storage::disk('local')->exists($path), 404);
+
+        return response(\Illuminate\Support\Facades\Storage::disk('local')->get($path), 200, ['Content-Type' => \Illuminate\Support\Facades\Storage::disk('local')->mimeType($path) ?: 'image/png', 'Cache-Control' => 'private, max-age=3600']);
     }
 
     /** One of its own invoices, to print. */

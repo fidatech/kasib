@@ -4,6 +4,7 @@
 <section class="site-section">
     <div class="site-wrap site-narrow">
         <h1 class="site-title">{{ __('Register your business') }}</h1>
+        @if ($trial ?? null)<p class="site-lead"><strong>{{ __('Free for :days days. Your system opens at once; nothing is paid now.', ['days' => $trial]) }}</strong></p>@endif
         <p class="site-lead">{{ __('Fill in the form. Our team checks the request; once it is approved, your system is opened at your own address.') }}</p>
 
         <form method="POST" action="{{ route('site.register.store') }}" class="card">

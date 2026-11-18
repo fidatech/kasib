@@ -44,4 +44,5 @@
         </div></div>
     </div>
 </div>
+@include('service.pay')
 @endsection

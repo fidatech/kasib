@@ -35,6 +35,9 @@ class InitializeTenancy
         $tenant = Tenant::where('domain', $host)->first();
         abort_if(! $tenant, 404);
 
+        if (! $tenant->isActive() && $tenant->locked_reason === 'licence') {
+            return $this->locked($request, $tenant);
+        }
         if (! $tenant->isActive()) {
             return response()->view('errors.suspended', ['name' => $tenant->name, 'licence' => $tenant->locked_reason === 'licence', 'company' => \App\Http\Controllers\Central\SettingsController::company()], 503);
         }
@@ -42,5 +45,34 @@ class InitializeTenancy
         $this->tenancy->initialize($tenant);
 
         return $next($request);
+    }
+
+    /** The page of a business whose licence ended: what happened, where to pay, and the form "we paid". */
+    private function locked(Request $request, Tenant $tenant): Response
+    {
+        $sent = false;
+        $errors = [];
+        $limit = 'paid:'.$tenant->id.':'.$request->ip();
+        if ($request->isMethod('post') && $request->is('paid') && \Illuminate\Support\Facades\RateLimiter::tooManyAttempts($limit, 6)) {
+            $errors = [__('Too many attempts. Please try again later.')];
+        } elseif ($request->isMethod('post') && $request->is('paid')) {
+            \Illuminate\Support\Facades\RateLimiter::hit($limit, 3600);
+            $check = \Illuminate\Support\Facades\Validator::make($request->all(), [
+                'amount' => ['required', 'numeric', 'gt:0', 'max:10000000'], 'reference' => ['required', 'string', 'min:3', 'max:120'],
+                'picture' => ['required', 'file', 'max:5120', 'mimes:jpg,jpeg,png,webp'], 'sender' => ['nullable', 'string', 'max:150'],
+            ]);
+            $errors = $check->errors()->all();
+            if (! $errors) {
+                try {
+                    \App\Services\PaymentRequests::submit($tenant, $request->input('amount'), (string) $request->input('reference'), $request->file('picture'), $request->input('sender'));
+                    $sent = true;
+                } catch (\App\Exceptions\UserError $e) {
+                    $errors = [$e->getMessage()];
+                }
+            }
+        }
+
+        return response()->view('errors.suspended', ['name' => $tenant->name, 'licence' => true, 'company' => \App\Http\Controllers\Central\SettingsController::company(),
+            'pay' => \App\Http\Controllers\ServiceController::payData($tenant), 'sent' => $sent, 'problems' => $errors], $sent ? 200 : 503);
     }
 }

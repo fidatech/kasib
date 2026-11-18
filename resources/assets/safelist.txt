@@ -68,3 +68,7 @@ is-success is-danger is-primary is-warning
 # icons of the account categories (AccountGroupController::ICONS, Chart::GROUPS) and of the reports list (ReportController::REPORTS)
 #s-address-book #s-users #s-user-tie #s-handshake #s-truck #s-money-bill-wave #s-building-columns #s-coins #s-mobile-screen #s-wallet #s-store #s-briefcase
 #s-scale-balanced #s-chart-line #s-landmark #s-calendar-days #s-vault #s-book
+
+# the tour of the screen is drawn in JavaScript
+tour-ring tour-card tour-title tour-text tour-actions tour-count
+#s-circle-question
