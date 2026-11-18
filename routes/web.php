@@ -42,6 +42,7 @@ use App\Http\Controllers\ShareholderController;
 use App\Http\Controllers\TransferController;
 use App\Http\Controllers\ReceiptCheckController;
 use App\Http\Controllers\TreasuryController;
+use App\Http\Controllers\TwoStepController;
 use App\Http\Controllers\WhatsappController;
 use Illuminate\Support\Facades\Route;
 
@@ -192,6 +193,8 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
     Route::middleware('guest')->group(function () {
         Route::get('login', [LoginController::class, 'show'])->name('login');
         Route::post('login', [LoginController::class, 'store'])->name('login.store');
+        Route::get('two-step/code', [TwoStepController::class, 'challenge'])->name('two-step.challenge');
+        Route::post('two-step/code', [TwoStepController::class, 'verify'])->name('two-step.verify')->middleware('throttle:10,1');
     });
 
     Route::middleware('auth')->group(function () use ($crud, $paper) {
@@ -211,6 +214,10 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
         Route::get('password', [PreferenceController::class, 'password'])->name('password.edit');
         Route::put('password', [PreferenceController::class, 'updatePassword'])->name('password.update');
         Route::post('refresh', [PreferenceController::class, 'refresh'])->name('system.refresh');
+        Route::get('two-step', [TwoStepController::class, 'show'])->name('two-step.show');
+        Route::post('two-step', [TwoStepController::class, 'start'])->name('two-step.start');
+        Route::post('two-step/confirm', [TwoStepController::class, 'confirm'])->name('two-step.confirm')->middleware('throttle:10,1');
+        Route::delete('two-step', [TwoStepController::class, 'disable'])->name('two-step.disable');
         Route::get('messages', [PreferenceController::class, 'notices'])->name('notices.index');
         Route::get('messages/{id}', [PreferenceController::class, 'openNotice'])->name('notices.open')->whereNumber('id');
         Route::post('messages/read', [PreferenceController::class, 'readNotices'])->name('notices.read');
@@ -295,6 +302,7 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
         Route::get('audit', [AuditController::class, 'index'])->name('audit.index');
         Route::get('backups', [BackupController::class, 'index'])->name('backups.index');
         Route::post('backups', [BackupController::class, 'store'])->name('backups.store');
+        Route::post('backups/upload', [BackupController::class, 'upload'])->name('backups.upload');
         Route::get('backups/{id}/download', [BackupController::class, 'download'])->name('backups.download')->whereNumber('id');
         Route::post('backups/{id}/restore', [BackupController::class, 'restore'])->name('backups.restore')->whereNumber('id');
 

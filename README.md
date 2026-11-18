@@ -43,9 +43,11 @@ WhatsApp messages through the sender of the business, a permission per account c
 plan of a business (users and accounts allowed), a public page that checks a receipt, the
 sign-in history, and a limit on dating papers back.
 
-Not built: two-step sign-in, a QR picture on receipts (the address to check a receipt is
-printed as text), restoring from an uploaded file (a copy is restored from the list only), and
-a copy of the backups outside the server. See the specification.
+Security and backups: two-step sign-in with an authenticator app, a QR picture on every
+receipt, a backup file that was downloaded can be uploaded and restored (only a file the system
+made itself, checked by its fingerprint), old backups are thinned (7 days, 4 weeks, 12 months),
+and each nightly backup can be sent to an FTP place outside the server (`BACKUP_FTP_*` in `.env`).
+The QR code and the two-step codes are written in the project itself: no package is needed.
 
 ## Stack
 

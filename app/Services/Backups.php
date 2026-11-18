@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Central\Backup;
+use App\Models\Central\BackupSeal;
 use App\Models\Central\Tenant;
 use App\Tenancy\Tenancy;
 use Illuminate\Support\Facades\DB;
@@ -40,7 +41,100 @@ class Backups
             return $file;
         });
 
-        return Backup::create(['tenant_id' => $tenant->id, 'file' => $file, 'size' => (int) @filesize(storage_path('app/backups/'.$file)), 'kind' => $kind, 'admin_id' => $adminId]);
+        $backup = Backup::create(['tenant_id' => $tenant->id, 'file' => $file, 'size' => (int) @filesize(storage_path('app/backups/'.$file)), 'kind' => $kind, 'admin_id' => $adminId]);
+        // its fingerprint is remembered: only a file the system made itself can be uploaded and put back
+        BackupSeal::firstOrCreate(['tenant_id' => $tenant->id, 'sha256' => hash_file('sha256', $backup->path())]);
+
+        return $backup;
+    }
+
+    /**
+     * Take in a backup file that was downloaded earlier, so it can be put back. The file must be
+     * one the system made for this same business: its fingerprint is looked up. Anything else is refused.
+     */
+    public static function accept(Tenant $tenant, string $path, string $originalName): Backup
+    {
+        if (! BackupSeal::where('tenant_id', $tenant->id)->where('sha256', hash_file('sha256', $path))->exists()) {
+            throw new RuntimeException('This file is not a backup the system made for this business, or it was changed.');
+        }
+        $extension = str_ends_with($originalName, '.sqlite.gz') ? '.sqlite.gz' : '.sql.gz';
+        $dir = storage_path('app/backups/'.$tenant->slug);
+        if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
+            throw new RuntimeException('The backup folder cannot be made: '.$dir);
+        }
+        $file = $tenant->slug.'/'.$tenant->slug.'-'.now()->format('Ymd-His').'-'.substr(bin2hex(random_bytes(3)), 0, 6).'-upload'.$extension;
+        if (! copy($path, storage_path('app/backups/'.$file))) {
+            throw new RuntimeException('The file could not be kept.');
+        }
+
+        return Backup::create(['tenant_id' => $tenant->id, 'file' => $file, 'size' => (int) @filesize(storage_path('app/backups/'.$file)), 'kind' => 'manual']);
+    }
+
+    /**
+     * Thin out the automatic copies: every copy of the last 7 days stays, then the newest of
+     * each week for 4 weeks, then the newest of each month for 12 months. Older ones go.
+     */
+    public static function thin(): int
+    {
+        $removed = 0;
+        foreach (Backup::where('kind', 'auto')->orderByDesc('created_at')->orderByDesc('id')->get()->groupBy('tenant_id') as $copies) {
+            $kept = [];
+            foreach ($copies as $backup) {
+                $age = (int) $backup->created_at->diffInDays(now());
+                $slot = match (true) {
+                    $age < 7 => null,
+                    $age < 35 => 'w'.$backup->created_at->format('o-W'),
+                    $age < 400 => 'm'.$backup->created_at->format('Y-m'),
+                    default => 'old',
+                };
+                if ($slot === null || ($slot !== 'old' && ! isset($kept[$slot]))) {
+                    if ($slot !== null) {
+                        $kept[$slot] = true;
+                    }
+
+                    continue;
+                }
+                self::remove($backup);
+                $removed++;
+            }
+        }
+
+        return $removed;
+    }
+
+    /**
+     * Send a copy of a backup to a place outside the server, by FTP (BACKUP_FTP_* in the .env),
+     * so the backups do not die with the server. Returns false when no place is written.
+     */
+    public static function ship(Backup $backup): bool
+    {
+        $ftp = config('tenancy.backup_ftp');
+        if (empty($ftp['host']) || ! function_exists('ftp_connect') || ! is_file($backup->path())) {
+            return false;
+        }
+        $link = ! empty($ftp['ssl']) && function_exists('ftp_ssl_connect') ? @ftp_ssl_connect($ftp['host'], (int) $ftp['port'], 30) : @ftp_connect($ftp['host'], (int) $ftp['port'], 30);
+        if (! $link || ! @ftp_login($link, (string) $ftp['user'], (string) $ftp['password'])) {
+            throw new RuntimeException('The place for backups outside the server did not accept the sign-in.');
+        }
+        try {
+            ftp_pasv($link, true);
+            $folder = trim((string) $ftp['path'], '/');
+            foreach (array_filter(array_merge($folder === '' ? [] : explode('/', $folder), [dirname($backup->file)])) as $part) {
+                if (! @ftp_chdir($link, $part)) {
+                    @ftp_mkdir($link, $part);
+                    if (! @ftp_chdir($link, $part)) {
+                        throw new RuntimeException('The folder '.$part.' cannot be made outside the server.');
+                    }
+                }
+            }
+            if (! @ftp_put($link, basename($backup->file), $backup->path(), FTP_BINARY)) {
+                throw new RuntimeException('The backup could not be sent outside the server.');
+            }
+        } finally {
+            @ftp_close($link);
+        }
+
+        return true;
     }
 
     /**

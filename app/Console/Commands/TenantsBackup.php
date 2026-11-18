@@ -21,14 +21,15 @@ class TenantsBackup extends Command
         foreach ($tenants as $tenant) {
             try {
                 $backup = Backups::make($tenant);
-                $this->info($tenant->slug.': '.$backup->file);
+                $this->info($tenant->slug.': '.$backup->file.(Backups::ship($backup) ? ' (sent outside the server)' : ''));
             } catch (Throwable $e) {
                 $failed++;
                 report($e);
                 $this->error($tenant->slug.': '.$e->getMessage());
             }
         }
-        $removed = Backups::prune((int) (CentralSetting::read('backup_keep_days') ?: 14));
+        // every copy of 7 days, then one a week for 4 weeks, then one a month for 12 months
+        $removed = Backups::thin();
         $this->line($tenants->count().' business(es), '.$failed.' failed, '.$removed.' old copies removed.');
 
         return $failed ? self::FAILURE : self::SUCCESS;

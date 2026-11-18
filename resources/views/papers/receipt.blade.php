@@ -19,7 +19,10 @@
     </tbody>
 </table>
 @isset($verify)
-    <div class="small text-muted mt-3">{{ __('To check that this receipt is real, open:') }} <span dir="ltr">{{ $verify }}</span></div>
+    <div class="d-flex gap-3 align-items-center mt-3">
+        <div>{!! \App\Support\QrCode::svg($verify, 104) !!}</div>
+        <div class="small text-muted">{{ __('Scan this picture to check that the receipt is real, or open:') }}<br><span dir="ltr">{{ $verify }}</span></div>
+    </div>
 @endisset
 <div class="d-flex justify-content-between mt-5 small">
     <span>{{ __('Prepared by') }}: ____________</span>

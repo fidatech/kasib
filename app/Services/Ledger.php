@@ -224,13 +224,14 @@ class Ledger
     {
         $cash = Account::with('currency')
             ->whereIn('id', array_unique($accountIds))
-            ->where('account_category_id', \App\Models\AccountCategory::byKey('cash')->id)
+            // cash can never be less than nothing; a bank account neither, unless the business allows an overdraft
+            ->whereIn('account_category_id', \App\Models\AccountCategory::whereIn('key', setting('bank_overdraft') === '1' ? ['cash'] : ['cash', 'bank'])->pluck('id'))
             ->get();
 
         foreach ($cash as $account) {
             $balance = self::balance($account);
             if (Num::isNegative($balance)) {
-                throw new UserError(__('There is not enough cash in :account. It would be short by :amount.', [
+                throw new UserError(__('There is not enough money in :account. It would be short by :amount.', [
                     'account' => $account->name,
                     'amount' => money(Num::abs($balance), $account->currency->code),
                 ]));

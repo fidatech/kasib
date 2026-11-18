@@ -678,7 +678,7 @@ class HesabBookTest extends TestCase
         $voucher = Vouchers::moneyIn($ahmad, $this->cash(), today_iso(), '750');
         $code = \App\Http\Controllers\VoucherController::code($voucher);
 
-        $this->get('/money-in/'.$voucher->id.'/receipt')->assertOk()->assertSee('/check/'.$voucher->number.'/'.$code);
+        $this->get('/money-in/'.$voucher->id.'/receipt')->assertOk()->assertSee('/check/'.$voucher->number.'/'.$code)->assertSee('<svg', false);
         $this->get('/audit?action=signed in')->assertOk();
 
         auth()->logout();
@@ -710,6 +710,92 @@ class HesabBookTest extends TestCase
         $this->post('/accounts/customers', ['name' => 'Karim', 'phone' => '0700555666', 'is_active' => 1])->assertSessionHasNoErrors()->assertSessionMissing('warning');
         $this->post('/accounts/suppliers', ['name' => 'Karim Ltd', 'phone' => '0700555666', 'is_active' => 1])->assertSessionHasNoErrors()->assertSessionHas('warning');
         $this->assertSame(2, Party::where('phone', '0700555666')->count());
+    }
+
+    public function test_two_step_sign_in_asks_for_the_code_of_the_phone(): void
+    {
+        $this->business();
+        $owner = $this->owner();
+        $secret = fn () => \Illuminate\Support\Facades\Crypt::decryptString($owner->fresh()->two_factor_secret);
+
+        $this->get('/two-step')->assertOk()->assertSee('Set it up');
+        $this->post('/two-step')->assertRedirect('/two-step');
+        $this->get('/two-step')->assertOk()->assertSee('<svg', false)->assertSee(substr($secret(), 0, 4));
+        // nothing is asked at sign-in until a code has confirmed the phone
+        $this->assertNull($owner->fresh()->two_factor_confirmed_at);
+        $this->post('/two-step/confirm', ['code' => '000000'])->assertSessionHasErrors('code');
+        $this->post('/two-step/confirm', ['code' => \App\Support\Totp::code($secret())])->assertSessionHasNoErrors();
+        $this->assertNotNull($owner->fresh()->two_factor_confirmed_at);
+
+        auth()->logout();
+        $this->post('/login', ['email' => 'owner@acme.test', 'password' => 'password123'])->assertRedirect('/two-step/code');
+        $this->assertGuest();
+        $this->get('/two-step/code')->assertOk()->assertSee('six-digit code');
+        $this->post('/two-step/code', ['code' => '123'])->assertSessionHasErrors('code');
+        $this->assertGuest();
+        $this->post('/two-step/code', ['code' => \App\Support\Totp::code($secret())])->assertRedirect('/');
+        $this->assertAuthenticatedAs($owner);
+
+        // off again, with the password
+        $this->delete('/two-step', ['password' => 'wrong-password'])->assertSessionHasErrors('password');
+        $this->delete('/two-step', ['password' => 'password123'])->assertSessionHasNoErrors();
+        $this->assertNull($owner->fresh()->two_factor_secret);
+        auth()->logout();
+        $this->post('/login', ['email' => 'owner@acme.test', 'password' => 'password123'])->assertRedirect('/');
+        // the page of the code is nothing without a password just before it
+        auth()->logout();
+        $this->get('/two-step/code')->assertRedirect('/login');
+    }
+
+    public function test_a_downloaded_backup_comes_back_only_when_the_system_made_it_and_old_copies_are_thinned(): void
+    {
+        $tenant = $this->business();
+        $this->owner();
+        $this->post('/backups')->assertSessionHasNoErrors();
+        $backup = \App\Models\Central\Backup::where('tenant_id', $tenant->id)->firstOrFail();
+        $bytes = file_get_contents($backup->path());
+
+        $this->from('/backups')->post('/backups/upload', ['file' => \Illuminate\Http\UploadedFile::fake()->createWithContent(basename($backup->file), $bytes.'x')])->assertSessionHas('danger');
+        $this->assertSame(1, \App\Models\Central\Backup::where('tenant_id', $tenant->id)->count());
+        $this->post('/backups/upload', ['file' => \Illuminate\Http\UploadedFile::fake()->createWithContent(basename($backup->file), $bytes)])->assertSessionHasNoErrors();
+        $this->assertSame(2, \App\Models\Central\Backup::where('tenant_id', $tenant->id)->count());
+
+        // every copy of the last 7 days, then one a week, then one a month, and nothing older than about a year
+        \App\Models\Central\Backup::where('tenant_id', $tenant->id)->delete();
+        foreach ([1, 3, 8, 9, 40, 41, 500] as $age) {
+            \App\Models\Central\Backup::create(['tenant_id' => $tenant->id, 'file' => 'acme/none-'.$age.'.sql.gz', 'size' => 1, 'kind' => 'auto', 'created_at' => now()->subDays($age)]);
+        }
+        $this->assertSame(3, \App\Services\Backups::thin());
+        $left = \App\Models\Central\Backup::where('tenant_id', $tenant->id)->orderByDesc('created_at')->get()->map(fn ($b) => (int) round($b->created_at->diffInDays(now())))->all();
+        $this->assertSame([1, 3, 8, 40], $left);
+    }
+
+    public function test_bank_accounts_credit_limits_and_unusual_rates_are_watched(): void
+    {
+        $this->business();
+        $this->owner();
+        $this->rates(['USD' => '70']);
+        $this->openingCash('AFN', '5000');
+        $cash = $this->cash();
+        $bank = Accounts::party($this->party('bank', 'AIB'), $this->currency('AFN'));
+
+        // a bank account does not go below zero, unless the business allows an overdraft
+        $this->from('/transfers/create')->post('/transfers', ['date' => today_iso(), 'account_id' => $bank->id, 'other_account_id' => $cash->id, 'amount' => '100'])->assertSessionHas('danger');
+        $this->put('/settings', ['company_name' => 'Acme business', 'bank_overdraft' => 1])->assertSessionHasNoErrors();
+        $this->post('/transfers', ['date' => today_iso(), 'account_id' => $bank->id, 'other_account_id' => $cash->id, 'amount' => '100'])->assertSessionHasNoErrors();
+        $this->assertSame('-100.00', Ledger::balance($bank));
+
+        // a customer may not come to owe more than the credit limit
+        $this->post('/accounts/customers', ['name' => 'Nazir', 'credit_limit' => '1000', 'is_active' => 1])->assertSessionHasNoErrors();
+        $nazir = Party::where('name', 'Nazir')->firstOrFail();
+        $this->post('/money-out', ['date' => today_iso(), 'party_id' => $nazir->id, 'account_id' => $cash->id, 'amount' => '800'])->assertSessionHasNoErrors();
+        $this->from('/money-out/create')->post('/money-out', ['date' => today_iso(), 'party_id' => $nazir->id, 'account_id' => $cash->id, 'amount' => '300'])->assertSessionHas('danger');
+        $this->assertSame('-800.00', $this->owed($nazir, 'AFN'));
+
+        // an exchange far from the rates of the business is saved, and pointed out
+        $this->post('/exchanges', ['date' => today_iso(), 'account_id' => $cash->id, 'amount' => '710', 'other_account_id' => $this->cash('USD')->id, 'other_amount' => '10'])->assertSessionHasNoErrors()->assertSessionMissing('warning');
+        $this->post('/exchanges', ['date' => today_iso(), 'account_id' => $cash->id, 'amount' => '1000', 'other_account_id' => $this->cash('USD')->id, 'other_amount' => '100'])->assertSessionHasNoErrors()->assertSessionHas('warning');
+        $this->booksBalance();
     }
 
     public function test_a_user_sees_only_what_the_role_allows(): void

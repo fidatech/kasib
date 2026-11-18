@@ -95,6 +95,11 @@ class PartyController extends CrudController
             ['name' => 'address', 'label' => 'Address', 'col' => 12, 'rules' => ['nullable', 'string', 'max:255']],
         ];
 
+        if (! $money) {
+            $fields[] = ['name' => 'credit_limit', 'label' => 'Credit limit', 'type' => 'decimal', 'rules' => ['nullable', 'numeric', 'gte:0'],
+                'help' => __('The most this account may owe the business, valued in :currency. Empty: no limit.', ['currency' => Currency::base()->code])];
+        }
+
         // opening balances are given once, when the account is made; afterwards money moves with papers
         if (! $record) {
             $fields[] = ['name' => 'currencies', 'label' => 'Currencies and opening balances', 'type' => 'currencies', 'virtual' => true, 'col' => 12,

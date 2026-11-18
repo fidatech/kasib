@@ -21,7 +21,7 @@ class User extends Authenticatable
 
     protected $fillable = ['name', 'email', 'password', 'is_active', 'calendar', 'locale', 'branch_id', 'transaction_limit'];
 
-    protected $hidden = ['password', 'remember_token'];
+    protected $hidden = ['password', 'remember_token', 'two_factor_secret'];
 
     public function branch(): BelongsTo
     {
@@ -46,6 +46,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'two_factor_confirmed_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
             'transaction_limit' => 'decimal:2',

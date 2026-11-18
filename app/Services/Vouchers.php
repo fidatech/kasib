@@ -68,6 +68,14 @@ class Vouchers
                 ['account' => $in ? $account : $money, 'credit' => $amount, 'base' => $base],
             ], $voucher);
 
+            // paid out: the party may not come to owe the business more than its credit limit
+            if (! $in && Num::isPositive($party->credit_limit ?? 0)) {
+                $owes = Num::money(DB::table('account_balances')->whereIn('account_id', $party->accounts()->pluck('id'))->sum('base_balance'));
+                if (Num::cmp($owes, $party->credit_limit) === 1) {
+                    throw new UserError(__(':name would owe :amount, more than the credit limit of :limit.', ['name' => $party->name, 'amount' => money($owes), 'limit' => money($party->credit_limit)]));
+                }
+            }
+
             return $voucher;
         });
         // the receipt on WhatsApp, once the paper is safely in the books

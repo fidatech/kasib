@@ -46,6 +46,24 @@ class BackupController extends Controller
         return back()->with('success', __('Backup made.'));
     }
 
+    /**
+     * A backup file that was downloaded earlier comes back, to be put back from the list. Only a
+     * file the system itself made for this business is taken: its fingerprint is checked.
+     */
+    public function upload(Request $request): RedirectResponse
+    {
+        Gate::authorize('settings.manage');
+        $file = $request->validate(['file' => ['required', 'file', 'max:204800']])['file'];
+        try {
+            Backups::accept(tenant(), $file->getRealPath(), (string) $file->getClientOriginalName());
+        } catch (Throwable $e) {
+            throw new UserError(__('This file is not a backup of this business made by the system, or it was changed. It was not taken.'));
+        }
+        audit('created', null, 'Backup uploaded: '.$file->getClientOriginalName());
+
+        return back()->with('success', __('The file is on the list. Put it back from there when you are ready.'));
+    }
+
     public function download(Request $request): BinaryFileResponse
     {
         Gate::authorize('settings.manage');

@@ -53,6 +53,12 @@ class ExchangeController extends VoucherController
     {
         $voucher = Vouchers::exchange($this->money($data['account_id']), $this->money($data['other_account_id']), $data['date'], $data['amount'], $data['other_amount'], $data['description'] ?? null);
 
+        // a deal far from the rates of the business is probably a typing mistake: it is saved, and pointed out
+        $worth = \App\Services\Rates::toBase($voucher->amount, $voucher->currency, \App\Models\Branch::main());
+        if (Num::isPositive($worth) && abs((float) $voucher->profit) > 0.05 * (float) $worth) {
+            session()->flash('warning', __('The rate of this exchange is more than 5% away from the rates of the business. Check the two amounts; cancel the paper if one was mistyped.'));
+        }
+
         return $this->saved().' '.__('Profit of this deal: :amount', ['amount' => money($voucher->profit)]);
     }
 }

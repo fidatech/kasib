@@ -43,6 +43,17 @@ class LoginController extends Controller
         }
 
         RateLimiter::clear($key);
+
+        // two-step sign-in: the password was right, the code of the phone is still owed
+        $user = $request->user();
+        if ($user->two_factor_confirmed_at && $user->two_factor_secret) {
+            Auth::logout();
+            $request->session()->regenerate();
+            $request->session()->put('two_step', ['user' => $user->id, 'remember' => $request->boolean('remember'), 'at' => time()]);
+
+            return redirect()->route('two-step.challenge');
+        }
+
         $request->session()->regenerate();
         audit('signed in', null, $request->user()->name);
 

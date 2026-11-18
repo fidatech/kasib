@@ -8,6 +8,21 @@
     </form>
 </x-page-header>
 
+<form method="POST" action="{{ route('backups.upload') }}" enctype="multipart/form-data" class="card mb-3">
+    @csrf
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-md-7">
+                <label class="form-label" for="b-file">{{ __('A backup file you downloaded before') }}</label>
+                <input type="file" class="form-control @error('file') is-invalid @enderror" id="b-file" name="file" accept=".gz" required>
+                @error('file')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+            </div>
+            <div class="col-auto"><button type="submit" class="btn btn-outline-soft">{{ __('Add it to the list') }}</button></div>
+        </div>
+        <div class="form-text">{{ __('Only a file this system made for this business is taken, unchanged. It is then put back from the list below.') }}</div>
+    </div>
+</form>
+
 <div class="card" data-no-export>
     <div class="card-body">
         @if ($backups->isEmpty())

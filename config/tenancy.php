@@ -24,5 +24,14 @@ return [
         // (a "*" subdomain with a wildcard certificate): no subdomain is made for a new business
         'wildcard' => (bool) env('CPANEL_WILDCARD', false),
     ],
+    // a copy of every nightly backup is sent here by FTP, so the backups are not only on this server
+    'backup_ftp' => [
+        'host' => env('BACKUP_FTP_HOST'),
+        'port' => env('BACKUP_FTP_PORT', 21),
+        'user' => env('BACKUP_FTP_USER'),
+        'password' => env('BACKUP_FTP_PASSWORD'),
+        'path' => env('BACKUP_FTP_PATH', 'hesabbook-backups'),
+        'ssl' => (bool) env('BACKUP_FTP_SSL', true),
+    ],
     'reserved_slugs' => ['admin', 'www', 'api', 'app', 'mail', 'dab', 'central'],
 ];

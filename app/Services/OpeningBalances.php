@@ -105,6 +105,11 @@ class OpeningBalances
                 ], $party);
                 $posted++;
             }
+            // the plan of the business says how many accounts it may have; too many, and nothing of the file is kept
+            $limit = (int) (tenant()?->max_accounts ?? 0);
+            if ($limit > 0 && Party::count() > $limit) {
+                throw new UserError(__('Your plan allows :count accounts. Ask Fida Technologies for a larger plan to add more.', ['count' => $limit]));
+            }
             audit('imported', null, 'Opening balances: '.$made.' accounts, '.$posted.' balances');
 
             return ['accounts' => $made, 'balances' => $posted];

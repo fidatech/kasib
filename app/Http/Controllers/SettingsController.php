@@ -36,8 +36,10 @@ class SettingsController extends Controller
             'remove_logo' => ['nullable', 'boolean'],
             'simple_mode' => ['nullable', 'boolean'],
             'backdate_days' => ['nullable', 'integer', 'min:0', 'max:3650'],
+            'bank_overdraft' => ['nullable', 'boolean'],
         ]);
         $data['simple_mode'] = $request->boolean('simple_mode') ? '1' : '0';
+        $data['bank_overdraft'] = $request->boolean('bank_overdraft') ? '1' : '0';
 
         // the logo is kept in the business's own folder, outside the public folder
         $logo = $data['logo'] ?? null;

@@ -90,6 +90,11 @@
                     <span class="d-block small text-muted">{{ __('Hides the Finance pages and the accounting reports from the menu. The books are kept in full all the same, and the pages come back when this is switched off.') }}</span>
                 </label>
             </div>
+            <input type="hidden" name="bank_overdraft" value="0">
+            <div class="form-check form-switch mt-3">
+                <input class="form-check-input" type="checkbox" role="switch" id="s-bank_overdraft" name="bank_overdraft" value="1" @checked((string) $text('bank_overdraft', '0') === '1') @disabled(! $canManage)>
+                <label class="form-check-label" for="s-bank_overdraft">{{ __('Bank accounts may go below zero (overdraft)') }} <span class="d-block small text-muted">{{ __('Cash can never go below zero. Bank accounts cannot either, unless this is on.') }}</span></label>
+            </div>
             <div class="row g-3 mt-1">
                 <div class="col-12 col-md-5">
                     <label class="form-label" for="s-backdate_days">{{ __('Days a paper may be dated back') }}</label>
