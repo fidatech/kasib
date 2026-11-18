@@ -240,11 +240,11 @@ class AdministrationTest extends TestCase
         $this->enter($tenant);
         $this->assertSame(['Before'], \App\Models\Party::where('is_system', false)->orderBy('id')->pluck('name')->all());
 
-        // the nightly command, and the old copies it removes
+        // the nightly command, and the copies older than about a year that it removes
         $this->central();
         $this->artisan('tenants:backup')->assertSuccessful();
         $nightly = Backup::where('kind', 'auto')->firstOrFail();
-        $nightly->forceFill(['created_at' => now()->subDays(40)])->save();
+        $nightly->forceFill(['created_at' => now()->subDays(500)])->save();
         $this->artisan('tenants:backup')->assertSuccessful();
         $this->assertNull(Backup::find($nightly->id));
         $this->assertFileDoesNotExist($nightly->path());
