@@ -30,7 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // the business is chosen from the address before anything reads the database
         $middleware->web(
-            append: [SetLocale::class, ExportTable::class, StripNumberCommas::class, ConvertShamsiDates::class, EnsureUserIsActive::class, \App\Http\Middleware\TrackSession::class],
+            append: [SetLocale::class, ExportTable::class, StripNumberCommas::class, ConvertShamsiDates::class, EnsureUserIsActive::class, \App\Http\Middleware\TrackSession::class, \App\Http\Middleware\DemoGuard::class],
             prepend: [InitializeTenancy::class],
         );
         // the connection (routes/api.php) is called at the address of a business too

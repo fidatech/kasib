@@ -17,6 +17,7 @@
             <a href="{{ url('/') }}#features">{{ __('Features') }}</a>
             <a href="{{ url('/') }}#how">{{ __('How it works') }}</a>
             <a href="{{ url('/') }}#pricing">{{ __('Prices') }}</a>
+            @if (\App\Services\Demo::info())<a href="{{ url('/') }}#demo">{{ __('Demo') }}</a>@endif
             <a href="{{ url('/') }}#signin">{{ __('Sign in') }}</a>
         </nav>
         <div class="site-tools">

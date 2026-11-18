@@ -72,6 +72,17 @@ class TenantManager
         return $tenant;
     }
 
+    /** Empty a business and set it up again as new: its database is dropped and made again. Used by the demo. */
+    public function rebuild(Tenant $tenant, array $data): void
+    {
+        $this->databases->drop($tenant->database);
+        $this->databases->create($tenant->database);
+        $this->tenancy->run($tenant, function () use ($tenant, $data) {
+            $this->migrate();
+            $this->setup->run($tenant, $data);
+        });
+    }
+
     /** Bring the tables of the business we are in up to date. */
     public function migrate(): void
     {

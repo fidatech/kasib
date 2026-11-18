@@ -38,6 +38,10 @@
     </div>
 </section>
 
+@if (\App\Services\Demo::info())
+<section class="site-demo-band"><div class="site-wrap">@include('site.demo')</div></section>
+@endif
+
 <section class="site-section site-tint" id="features">
     <div class="site-wrap">
         <h2>{{ __('Everything a business that handles money needs, and nothing it does not.') }}</h2>

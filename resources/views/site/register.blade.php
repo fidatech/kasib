@@ -151,6 +151,7 @@
                     @if ($trial ?? null)<div class="reg-side-trial"><x-icon name="gift" /> {{ __(':days days free, then you decide.', ['days' => $trial]) }}</div>@endif
                     <div class="reg-side-address"><span>{{ __('Your address') }}</span><strong dir="ltr" id="sideAddress">—</strong></div>
                 </div>
+                @include('site.demo', ['class' => 'is-stacked'])
                 <ol class="reg-next">
                     <li><strong>{{ __('Fill in the form') }}</strong><span>{{ __('Two minutes. Only the boxes with a star are needed.') }}</span></li>
                     <li><strong>{{ ($trial ?? null) ? __('Your system opens') : __('We check the request') }}</strong><span>{{ ($trial ?? null) ? __('At your own address, with your email and password.') : __('You are told when your system is open.') }}</span></li>

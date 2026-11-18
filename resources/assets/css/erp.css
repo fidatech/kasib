@@ -777,6 +777,18 @@ button.ws-mark { cursor: pointer; } button.ws-mark:hover { border-style: solid; 
 .site-plan input { margin-top: 5px; accent-color: var(--site-accent); }
 .site-plan strong { display: block; color: var(--site-ink); }
 .site-plan span { color: var(--site-mute); }
+.site-demo-band { padding: 0 0 56px; }
+.site-demo { display: flex; flex-wrap: wrap; align-items: center; gap: 20px 32px; background: #fff; border: 1px solid var(--site-line); border-inline-start: 4px solid var(--site-accent); border-radius: 14px; padding: 20px 24px; }
+.site-demo-text { flex: 1 1 260px; display: flex; flex-direction: column; gap: 4px; }
+.site-demo-text strong { color: var(--site-ink); font-size: 18px; }
+.site-demo-text span { color: var(--site-mute); font-size: 15px; line-height: 1.5; }
+.site-demo-facts { display: flex; flex-wrap: wrap; gap: 12px 28px; margin: 0; }
+.site-demo-facts dt { font-size: 12px; font-weight: 600; color: var(--site-mute); }
+.site-demo-facts dd { margin: 0; font-weight: 700; color: var(--site-ink); font-size: 16px; }
+.site-demo-facts a { color: var(--site-accent-dark); text-decoration: none; }
+.site-demo.is-stacked { flex-direction: column; align-items: stretch; gap: 14px; padding: 20px; border-radius: 18px; }
+.site-demo.is-stacked .site-demo-text { flex: none; }
+.site-demo.is-stacked .site-demo-facts { flex-direction: column; gap: 10px; }
 .site-trap { position: absolute; inset-inline-start: -9999px; width: 1px; height: 1px; overflow: hidden; }
 .site-status { text-align: center; }
 .site-status .site-icon { width: 64px; height: 64px; font-size: 28px; border-radius: 50%; margin-bottom: 14px; }
