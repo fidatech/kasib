@@ -214,7 +214,9 @@ class PartyController extends CrudController
             ?? $accounts->first(fn (Account $a) => ! Num::isZero($a->total?->balance ?? 0))
             ?? $accounts->first();
         if (! $account) {
-            throw new UserError(__('This account has no currency yet.'));
+            // an account nothing was recorded on yet: its statement opens in the base currency, empty
+            $account = Accounts::party($party, Currency::base());
+            $accounts = collect([$account->load('currency')]);
         }
 
         // a party is read from its own side: what the business owes it is a positive balance
