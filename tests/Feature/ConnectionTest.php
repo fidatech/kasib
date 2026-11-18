@@ -100,7 +100,9 @@ class ConnectionTest extends TestCase
         CentralSetting::put('assistant_key', Crypt::encryptString('sk-ant-test'));
         CentralSetting::put('assistant_daily_limit', '2');
         $karim = Party::create(['account_group_id' => AccountGroup::byKey('customers')->id, 'name' => 'Karim Wardak'])->fresh();
-        Vouchers::moneyOut($karim, Accounts::cash(Branch::main(), Currency::base()), today_iso(), '750');
+        $cash = Accounts::cash(Branch::main(), Currency::base());
+        Vouchers::moneyIn(Party::create(['account_group_id' => AccountGroup::byKey('customers')->id, 'name' => 'Depositor'])->fresh(), $cash, today_iso(), '5000');
+        Vouchers::moneyOut($karim, $cash, today_iso(), '750');
 
         Http::fake(['api.anthropic.com/*' => Http::sequence()
             ->push(['content' => [['type' => 'text', 'text' => 'Karim Wardak owes you 750.00.']], 'usage' => ['input_tokens' => 400, 'output_tokens' => 20]])
