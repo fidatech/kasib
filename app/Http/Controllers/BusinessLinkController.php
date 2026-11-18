@@ -35,9 +35,9 @@ class BusinessLinkController extends Controller
         $data = $request->validate(['address' => ['required', 'string', 'max:190'], 'email' => ['required', 'email', 'max:190'], 'password' => ['required', 'string', 'max:200'], 'code' => ['nullable', 'string', 'max:10']]);
         $slug = preg_replace('/\..*$/', '', strtolower(trim($data['address'])));
         $other = Tenant::where('status', Tenant::ACTIVE)->where(fn ($q) => $q->where('slug', $slug)->orWhere('domain', strtolower(trim($data['address']))))->first();
-        $wrong = back()->withErrors(['address' => __('The address, the email or the password is not right.')])->withInput($request->only('address', 'email'));
+        $wrong = fn () => back()->withErrors(['address' => __('The address, the email or the password is not right.')])->withInput($request->only('address', 'email'));
         if (! $other || (int) $other->id === (int) tenant()->id) {
-            return $wrong;
+            return $wrong();
         }
         // the proof is checked in the books of the other business
         $found = $tenancy->run($other, function () use ($data) {
@@ -55,7 +55,7 @@ class BusinessLinkController extends Controller
             return back()->withErrors(['code' => __('That user has two-step sign-in. Write the code of its phone.')])->withInput($request->only('address', 'email'));
         }
         if (! $found) {
-            return $wrong;
+            return $wrong();
         }
 
         DB::connection((new LinkedLogin)->getConnectionName())->transaction(function () use ($request, $other, $found) {

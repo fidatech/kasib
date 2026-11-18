@@ -10,6 +10,7 @@ use App\Models\Central\Payment;
 use App\Models\Central\Seller;
 use App\Models\Central\Tenant;
 use App\Services\Commissions;
+use App\Support\Num;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -52,11 +53,11 @@ class GrowthTest extends TestCase
 
         // Beta pays 200 for its first year: 20% to the seller. Gamma pays: 25 to Acme, once.
         $payment = $this->pay($beta, '200');
-        $this->assertSame(['seller', '40.00', '20.00'], [Commission::sole()->kind, (string) Commission::sole()->amount, (string) Commission::sole()->percent]);
+        $this->assertSame(['seller', '40.00', '20.00'], [Commission::sole()->kind, Num::money(Commission::sole()->amount), Num::money(Commission::sole()->percent)]);
         $this->pay($gamma, '100');
         $this->pay($gamma, '100');
         $referral = Commission::where('kind', 'referral')->sole();
-        $this->assertSame([$acme->id, '25.00'], [(int) $referral->referrer_id, (string) $referral->amount]);
+        $this->assertSame([$acme->id, '25.00'], [(int) $referral->referrer_id, Num::money($referral->amount)]);
 
         $this->get('/admin/sellers')->assertOk()->assertSee('Ahmad')->assertSee('40.00')->assertSee('Acme business')->assertSee('65.00');
         $this->post('/admin/commissions/'.$referral->id.'/paid')->assertSessionHasNoErrors();
