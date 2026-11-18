@@ -3,7 +3,7 @@
 @section('content')
 <x-page-header :title="__('Chart of Accounts')" icon="address-book" :subtitle="__('Every group fills one line of a Da Afghanistan Bank statement.')">
     <a class="btn btn-outline-soft" href="{{ route('expense-categories.index') }}">{{ __('Expense Categories') }}</a>
-    <a class="btn btn-outline-soft" href="{{ route('accounts.index') }}">{{ __('Accounts') }}</a>
+    @can('accounts.manage')<a class="btn btn-outline-soft" href="{{ route('account-categories.index') }}">{{ __('Account Categories') }}</a>@endcan
 </x-page-header>
 
 @foreach (\App\Models\AccountCategory::NATURES as $nature => $heading)
