@@ -119,8 +119,36 @@ whole business.
 In the code: `Branch::working()` (the helper `current_branch()`) is the branch whose books are open; papers use the
 `BranchScoped` trait; `Branch::as($branch, fn)` runs something as a branch and `Branch::everywhere(fn)` reads them all.
 
-Still to come in version 2: several businesses under one login, white label, seller commissions and referrals,
-the SarafBook connection and the assistant. Tests: `tests/Feature/TradeTest.php`, `tests/Feature/BranchTest.php`.
+### Several businesses, white label, sellers (Pro)
+
+- **Administration → My Businesses**: a person who has a user in another business links it once (its address, email
+  and password, and the two-step code if that user has one) and from then on opens it without signing in again. The
+  jump uses a pass that is good once, for one minute (`login_tokens`). Nobody enters a business he has no user in.
+- **White label**: on the page of a business in the admin panel, "its own name" replaces the name of the system for
+  its users and the name of the company is left out (`tenants.brand_name`, helper `white_label()`).
+- **Admin → Sellers and referrals**: a seller has a code and two percentages (first year, renewals). A business that
+  registers through `/register?ref=<code>` or is given his code is his, and every payment it makes earns him his
+  share. A client who brings another (`/register?ref=<its address>`) earns the reward of the settings once, when
+  the new business first pays. Commissions are paid by hand and marked paid; a cancelled payment cancels them.
+
+### The connection with SarafBook (Pro)
+
+**Configuration → Connections** makes a key (`ksb_...`, shown once, only its fingerprint is kept) that works in the
+books of one branch and may read only or also record. The other system calls `https://<business>/api/v1/...` with
+`Authorization: Bearer <key>`: `business`, `rates`, `accounts` (list, one, new, statement), `money-in`, `money-out`,
+`papers/{reference}` and its `cancel`. A `reference` sent twice is recorded once. The page lists every call.
+Code: `routes/api.php`, `ApiAuth`, `Api\ConnectionApiController`.
+
+### The assistant (Pro)
+
+**Assistant** in the menu: the owner asks a question in Dari, Pashto or English and is answered from a summary of
+his books (cash, rates, who owes and is owed, income and expenses of this month and the last, what is due). The
+summary and the question go to the Claude API; the key, the model (default `claude-haiku-5-5`) and the number of
+questions a business may ask in a day are on **Admin → Settings**. Without a key the page says it is switched off.
+Code: `App\Services\Assistant`.
+
+Tests: `TradeTest`, `BranchTest`, `GrowthTest`, `ConnectionTest`. Voice POS is not started.
+
 
 ## Stack
 
