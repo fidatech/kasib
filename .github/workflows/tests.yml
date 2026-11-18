@@ -71,7 +71,7 @@ jobs:
           php artisan app:create-admin --name="CI Admin" --email=ci@example.com --password=ci-password-1
           php artisan tenants:create demo --name="Demo Trading" --owner-name="Demo Owner" --owner-email=owner@example.com --owner-password=ci-password-1
           php artisan tenants:migrate
-          mysql -h 127.0.0.1 -uroot -psecret -e "SELECT `key`, type FROM hb_demo.account_groups; SELECT name FROM hb_demo.parties; SELECT email FROM hb_demo.users;"
+          mysql -h 127.0.0.1 -uroot -psecret -e "SELECT name, type FROM hb_demo.account_groups; SELECT name FROM hb_demo.parties; SELECT email FROM hb_demo.users;"
 
       - name: Compile every view
         run: php artisan view:cache
