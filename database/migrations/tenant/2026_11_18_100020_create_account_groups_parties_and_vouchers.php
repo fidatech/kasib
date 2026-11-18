@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Schema;
  *  parties         the accounts of a category as people know them: a cash box, a bank account, a
  *                  customer. A party has one ledger account for every currency it uses.
  *  vouchers        money in, money out, transfers, exchanges and income; each posts one journal entry.
+ *  distributions   profit shared out among the shareholders.
  *  notices         messages of the system to one of its users, shown under the bell of the navbar.
  */
 return new class extends Migration
@@ -79,6 +80,20 @@ return new class extends Migration
             $table->index('due_date');
         });
 
+        // profit shared out among the shareholders, by their percentages
+        Schema::create('distributions', function (Blueprint $table) {
+            $table->id();
+            $table->string('number', 30)->unique();
+            $table->date('date');
+            $table->decimal('amount', 22, 2);
+            $table->foreignId('paid_account_id')->constrained('accounts')->restrictOnDelete();
+            $table->json('shares');                                    // [{shareholder_id, name, percent, amount}]
+            $table->string('note', 500)->nullable();
+            $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('cancelled_at')->nullable();
+            $table->timestamps();
+        });
+
         Schema::create('notices', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -94,6 +109,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('notices');
+        Schema::dropIfExists('distributions');
         Schema::dropIfExists('vouchers');
         Schema::table('accounts', function (Blueprint $table) {
             $table->dropConstrainedForeignId('party_id');
