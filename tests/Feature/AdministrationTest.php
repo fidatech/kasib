@@ -67,10 +67,11 @@ class AdministrationTest extends TestCase
         $this->central();
         $this->systemAdmin();
 
+        \App\Models\Central\CentralSetting::put('price_main_first', '500');
         $this->post('/admin/invoices', ['tenant_id' => $tenant->id, 'from_date' => '2026-11-13', 'to_date' => '2027-11-12'])->assertSessionHasNoErrors();
         $invoice = Invoice::firstOrFail();
         $this->assertSame('500.00', $invoice->total);
-        $this->get('/admin/invoices/'.$invoice->id)->assertOk()->assertSee('INV-000001')->assertSee('Subscription, first year')->assertSee('Fida Technologies');
+        $this->get('/admin/invoices/'.$invoice->id)->assertOk()->assertSee('INV-000001')->assertSee('Starter plan, first year')->assertSee('Fida Technologies');
         $this->get('/admin/payments?tenant='.$tenant->id.'&invoice='.$invoice->id)->assertOk()->assertSee('500.00');
 
         // a part of it: still not paid, the licence does not move

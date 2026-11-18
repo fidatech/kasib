@@ -22,12 +22,12 @@ class SiteController extends Controller
 {
     public function home(): View
     {
-        return view('site.home', ['prices' => Billing::prices(), 'company' => SettingsController::company(), 'trial' => Billing::trialDays()]);
+        return view('site.home', ['prices' => Billing::prices(), 'company' => SettingsController::company(), 'trial' => Billing::trialDays(), 'plans' => Billing::plans()]);
     }
 
     public function register(): View
     {
-        return view('site.register', ['prices' => Billing::prices(), 'company' => SettingsController::company(), 'trial' => Billing::trialDays()]);
+        return view('site.register', ['prices' => Billing::prices(), 'company' => SettingsController::company(), 'trial' => Billing::trialDays(), 'plans' => Billing::plans()]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -45,6 +45,7 @@ class SiteController extends Controller
             'licence_no' => ['nullable', 'string', 'max:60'],
             'province' => ['nullable', 'string', 'max:100'],
             'branches' => ['nullable', 'integer', 'min:0', 'max:500'],
+            'plan' => ['nullable', Rule::in(array_keys(Billing::PLANS))],
             'owner_name' => ['required', 'string', 'max:150'],
             'owner_email' => ['required', 'email', 'max:190'],
             'owner_phone' => ['required', 'string', 'min:7', 'max:40'],
@@ -54,7 +55,7 @@ class SiteController extends Controller
             'slug.not_in' => __('This address is taken; choose another.')]);
 
         $signup = Signup::create(['token' => Str::lower(Str::random(32)), 'password' => Hash::make($data['password']), 'branches' => (int) ($data['branches'] ?? 0),
-            'status' => 'pending', 'ip' => $request->ip()] + collect($data)->except(['password', 'branches'])->all());
+            'status' => 'pending', 'ip' => $request->ip(), 'plan' => $data['plan'] ?? 'starter'] + collect($data)->except(['password', 'branches', 'plan'])->all());
 
         $this->openTrial($signup, $request);
 
@@ -75,7 +76,7 @@ class SiteController extends Controller
         try {
             $tenant = app(\App\Tenancy\TenantManager::class)->create([
                 'name' => $signup->name, 'name_local' => $signup->name_local, 'slug' => $signup->slug, 'licence_no' => $signup->licence_no,
-                'licence_expires_on' => now()->addDays($days)->toDateString(), 'plan' => 'trial',
+                'licence_expires_on' => now()->addDays($days)->toDateString(), 'plan' => $signup->plan ?: 'starter',
                 'owner_name' => $signup->owner_name, 'owner_email' => $signup->owner_email, 'owner_password' => $signup->password,   // already hashed
                 'notes' => trim(__('Free trial from the website.').' '.$signup->owner_phone.' '.$signup->message),
             ]);

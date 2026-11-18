@@ -5,7 +5,7 @@
     <div class="site-wrap site-narrow">
         <h1 class="site-title">{{ __('Register your business') }}</h1>
         @if ($trial ?? null)<p class="site-lead"><strong>{{ __('Free for :days days. Your system opens at once; nothing is paid now.', ['days' => $trial]) }}</strong></p>@endif
-        <p class="site-lead">{{ __('Fill in the form. Our team checks the request; once it is approved, your system is opened at your own address.') }}</p>
+        @unless ($trial ?? null)<p class="site-lead">{{ __('Fill in the form. Our team checks the request; once it is approved, your system is opened at your own address.') }}</p>@endunless
 
         <form method="POST" action="{{ route('site.register.store') }}" class="card">
             @csrf
@@ -14,6 +14,16 @@
                     <div class="alert alert-danger" role="alert">{{ __('Please correct the boxes marked below.') }}</div>
                 @endif
                 <div class="site-trap" aria-hidden="true"><label for="website">Website</label><input type="text" id="website" name="website" tabindex="-1" autocomplete="off"></div>
+
+                <h2 class="site-form-head">{{ __('The plan') }}</h2>
+                <div class="site-plans" role="radiogroup" aria-label="{{ __('The plan') }}">
+                    @foreach ($plans as $key => $plan)
+                        <label class="site-plan">
+                            <input type="radio" name="plan" value="{{ $key }}" @checked(old('plan', request('plan', 'starter')) === $key)>
+                            <span><strong>{{ __($plan['name']) }}</strong><span dir="ltr">${{ $plan['first'] + 0 }}</span> {{ __('first year') }}, {{ __('then :amount a year', ['amount' => '$'.($plan['renewal'] + 0)]) }}</span>
+                        </label>
+                    @endforeach
+                </div>
 
                 <h2 class="site-form-head">{{ __('The business') }}</h2>
                 <div class="row g-3">
@@ -84,8 +94,8 @@
                 </div>
             </div>
             <div class="card-footer d-flex flex-wrap gap-3 justify-content-between align-items-center">
-                <span class="small text-muted">{{ __('The subscription is :first the first year, then :renewal a year.', ['first' => '$'.($prices['main_first'] + 0), 'renewal' => '$'.($prices['main_renewal'] + 0)]) }}</span>
-                <button type="submit" class="btn btn-primary btn-lg">{{ __('Send the request') }}</button>
+                <span class="small text-muted">{{ ($trial ?? null) ? __('Free for :days days. Your system opens at once; nothing is paid now.', ['days' => $trial]) : __('Our team checks the request and contacts you.') }}</span>
+                <button type="submit" class="btn btn-primary btn-lg">{{ ($trial ?? null) ? __('Open my system') : __('Send the request') }}</button>
             </div>
         </form>
     </div>

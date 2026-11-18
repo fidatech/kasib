@@ -8,7 +8,7 @@
         <form method="POST" action="{{ route('admin.invoices.store') }}" class="card mb-0">
             @csrf
             <div class="card-header d-flex justify-content-between align-items-center"><h2 class="h5 card-title mb-0">{{ __('New invoice') }}</h2>
-                <span class="text-muted small" dir="ltr">${{ money($prices['main_first']) }} / ${{ money($prices['main_renewal']) }} · ${{ money($prices['branch_first']) }} / ${{ money($prices['branch_renewal']) }}@if (auth('admin')->user()->allows('settings')) · <a href="{{ route('admin.settings.edit') }}#prices">{{ __('Prices') }}</a>@endif</span></div>
+                <span class="text-muted small" dir="ltr">Starter ${{ money($prices['main_first']) }} / ${{ money($prices['main_renewal']) }} · Pro ${{ money($prices['pro_first']) }} / ${{ money($prices['pro_renewal']) }}</span></div>
             <div class="card-body row g-3">
                 <div class="col-12 col-md-6"><label class="form-label" for="i-tenant">{{ __('Business') }}</label>
                     {{-- choosing a business shows what its invoice will hold --}}
@@ -40,7 +40,7 @@
                         </table>
                     </div>
                 @else
-                    <div class="col-12 text-muted small">{{ __('The first-year price once (the system and its setup), then the yearly price every year. The plan of a business, its users and accounts allowed, is set on the business itself.') }}</div>
+                    <div class="col-12 text-muted small">{{ __('Two plans, Starter and Pro: the first-year price once, then the yearly price. The plan of a business is written on the business itself.') }}</div>
                 @endif
             </div>
             <div class="card-footer text-end"><button class="btn btn-primary" type="submit" @disabled($quote && ! $quote['lines'])><x-icon name="receipt" class="me-1" /> {{ __('Make invoice') }}</button></div>

@@ -32,7 +32,8 @@ class SettingsController extends Controller
         return view('central.settings', [
             'company' => self::company(), 'rules' => Licence::rules(), 'keep' => (int) (CentralSetting::read('backup_keep_days') ?: 14),
             'logo' => (bool) CentralSetting::read('logo_path'), 'prices' => \App\Services\Billing::prices(),
-            'trial' => ['enabled' => CentralSetting::read('trial_enabled') === '1', 'days' => (int) (CentralSetting::read('trial_days') ?: 14)],
+            'trial' => ['enabled' => \App\Services\Billing::trialDays() !== null, 'days' => (int) (CentralSetting::read('trial_days') ?: 7)],
+            'planNotes' => ['starter' => (string) CentralSetting::read('plan_starter_notes'), 'pro' => (string) CentralSetting::read('plan_pro_notes')],
             'hesabpay' => \App\Services\Billing::hesabpay(), 'videos' => (string) CentralSetting::read('help_videos'),
         ]);
     }
@@ -49,6 +50,7 @@ class SettingsController extends Controller
             'hesabpay_number' => ['nullable', 'string', 'max:40'], 'hesabpay_name' => ['nullable', 'string', 'max:150'], 'afn_rate' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'hesabpay_qr' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:1024'],
             'help_videos' => ['nullable', 'string', 'max:5000'],
+            'plan_starter_notes' => ['nullable', 'string', 'max:1000'], 'plan_pro_notes' => ['nullable', 'string', 'max:1000'],
         ] + array_fill_keys(array_keys(\App\Services\Billing::DEFAULTS), ['nullable', 'numeric', 'min:0', 'max:1000000']));
         // the four prices of the service
         foreach (array_keys(\App\Services\Billing::DEFAULTS) as $key) {
@@ -64,8 +66,8 @@ class SettingsController extends Controller
         CentralSetting::put('auto_lock', $request->boolean('auto_lock') ? '1' : '0');
         CentralSetting::put('backup_keep_days', (string) $data['backup_keep_days']);
         CentralSetting::put('trial_enabled', $request->boolean('trial_enabled') ? '1' : '0');
-        CentralSetting::put('trial_days', (string) ($data['trial_days'] ?? 14));
-        foreach (['hesabpay_number', 'hesabpay_name', 'afn_rate', 'help_videos'] as $key) {
+        CentralSetting::put('trial_days', (string) ($data['trial_days'] ?? 7));
+        foreach (['hesabpay_number', 'hesabpay_name', 'afn_rate', 'help_videos', 'plan_starter_notes', 'plan_pro_notes'] as $key) {
             CentralSetting::put($key, (string) ($data[$key] ?? ''));
         }
         if ($request->hasFile('hesabpay_qr')) {

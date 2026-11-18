@@ -31,6 +31,9 @@ class SelfServiceTest extends TestCase
         $this->central();
         $form = ['name' => 'Kabul Exchange', 'slug' => 'kabul', 'owner_name' => 'Karim Khan', 'owner_email' => 'karim@kabul.test', 'owner_phone' => '0700123456',
             'password' => 'a-good-password', 'password_confirmation' => 'a-good-password'];
+        // seven days until the administrator writes another number; switched off, nothing is promised
+        $this->get('/register')->assertOk()->assertSee('Free for 7 days')->assertSee('Starter')->assertSee('Pro');
+        CentralSetting::put('trial_enabled', '0');
         $this->get('/register')->assertOk()->assertDontSee('Free for');
 
         CentralSetting::put('trial_enabled', '1');
@@ -38,12 +41,16 @@ class SelfServiceTest extends TestCase
         $this->get('/register')->assertOk()->assertSee('Free for 10 days');
         $this->get('/')->assertOk()->assertSee('Free for 10 days');
 
-        $this->post('/register', $form)->assertSessionHasNoErrors();
+        $this->post('/register', ['plan' => 'gold'] + $form)->assertSessionHasErrors('plan');
+        $this->post('/register', ['plan' => 'pro'] + $form)->assertSessionHasNoErrors();
         $signup = Signup::sole();
         $tenant = Tenant::sole();
         $this->assertSame(['approved', $tenant->id, null], [$signup->status, (int) $signup->tenant_id, $signup->password]);
-        $this->assertSame(['kabul', 'trial', now()->addDays(10)->toDateString()], [$tenant->slug, $tenant->plan, $tenant->licence_expires_on->toDateString()]);
+        $this->assertSame(['kabul', 'pro', now()->addDays(10)->toDateString()], [$tenant->slug, $tenant->plan, $tenant->licence_expires_on->toDateString()]);
         $this->get('/register/'.$signup->token)->assertOk()->assertSee('kabul.kasib.test');
+
+        // the plan it chose decides what the first invoice asks for
+        $this->assertSame('400.00', \App\Services\Billing::quote($tenant)['total']);
 
         // the owner signs in with the password he chose
         $this->enter($tenant);
@@ -61,14 +68,14 @@ class SelfServiceTest extends TestCase
         CentralSetting::put('hesabpay_number', '0799123456');
         CentralSetting::put('help_videos', "Money in and out | https://videos.example.test/1\nnot a video line");
 
-        $this->get('/service/licence')->assertOk()->assertSee('Pay the subscription through HesabPay')->assertSee('0799123456')->assertSee('500.00');
+        $this->get('/service/licence')->assertOk()->assertSee('Pay the subscription through HesabPay')->assertSee('0799123456')->assertSee('200.00');
         $this->get('/help')->assertOk()->assertSee('Money in and out')->assertDontSee('not a video line');
-        $this->post('/service/pay', ['amount' => '500', 'reference' => 'HP-778899'])->assertSessionHasErrors('picture');
-        $this->post('/service/pay', ['amount' => '500', 'reference' => 'HP-778899', 'picture' => $this->picture()])->assertSessionHasNoErrors()->assertSessionHas('success');
+        $this->post('/service/pay', ['amount' => '200', 'reference' => 'HP-778899'])->assertSessionHasErrors('picture');
+        $this->post('/service/pay', ['amount' => '200', 'reference' => 'HP-778899', 'picture' => $this->picture()])->assertSessionHasNoErrors()->assertSessionHas('success');
         // the same transaction is not sent twice
-        $this->post('/service/pay', ['amount' => '500', 'reference' => 'HP-778899', 'picture' => $this->picture()]);
+        $this->post('/service/pay', ['amount' => '200', 'reference' => 'HP-778899', 'picture' => $this->picture()]);
         $request = PaymentRequest::sole();
-        $this->assertSame(['pending', '500.00', 'Owner One'], [$request->status, (string) $request->amount, $request->sender]);
+        $this->assertSame(['pending', '200.00', 'Owner One'], [$request->status, (string) $request->amount, $request->sender]);
         $this->get('/service/licence')->assertOk()->assertSee('HP-778899');
 
         // the administrator checks it and approves: invoice, payment, and a year more
@@ -77,12 +84,12 @@ class SelfServiceTest extends TestCase
         $this->systemAdmin();
         $this->get('/admin/payment-requests')->assertOk()->assertSee('HP-778899')->assertSee('Acme business');
         $this->get('/admin/payment-requests/'.$request->id.'/picture')->assertOk();
-        $this->post('/admin/payment-requests/'.$request->id.'/approve', ['amount' => '500'])->assertSessionHas('success');
+        $this->post('/admin/payment-requests/'.$request->id.'/approve', ['amount' => '200'])->assertSessionHas('success');
         $this->assertSame('approved', $request->fresh()->status);
-        $this->assertSame(['paid', '500.00'], [Invoice::sole()->status, (string) Invoice::sole()->total]);
+        $this->assertSame(['paid', '200.00'], [Invoice::sole()->status, (string) Invoice::sole()->total]);
         $this->assertSame(['hesabpay', 'HP-778899'], [Payment::sole()->method, Payment::sole()->reference]);
         $this->assertSame(now()->addDays(5)->addYear()->toDateString(), $tenant->fresh()->licence_expires_on->toDateString());
-        $this->post('/admin/payment-requests/'.$request->id.'/approve', ['amount' => '500']);
+        $this->post('/admin/payment-requests/'.$request->id.'/approve', ['amount' => '200']);
         $this->assertSame(1, Payment::count());
 
         // a second one is rejected, with a reason from the list
@@ -100,16 +107,16 @@ class SelfServiceTest extends TestCase
         $tenant = $this->business();
         $tenant->update(['status' => Tenant::SUSPENDED, 'locked_reason' => 'licence', 'licence_expires_on' => now()->subDays(40)->toDateString()]);
 
-        $this->get('/login')->assertStatus(503)->assertSee('Pay the subscription through HesabPay')->assertSee('500.00');
+        $this->get('/login')->assertStatus(503)->assertSee('Pay the subscription through HesabPay')->assertSee('200.00');
         $this->post('/paid', ['amount' => '', 'reference' => ''])->assertStatus(503);
         $this->assertSame(0, PaymentRequest::count());
-        $this->post('/paid', ['amount' => '500', 'reference' => 'HP-LOCKED-1', 'sender' => 'Karim', 'picture' => $this->picture()])->assertOk()->assertSee('We have it');
+        $this->post('/paid', ['amount' => '200', 'reference' => 'HP-LOCKED-1', 'sender' => 'Karim', 'picture' => $this->picture()])->assertOk()->assertSee('We have it');
         $request = PaymentRequest::sole();
         $this->assertSame(['HP-LOCKED-1', 'Karim'], [$request->reference, $request->sender]);
 
         $this->central();
         $admin = $this->systemAdmin();
-        PaymentRequests::approve($request, '500', $admin->id);
+        PaymentRequests::approve($request, '200', $admin->id);
         $this->assertSame(Tenant::ACTIVE, $tenant->fresh()->status);
         $this->assertSame(now()->addYear()->toDateString(), $tenant->fresh()->licence_expires_on->toDateString());
 

@@ -51,7 +51,7 @@ class InvoiceController extends Controller
         if (! $quote['lines']) {
             return back()->with('danger', __('There is nothing to invoice: this business has no new branch.'));
         }
-        $main = collect($quote['lines'])->first(fn (array $line) => str_starts_with($line['key'], 'main_'));
+        $main = collect($quote['lines'])->first(fn (array $line) => Billing::isYearly($line['key']));
 
         $invoice = DB::connection((new Invoice)->getConnectionName())->transaction(fn () => Invoice::create([
             'tenant_id' => $tenant->id, 'from_date' => $data['from_date'], 'to_date' => $data['to_date'], 'note' => $data['note'] ?? null,
@@ -82,7 +82,7 @@ class InvoiceController extends Controller
         $invoice = Invoice::with('tenant')->findOrFail($request->route('id'));
         $data = $request->validate(['status' => ['required', Rule::in(['paid', 'unpaid', 'cancelled'])]]);
         $invoice->update(['status' => $data['status'], 'paid_on' => $data['status'] === 'paid' ? now()->toDateString() : null]);
-        $yearly = collect($invoice->lines ?? [['key' => 'main_renewal']])->contains(fn (array $line) => str_starts_with((string) ($line['key'] ?? ''), 'main_'));
+        $yearly = collect($invoice->lines ?? [['key' => 'main_renewal']])->contains(fn (array $line) => Billing::isYearly($line['key'] ?? ''));
         if ($yearly && $data['status'] === 'paid' && (! $invoice->tenant->licence_expires_on || $invoice->tenant->licence_expires_on->lt($invoice->to_date))) {
             $invoice->tenant->update(['licence_expires_on' => $invoice->to_date]);
         }

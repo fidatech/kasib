@@ -49,7 +49,7 @@ class SignupController extends Controller
         try {
             $tenant = $manager->create([
                 'name' => $signup->name, 'name_local' => $signup->name_local, 'slug' => $data['slug'], 'licence_no' => $signup->licence_no,
-                'licence_expires_on' => $data['licence_expires_on'] ?? null, 'max_branches' => $data['max_branches'] ?? null,
+                'licence_expires_on' => $data['licence_expires_on'] ?? null, 'max_branches' => $data['max_branches'] ?? null, 'plan' => $signup->plan ?: 'starter',
                 'owner_name' => $signup->owner_name, 'owner_email' => $signup->owner_email, 'owner_password' => $signup->password,   // already hashed
                 'notes' => trim(__('Registered on the website.').' '.$signup->owner_phone.' '.$signup->message),
             ]);

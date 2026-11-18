@@ -70,16 +70,22 @@
         {{-- the four prices of the service, side by side --}}
         <div class="col-12" id="prices">
             <div class="card mb-0">
-                <div class="card-header"><div class="set-head"><span class="set-icon"><x-icon name="tags" /></span><div><h2 class="h5">{{ __('Prices (US dollars)') }}</h2><small>{{ __('Main branch: the first-year price once, then hosting every year. Every further branch the same, at its own two prices.') }}</small></div></div></div>
+                <div class="card-header"><div class="set-head"><span class="set-icon"><x-icon name="tags" /></span><div><h2 class="h5">{{ __('Prices (US dollars)') }}</h2><small>{{ __('Two plans, Starter and Pro: the first-year price once, then the yearly price. The plan of a business is written on the business itself.') }}</small></div></div></div>
                 <div class="card-body">
                     <div class="row g-3">
-                        @foreach (['main_first' => 'Paid once, when the business starts', 'main_renewal' => 'Every year after the first', 'branch_first' => 'Paid once for each branch that is added', 'branch_renewal' => 'Every year after the first, for each branch'] as $key => $note)
-                            <div class="col-12 col-sm-6 col-xl-3">
+                        @foreach (['main_first' => 'Paid once, when the business starts', 'main_renewal' => 'Every year after the first', 'pro_first' => 'Paid once, when the business starts', 'pro_renewal' => 'Every year after the first', 'branch_first' => 'Paid once for each branch that is added', 'branch_renewal' => 'Every year after the first, for each branch'] as $key => $note)
+                            <div class="col-12 col-sm-6 col-xl-4">
                                 <div class="price-tile">
                                     <label for="p-{{ $key }}">{{ __(\App\Services\Billing::LABELS[$key]) }}</label>
                                     <small>{{ __($note) }}</small>
                                     <div class="input-group"><span class="input-group-text">$</span><input type="text" inputmode="decimal" class="form-control @error($key) is-invalid @enderror" id="p-{{ $key }}" name="{{ $key }}" value="{{ old($key, rtrim(rtrim($prices[$key], '0'), '.')) }}" dir="ltr" required></div>
                                 </div>
+                            </div>
+                        @endforeach
+                        @foreach (['starter' => 'Starter', 'pro' => 'Pro'] as $plan => $planName)
+                            <div class="col-12 col-md-6">
+                                <label class="form-label" for="pn-{{ $plan }}">{{ __('What the :plan plan includes (shown on the website)', ['plan' => $planName]) }}</label>
+                                <textarea class="form-control" id="pn-{{ $plan }}" name="plan_{{ $plan }}_notes" rows="4" dir="auto" placeholder="{{ __('One point on a line') }}">{{ old('plan_'.$plan.'_notes', $planNotes[$plan]) }}</textarea>
                             </div>
                         @endforeach
                     </div>

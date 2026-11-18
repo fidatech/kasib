@@ -38,9 +38,9 @@ return [
         'remember' => 'Keep me signed in',
         'submit' => 'Sign in',
         'show_password' => 'Show password',
-        'hero_kicker' => 'Exchange · Remittance · Compliance',
+        'hero_kicker' => 'Accounts · Exchange · Reports',
         'hero_title' => 'Your business, in one system.',
-        'hero_text' => 'Exchanges, remittances and customer accounts for every branch, with the reports Da Afghanistan Bank asks for.',
+        'hero_text' => 'Simple accounting for every business: balances per currency, money in and money out, exchange profit and clear reports.',
     ],
 
     'errors' => [
@@ -58,5 +58,5 @@ return [
         'empty_title' => 'Welcome, :name',
         'empty_text' => 'The system is ready. Its modules will appear in the menu as they are added.',
     ],
-    'meta_description' => 'The system of :name for exchange and remittance businesses: exchanges, remittances, accounts and the reports of Da Afghanistan Bank.',
+    'meta_description' => 'The accounting system :name for every business: balances per currency, money in and money out, exchange profit, statements and reports.',
 ];

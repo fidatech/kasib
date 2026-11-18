@@ -15,6 +15,7 @@
         <a href="{{ url('/') }}" class="brand-link"><x-brand-logo :size="34" /><span class="brand-text">{{ config('app.name') }}</span></a>
         <nav class="site-links" aria-label="{{ __('Main menu') }}">
             <a href="{{ url('/') }}#features">{{ __('Features') }}</a>
+            <a href="{{ url('/') }}#how">{{ __('How it works') }}</a>
             <a href="{{ url('/') }}#pricing">{{ __('Prices') }}</a>
             <a href="{{ url('/') }}#signin">{{ __('Sign in') }}</a>
         </nav>
@@ -40,6 +41,7 @@
         <div>
             <strong>{{ config('app.name') }}</strong>
             <p>{{ __('app.auth.hero_text') }}</p>
+            <p>{{ __(':name is made by Fida Technologies, Kabul.', ['name' => config('app.name')]) }}</p>
         </div>
         <div>
             <strong>{{ $company['company_name'] }}</strong>

@@ -204,9 +204,10 @@ class CentralPanelTest extends TestCase
     {
         config(['tenancy.base_domain' => 'kasib.test']);
         $this->central();
+        \App\Models\Central\CentralSetting::put('trial_enabled', '0');   // without the free trial a request waits for the administrator
 
         // the public website: what the system is, the prices and the form; search engines may list it
-        $this->get('/')->assertOk()->assertSee('Register your business')->assertSee('$500')->assertSee('Already a client?')->assertDontSee('noindex');
+        $this->get('/')->assertOk()->assertSee('Register your business')->assertSee('$200')->assertSee('$400')->assertSee('Starter')->assertSee('Pro')->assertSee('Already a client?')->assertDontSee('Da Afghanistan Bank')->assertDontSee('noindex');
         $this->get('/register')->assertOk()->assertSee('Send the request');
         $this->get('/robots.txt')->assertOk()->assertSee('Allow: /');
 
