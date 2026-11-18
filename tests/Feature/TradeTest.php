@@ -156,4 +156,28 @@ class TradeTest extends TestCase
         $this->assertSame('1000.00', $this->owed($supplier));
         $this->assertSame(0.0, round((float) AccountBalance::sum('base_balance'), 2));
     }
+
+    public function test_units_are_a_list_of_their_own(): void
+    {
+        $this->business(['plan' => 'pro']);
+        $this->owner();
+        $this->get('/units')->assertOk()->assertSee('carton')->assertSee('kg');
+
+        // a unit of the business is added, and items are counted in it
+        $this->post('/units', ['name' => 'sack', 'name_local' => 'جوال'])->assertSessionHasNoErrors();
+        $this->post('/units', ['name' => 'sack'])->assertSessionHasErrors('name');
+        $this->get('/items/create')->assertOk()->assertSee('sack');
+        $form = ['name' => 'Potatoes', 'sale_price' => '900', 'cost_price' => '800', 'track_stock' => '1', 'is_active' => '1'];
+        $this->post('/items', $form + ['unit' => 'handful'])->assertSessionHasErrors('unit');
+        $this->post('/items', $form + ['unit' => 'sack'])->assertSessionHasNoErrors();
+
+        // renamed, its items follow; in use, it is not deleted; unused, it goes
+        $unit = \App\Models\Unit::where('name', 'sack')->sole();
+        $this->put('/units/'.$unit->id, ['name' => 'jawal', 'name_local' => 'جوال'])->assertSessionHasNoErrors();
+        $this->assertSame('jawal', \App\Models\Item::where('name', 'Potatoes')->value('unit'));
+        $this->delete('/units/'.$unit->id);
+        $this->assertSame(1, \App\Models\Unit::where('name', 'jawal')->count());
+        $this->delete('/units/'.\App\Models\Unit::where('name', 'dozen')->value('id'));
+        $this->assertSame(0, \App\Models\Unit::where('name', 'dozen')->count());
+    }
 }

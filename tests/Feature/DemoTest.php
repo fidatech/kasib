@@ -19,6 +19,7 @@ class DemoTest extends TestCase
 
     public function test_the_demo_is_shown_on_the_website_and_anybody_signs_in_to_it(): void
     {
+        config(['tenancy.demo.transactions' => 600]);
         $this->central();
         // while there is no demo the website says nothing about one
         $this->get('/')->assertOk()->assertDontSee('Try the demo');
@@ -43,10 +44,22 @@ class DemoTest extends TestCase
 
         // it holds a month of example papers
         // it holds two months of a food wholesaler: partners, a bank, customers, suppliers, stock, sales, expenses
-        $this->assertSame(12, Party::where('is_system', false)->whereHas('group', fn ($q) => $q->where('type', 'party'))->count());
+        // about fifty accounts in every section, and the cash box with one account for every currency
+        $sections = \App\Models\AccountGroup::withCount(['parties' => fn ($q) => $q->where('is_system', false)])->pluck('parties_count', 'key');
+        $this->assertSame([50, 50, 50, 50], [$sections['bank'], $sections['saraf'], $sections['customers'], $sections['suppliers']]);
+        $this->assertSame(\App\Models\Currency::active()->count(), \App\Services\Accounts::cashBox()->accounts()->count());
+        // the papers of earlier years are in the books: every one with a balanced entry, and the totals agree with the lines
+        $this->assertGreaterThanOrEqual(600, Voucher::whereDate('date', '<', now()->subDays(62)->toDateString())->count());
+        $this->assertSame(0, (int) round((float) \Illuminate\Support\Facades\DB::table('journal_lines')->selectRaw('SUM(base_debit) - SUM(base_credit) as d')->value('d') * 100));
+        foreach (\App\Models\Account::with('total')->inRandomOrder()->limit(25)->get() as $account) {
+            $lines = \Illuminate\Support\Facades\DB::table('journal_lines')->where('account_id', $account->id)->where('is_void', false)->selectRaw('COALESCE(SUM(debit),0) - COALESCE(SUM(credit),0) as d')->value('d');
+            $this->assertSame(\App\Support\Num::money($lines), \App\Support\Num::money($account->total?->balance ?? 0), $account->name);
+        }
+        $this->assertSame(0, \App\Models\Account::whereHas('party.group', fn ($q) => $q->where('type', 'money'))->whereHas('total', fn ($q) => $q->where('balance', '<', 0))->count());
+        $this->get('/reports/trial-balance')->assertOk();
+        $this->get(route('money-in.index'))->assertOk();
         $this->assertGreaterThan(80, Invoice::where('kind', 'sale')->count());
         $this->assertGreaterThan(8, Invoice::where('kind', 'purchase')->count());
-        $this->assertGreaterThan(20, Voucher::count());
         $this->assertGreaterThan(8, \App\Models\Expense::count());
         $this->assertSame([14, 2, 0], [\App\Models\Item::count(), \App\Models\Shareholder::count(), \App\Models\Alert::count()]);
         $papers = Invoice::count();

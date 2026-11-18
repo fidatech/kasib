@@ -50,7 +50,8 @@ class ItemController extends CrudController
         return [
             ['name' => 'name', 'label' => 'Name', 'rules' => ['required', 'string', 'max:150']],
             ['name' => 'code', 'label' => 'Code or barcode', 'rules' => ['nullable', 'string', 'max:60', Rule::unique('items', 'code')->ignore($record?->id)]],
-            ['name' => 'unit', 'label' => 'Unit', 'default' => 'pcs', 'rules' => ['required', 'string', 'max:30'], 'help' => 'Piece, kilo, metre, carton ...'],
+            ['name' => 'unit', 'label' => 'Unit', 'type' => 'select', 'options' => \App\Models\Unit::options($record?->unit), 'default' => 'pcs', 'rules' => ['required', 'string', 'max:30', Rule::exists('units', 'name')],
+                'help' => 'The list is under Sales & Purchases → Units: add your own there.'],
             ['name' => 'sale_price', 'label' => 'Sale price', 'type' => 'decimal', 'default' => 0, 'rules' => ['required', 'numeric', 'min:0'], 'help' => __('In :currency. It is offered on a sale and can be changed there.', ['currency' => $base])],
             ['name' => 'cost_price', 'label' => 'Purchase price', 'type' => 'decimal', 'default' => 0, 'rules' => ['required', 'numeric', 'min:0'], 'help' => __('In :currency. It is offered on a purchase.', ['currency' => $base])],
             ['name' => 'reorder_level', 'label' => 'Warn when the stock falls to', 'type' => 'decimal', 'rules' => ['nullable', 'numeric', 'min:0']],

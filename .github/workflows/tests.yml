@@ -73,9 +73,9 @@ jobs:
           php artisan tenants:migrate
           mysql -h 127.0.0.1 -uroot -psecret -e "SELECT name, type FROM hb_sample.account_groups; SELECT name FROM hb_sample.parties; SELECT email FROM hb_sample.users;"
           # the demo of the website is made, and made again, on a real MySQL
+          DEMO_TRANSACTIONS=3000 php artisan demo:refresh
           php artisan demo:refresh
-          php artisan demo:refresh
-          mysql -h 127.0.0.1 -uroot -psecret -e "SELECT COUNT(*) AS invoices FROM hb_demo.invoices; SELECT email FROM hb_demo.users;"
+          mysql -h 127.0.0.1 -uroot -psecret -e "SELECT COUNT(*) AS invoices FROM hb_demo.invoices; SELECT COUNT(*) AS papers FROM hb_demo.vouchers; SELECT COUNT(*) AS journal_lines, SUM(base_debit) - SUM(base_credit) AS difference FROM hb_demo.journal_lines; SELECT email FROM hb_demo.users;"
 
       - name: Compile every view
         run: php artisan view:cache

@@ -34,7 +34,9 @@ return [
         'ssl' => (bool) env('BACKUP_FTP_SSL', true),
     ],
     // the business anybody may open from the website; an empty DEMO_SLUG means no demo
-    'demo' => ['slug' => env('DEMO_SLUG', 'demo'), 'email' => env('DEMO_EMAIL', 'demo@kasib.af'), 'password' => env('DEMO_PASSWORD', 'demo1234')],
+    'demo' => ['slug' => env('DEMO_SLUG', 'demo'), 'email' => env('DEMO_EMAIL', 'demo@kasib.af'), 'password' => env('DEMO_PASSWORD', 'demo1234'),
+        // how many papers of earlier years the demo holds beside the two months of its story
+        'transactions' => (int) env('DEMO_TRANSACTIONS', 100000)],
 
     'reserved_slugs' => ['admin', 'www', 'api', 'app', 'mail', 'dab', 'central', 'demo'],
 ];

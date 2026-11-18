@@ -83,6 +83,14 @@ class Demo
             $afn = Currency::base();
             $usd = Currency::where('code', 'USD')->firstOrFail();
             Rates::set($main, $usd, '70.50', '70.30', '70.70');
+            foreach (['EUR' => ['76.40', '76.10', '76.70'], 'PKR' => ['252.50', '251.00', '254.00']] as $code => [$rate, $buys, $sells]) {
+                if ($other = Currency::active()->where('code', $code)->first()) {
+                    Rates::set($main, $other, $rate, $buys, $sells);
+                }
+            }
+            // the years before the two months told below: about fifty accounts a section and the papers of every day
+            $volume = max(0, (int) config('tenancy.demo.transactions'));
+            $years = $volume > 0 ? 730 : 0;
             foreach (['company_phone' => '0799 240 118', 'company_address' => 'Mandawi, Sarai Haji Zaman, Kabul'] as $key => $value) {
                 Setting::updateOrCreate(['key' => $key], ['value' => $value]);
             }
@@ -99,9 +107,10 @@ class Demo
 
             // the two partners pay in their capital, and most of it goes to the bank
             foreach ([['Haji Abdul Rahman Safi', 'حاجی عبدالرحمن صافی', 'Haji Gul Mohammad', '0799 240 118', 60, '1800000'], ['Mohammad Naeem Safi', 'محمد نعیم صافی', 'Haji Abdul Rahman', '0788 615 402', 40, '1200000']] as [$name, $local, $father, $phone, $share, $paid]) {
-                CapitalService::record(\App\Models\Shareholder::create(['name' => $name, 'name_local' => $local, 'father_name' => $father, 'phone' => $phone, 'share_percent' => $share]), 'contribution', $day(62), $paid, $cash);
+                CapitalService::record(\App\Models\Shareholder::create(['name' => $name, 'name_local' => $local, 'father_name' => $father, 'phone' => $phone, 'share_percent' => $share]), 'contribution', $day(64 + $years), $paid, $cash);
             }
-            Vouchers::transfer($cash, $bank, $day(61), '2200000', 0, 'Deposit to the bank');
+            Vouchers::transfer($cash, $bank, $day(63 + $years), '2200000', 0, 'Deposit to the bank');
+            DemoBulk::run($volume, $years, 62);
             $money = ['cash' => 800000, 'bank' => 2200000];
 
             $customers = [

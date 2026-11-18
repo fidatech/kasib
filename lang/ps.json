@@ -3276,5 +3276,8 @@
     "This is the demo. Everything recorded here is erased every night.": "دا ډیمو ده. هر څه چې دلته ثبت شي هره شپه پاکېږي.",
     "This is switched off in the demo.": "دا برخه په ډیمو کې بنده ده.",
     "A business with example papers, open to everybody. Nothing to register; it starts fresh every midnight.": "یو کاروبار له بېلګه‌ییزو سندونو سره، د ټولو لپاره خلاص. نوم‌لیکنې ته اړتیا نشته؛ هره نیمه شپه له سره پیلېږي.",
-    "This is the demo. Everything recorded here is erased at midnight (12:00 AM).": "دا ډیمو ده. هر څه چې دلته ثبت شي د شپې په ۱۲ بجو پاکېږي."
+    "This is the demo. Everything recorded here is erased at midnight (12:00 AM).": "دا ډیمو ده. هر څه چې دلته ثبت شي د شپې په ۱۲ بجو پاکېږي.",
+    "Short, as it is printed on an invoice: kg, carton, pcs ...": "لنډ، لکه څنګه چې په بل کې چاپېږي: kg، carton، pcs ...",
+    "The list is under Sales & Purchases → Units: add your own there.": "لېست په «پلور او پېرود ← واحدونه» کې دی: خپل واحد هلته اضافه کړئ.",
+    ":count items are counted in this unit. Give them another unit first.": ":count جنسونه په دې واحد شمېرل کېږي. لومړی بل واحد ورکړئ."
 }

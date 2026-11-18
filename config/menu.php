@@ -52,6 +52,7 @@ return [
         ['label' => 'Sale Returns', 'route' => 'trade.index', 'params' => ['kind' => 'sale-returns'], 'can' => 'transactions.view'],
         ['label' => 'Purchase Returns', 'route' => 'trade.index', 'params' => ['kind' => 'purchase-returns'], 'can' => 'transactions.view'],
         ['label' => 'Items', 'route' => 'items.index', 'active' => 'items.*', 'can' => 'transactions.view'],
+        ['label' => 'Units', 'route' => 'units.index', 'active' => 'units.*', 'can' => 'transactions.view'],
         ['label' => 'Stock on Hand', 'route' => 'trade.reports.stock', 'can' => 'reports.view'],
         ['label' => 'Sales by Item', 'route' => 'trade.reports.items', 'can' => 'reports.view'],
         ['label' => 'Sales by Customer', 'route' => 'trade.reports.parties', 'can' => 'reports.view'],

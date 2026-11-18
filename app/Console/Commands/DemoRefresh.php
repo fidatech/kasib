@@ -18,8 +18,11 @@ class DemoRefresh extends Command
 
             return self::SUCCESS;
         }
+        @set_time_limit(0);
+        @ini_set('memory_limit', '512M');
+        $started = microtime(true);
         $tenant = Demo::refresh();
-        $this->info('The demo is ready at '.$tenant->domain.' ('.config('tenancy.demo.email').').');
+        $this->info('The demo is ready at '.$tenant->domain.' ('.config('tenancy.demo.email').'), '.config('tenancy.demo.transactions').' papers of earlier years, in '.round(microtime(true) - $started).' seconds.');
 
         return self::SUCCESS;
     }
