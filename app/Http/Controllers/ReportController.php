@@ -29,6 +29,7 @@ class ReportController extends Controller
         'reports.balance' => ['Balance Sheet', 'landmark', 'What the business has, what it owes and its capital on a date.'],
         'reports.balances' => ['Customer & Supplier Balances', 'users', 'What every party has with the business, per currency.'],
         'reports.due' => ['Due Payments', 'calendar-days', 'Money received with a payback date that has come or is near.'],
+        'export.index' => ['Export Center', 'file-excel', 'One Excel workbook of a period, with a sheet for every module you tick.'],
         'treasury.index' => ['Currency Position', 'vault', 'The money of the business in every currency, and where it is.'],
         'journal.index' => ['Roznamcha', 'book', 'The general ledger: every entry of every transaction.'],
     ];
@@ -73,6 +74,13 @@ class ReportController extends Controller
     {
         Gate::authorize('reports.view');
         [$from, $to] = $this->dates($request);
+
+        return $this->sheet('Profit & Loss', 'chart-line', [['', ''], [Currency::base()->code, 'end']], $this->profitRows($from, $to), $from, $to);
+    }
+
+    /** The lines of the profit and loss statement: headings, groups, totals and the profit of the period. */
+    public function profitRows(string $from, string $to): array
+    {
         $sums = $this->movement($from, $to);
 
         $rows = [];
@@ -92,7 +100,7 @@ class ReportController extends Controller
         $profit = Num::money(Num::sub($totals['income'], $totals['expense']));
         $rows[] = ['total' => true, 'cells' => [Num::isNegative($profit) ? __('Loss of the period') : __('Profit of the period'), money(Num::abs($profit))]];
 
-        return $this->sheet('Profit & Loss', 'chart-line', [['', ''], [Currency::base()->code, 'end']], $rows, $from, $to);
+        return $rows;
     }
 
     /**
@@ -105,6 +113,12 @@ class ReportController extends Controller
         Gate::authorize('reports.view');
         $to = $this->dates($request)[1];
 
+        return $this->sheet('Balance Sheet', 'landmark', [['', ''], [Currency::base()->code, 'end']], $this->balanceRows($to), null, $to);
+    }
+
+    /** The lines of the balance sheet at the end of a date. */
+    public function balanceRows(string $to): array
+    {
         $accounts = DB::table('journal_lines as l')
             ->join('accounts as a', 'a.id', '=', 'l.account_id')
             ->join('account_categories as c', 'c.id', '=', 'a.account_category_id')
@@ -150,7 +164,7 @@ class ReportController extends Controller
         }
         $rows[] = ['total' => true, 'cells' => [__('Liabilities and capital'), money(Num::add($totals['liability'], $totals['equity']))]];
 
-        return $this->sheet('Balance Sheet', 'landmark', [['', ''], [Currency::base()->code, 'end']], $rows, null, $to);
+        return $rows;
     }
 
     /** What every customer, supplier and other party has with the business, per currency. */

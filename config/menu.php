@@ -59,6 +59,7 @@ return [
         ['label' => 'Profit & Loss', 'route' => 'reports.profit', 'can' => 'reports.view', 'advanced' => true],
         ['label' => 'Balance Sheet', 'route' => 'reports.balance', 'can' => 'reports.view', 'advanced' => true],
         ['label' => 'Cancelled Papers', 'route' => 'journal.index', 'params' => ['cancelled' => 1], 'can' => 'journal.view'],
+        ['label' => 'Export Center', 'route' => 'export.index', 'active' => 'export.*', 'can' => 'reports.view'],
         ['label' => 'All Reports', 'route' => 'reports.index', 'can' => 'reports.view'],
     ]],
 

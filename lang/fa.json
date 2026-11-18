@@ -2628,5 +2628,15 @@
     "Backup made.": "بک‌اپ گرفته شد.",
     "The backup was put back. What you had before was saved as a new backup.": "بک‌اپ بازگردانده شد. آنچه قبلاً داشتید به شکل بک‌اپ جدید ذخیره شد.",
     "Deal cost": "مصرف معامله",
-    "Deal receipt": "دریافت معامله"
+    "Deal receipt": "دریافت معامله",
+    "Export Center": "مرکز صادرات",
+    "One Excel workbook of a period, with a sheet for every module you tick.": "یک فایل اکسل از یک دوره، با یک صفحه برای هر ماژولی که نشانی می‌کنید.",
+    "One Excel workbook of a period, with a summary and a sheet for every module you tick.": "یک فایل اکسل از یک دوره، با خلاصه و یک صفحه برای هر ماژولی که نشانی می‌کنید.",
+    "Sheets of the workbook": "صفحات فایل",
+    "Download the workbook": "دانلود فایل",
+    "The balance sheet and the trial balance are as on the last day of the period. Amounts are numbers, so Excel can add and filter them.": "بیلانس شیت و ترازنامه آزمایشی مطابق آخرین روز دوره است. مبالغ عدد اند، بنابراین اکسل می‌تواند آن‌ها را جمع و فلتر کند.",
+    "Made by": "تهیه کننده",
+    "Sheet": "صفحه",
+    "Rows": "سطرها",
+    "first :count rows only": "فقط :count سطر اول"
 }

@@ -17,9 +17,78 @@ class Xlsx
      */
     public static function build(array $rows, string $sheetName = 'Sheet1', bool $rtl = false): string
     {
+        return self::workbook([$sheetName => $rows], $rtl);
+    }
+
+    /**
+     * A workbook of several sheets: [name of the sheet => rows]. Two sheets cannot have the same
+     * name in Excel, so a name that comes twice gets a number.
+     */
+    public static function workbook(array $sheets, bool $rtl = false): string
+    {
+        $types = '';
+        $list = '';
+        $rels = '';
+        $files = [];
+        $used = [];
+        $n = 0;
+        foreach ($sheets as $name => $rows) {
+            $n++;
+            $name = self::sheetName((string) $name);
+            for ($i = 2, $base = $name; isset($used[mb_strtolower($name)]); $i++) {
+                $name = mb_substr($base, 0, 28).' '.$i;
+            }
+            $used[mb_strtolower($name)] = true;
+            $types .= '<Override PartName="/xl/worksheets/sheet'.$n.'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>';
+            $list .= '<sheet name="'.self::escape($name).'" sheetId="'.$n.'" r:id="rId'.$n.'"/>';
+            $rels .= '<Relationship Id="rId'.$n.'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'.$n.'.xml"/>';
+            $files['xl/worksheets/sheet'.$n.'.xml'] = self::sheet($rows, $rtl);
+        }
+
+        $files = [
+            '[Content_Types].xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+                .'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
+                .'<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+                .$types
+                .'<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>',
+            '_rels/.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                .'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
+            'xl/workbook.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+                .'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'.$list.'</sheets></workbook>',
+            'xl/_rels/workbook.xml.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+                .$rels
+                .'<Relationship Id="rId'.($n + 1).'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
+            // styles: 0 normal, 1 bold text, 2 number with thousands, 3 bold number
+            'xl/styles.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+                .'<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
+                .'<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'
+                .'<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+                .'<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+                .'<cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
+                .'<xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="4" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/></cellXfs>'
+                .'<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+                .'</styleSheet>',
+        ] + $files;
+
+        $path = tempnam(sys_get_temp_dir(), 'xlsx');
+        $zip = new ZipArchive;
+        $zip->open($path, ZipArchive::OVERWRITE);
+        foreach ($files as $name => $content) {
+            $zip->addFromString($name, $content);
+        }
+        $zip->close();
+        $bytes = file_get_contents($path);
+        @unlink($path);
+
+        return $bytes;
+    }
+
+    /** The XML of one sheet. */
+    private static function sheet(array $rows, bool $rtl): string
+    {
         $widths = [];
         $xml = '';
-        foreach ($rows as $r => $row) {
+        foreach (array_values($rows) as $r => $row) {
             $xml .= '<row r="'.($r + 1).'">';
             foreach ($row['cells'] as $c => $cell) {
                 $ref = self::column($c).($r + 1);
@@ -42,53 +111,16 @@ class Xlsx
         }
 
         $cols = '';
+        ksort($widths);
         foreach ($widths as $c => $width) {
             $cols .= '<col min="'.($c + 1).'" max="'.($c + 1).'" width="'.$width.'" customWidth="1"/>';
         }
 
-        $sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             .'<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
             .'<sheetViews><sheetView workbookViewId="0"'.($rtl ? ' rightToLeft="1"' : '').'/></sheetViews>'
             .($cols !== '' ? '<cols>'.$cols.'</cols>' : '')
             .'<sheetData>'.$xml.'</sheetData></worksheet>';
-
-        $files = [
-            '[Content_Types].xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-                .'<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>'
-                .'<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-                .'<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
-                .'<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>',
-            '_rels/.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-                .'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>',
-            'xl/workbook.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
-                .'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="'.self::escape(self::sheetName($sheetName)).'" sheetId="1" r:id="rId1"/></sheets></workbook>',
-            'xl/_rels/workbook.xml.rels' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-                .'<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
-                .'<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>',
-            // styles: 0 normal, 1 bold text, 2 number with thousands, 3 bold number
-            'xl/styles.xml' => '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-                .'<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
-                .'<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'
-                .'<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
-                .'<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-                .'<cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>'
-                .'<xf numFmtId="4" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="4" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/></cellXfs>'
-                .'<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
-                .'</styleSheet>',
-            'xl/worksheets/sheet1.xml' => $sheet,
-        ];
-
-        $path = tempnam(sys_get_temp_dir(), 'xlsx');
-        $zip = new ZipArchive;
-        $zip->open($path, ZipArchive::OVERWRITE);
-        foreach ($files as $name => $content) {
-            $zip->addFromString($name, $content);
-        }
-        $zip->close();
-        $bytes = file_get_contents($path);
-        @unlink($path);
-
-        return $bytes;
     }
 
     /** 0 becomes A, 25 becomes Z, 26 becomes AA. */

@@ -20,6 +20,7 @@ use App\Http\Controllers\DepreciationController;
 use App\Http\Controllers\ExchangeController;
 use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\ExportController;
 use App\Http\Controllers\FixedAssetController;
 use App\Http\Controllers\Hr\DistributionController;
 use App\Http\Controllers\IncomeController;
@@ -251,6 +252,8 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
         Route::get('reports/balances', [ReportController::class, 'balances'])->name('reports.balances');
         Route::get('reports/due-payments', [ReportController::class, 'due'])->name('reports.due');
         Route::get('currency-position', [TreasuryController::class, 'index'])->name('treasury.index');
+        Route::get('export', [ExportController::class, 'index'])->name('export.index');
+        Route::get('export/download', [ExportController::class, 'download'])->name('export.download');
 
         // administration
         $crud('users', UserController::class, 'users');

@@ -426,6 +426,50 @@ class HesabBookTest extends TestCase
         $this->get('/backups/999/download')->assertNotFound();
     }
 
+    public function test_the_export_center_makes_one_workbook_with_a_sheet_for_every_module(): void
+    {
+        $this->business();
+        $this->owner();
+        $this->rates(['USD' => '70']);
+        $this->openingCash('AFN', '50000');
+        $cash = $this->cash();
+        $ahmad = $this->party('customers', 'Ahmad');
+        Vouchers::moneyIn($ahmad, $cash, today_iso(), '5000');
+        Vouchers::exchange($cash, $this->cash('USD'), today_iso(), '7100', '100');
+        Vouchers::income(AccountCategory::byKey('trade_income'), $cash, today_iso(), '900');
+
+        $this->get('/export')->assertOk()->assertSee('Download the workbook');
+        $this->get('/export/download?from='.today_iso().'&to='.today_iso())->assertSessionHasErrors('modules');
+
+        $modules = array_keys(\App\Services\ExportCenter::MODULES);
+        $response = $this->get('/export/download?'.http_build_query(['from' => now()->startOfYear()->toDateString(), 'to' => today_iso(), 'modules' => $modules]));
+        $response->assertOk()->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        // the file is a workbook: a summary and one sheet for every module, with the papers in them
+        $file = tempnam(sys_get_temp_dir(), 'export');
+        file_put_contents($file, $response->getContent());
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($file) === true);
+        $workbook = $zip->getFromName('xl/workbook.xml');
+        $this->assertSame(count($modules) + 1, substr_count($workbook, '<sheet '));
+        foreach (['Summary', 'Money In', 'Exchanges', 'Roznamcha', 'Balance Sheet'] as $sheet) {
+            $this->assertStringContainsString('name="'.$sheet.'"', $workbook);
+        }
+        $this->assertNotFalse($zip->getFromName('xl/worksheets/sheet'.(count($modules) + 1).'.xml'));
+        $this->assertStringContainsString('MI-000001', $zip->getFromName('xl/worksheets/sheet3.xml'));
+        $this->assertStringContainsString('Ahmad', $zip->getFromName('xl/worksheets/sheet2.xml'));
+        $zip->close();
+        @unlink($file);
+
+        // only what was ticked
+        $one = $this->get('/export/download?'.http_build_query(['from' => today_iso(), 'to' => today_iso(), 'modules' => ['exchanges']]))->assertOk();
+        file_put_contents($file, $one->getContent());
+        $zip->open($file);
+        $this->assertSame(2, substr_count($zip->getFromName('xl/workbook.xml'), '<sheet '));
+        $zip->close();
+        @unlink($file);
+    }
+
     public function test_a_user_sees_only_what_the_role_allows(): void
     {
         $this->business();

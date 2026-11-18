@@ -2628,5 +2628,15 @@
     "Backup made.": "بیک اپ واخیستل شو.",
     "The backup was put back. What you had before was saved as a new backup.": "بیک اپ بېرته کېښودل شو. هغه څه چې مخکې مو درلودل د نوي بیک اپ په توګه خوندي شول.",
     "Deal cost": "د معاملې لګښت",
-    "Deal receipt": "د معاملې ترلاسه شوي"
+    "Deal receipt": "د معاملې ترلاسه شوي",
+    "Export Center": "د صادراتو مرکز",
+    "One Excel workbook of a period, with a sheet for every module you tick.": "د یوې دورې یوه اکسل فایل، د هر هغه ماډل لپاره یوه پاڼه چې تاسو یې په نښه کوئ.",
+    "One Excel workbook of a period, with a summary and a sheet for every module you tick.": "د یوې دورې یوه اکسل فایل، له لنډیز او د هر په نښه شوي ماډل لپاره له یوې پاڼې سره.",
+    "Sheets of the workbook": "د فایل پاڼې",
+    "Download the workbook": "فایل ډاونلوډ کړئ",
+    "The balance sheet and the trial balance are as on the last day of the period. Amounts are numbers, so Excel can add and filter them.": "بیلانس شیټ او ازمایښتي بیلانس د دورې د وروستۍ ورځې سره سم دي. مبلغونه شمېرې دي، نو اکسل یې جمع او فلټر کولای شي.",
+    "Made by": "جوړوونکی",
+    "Sheet": "پاڼه",
+    "Rows": "کرښې",
+    "first :count rows only": "یوازې لومړۍ :count کرښې"
 }
