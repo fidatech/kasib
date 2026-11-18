@@ -4,7 +4,7 @@
 <div class="site-demo {{ $class ?? '' }}" id="demo">
     <div class="site-demo-text">
         <strong>{{ __('Try the demo') }}</strong>
-        <span>{{ __('A business with example papers, open to everybody. Nothing to register; it is emptied every night.') }}</span>
+        <span>{{ __('A business with example papers, open to everybody. Nothing to register; it starts fresh every midnight.') }}</span>
     </div>
     <dl class="site-demo-facts">
         <div><dt>{{ __('Address') }}</dt><dd dir="ltr"><a href="{{ $demo['url'] }}" target="_blank" rel="noopener">{{ $demo['host'] }}</a></dd></div>

@@ -25,7 +25,7 @@ class DemoTest extends TestCase
 
         $this->artisan('demo:refresh')->assertSuccessful();
         $demo = Tenant::where('slug', 'demo')->sole();
-        $this->assertSame(['pro', true], [$demo->plan, $demo->isActive()]);
+        $this->assertSame(['pro', true, null], [$demo->plan, $demo->isActive(), $demo->licence_expires_on]);
 
         // its address, user and password are on the home page and beside the registration form
         $this->central();
@@ -39,12 +39,27 @@ class DemoTest extends TestCase
         $this->get('/login')->assertOk()->assertSee('This is the demo.')->assertSee('value="demo@kasib.af"', false)->assertSee('value="demo1234"', false);
         $this->post('/login', ['email' => 'demo@kasib.af', 'password' => 'demo1234'])->assertRedirect();
         $this->assertAuthenticated();
-        $this->get('/')->assertOk()->assertSee('Everything recorded here is erased every night.');
+        $this->get('/')->assertOk()->assertSee('Everything recorded here is erased at midnight (12:00 AM).');
 
         // it holds a month of example papers
-        $this->assertSame([5, 5], [Invoice::count(), Party::where('is_system', false)->whereHas('group', fn ($q) => $q->where('type', 'party'))->count()]);
-        $this->assertGreaterThan(5, Voucher::count());
-        $this->get(route('trade.index', ['kind' => 'sales']))->assertOk()->assertSee('Ahmad Karimi');
+        // it holds two months of a food wholesaler: partners, a bank, customers, suppliers, stock, sales, expenses
+        $this->assertSame(12, Party::where('is_system', false)->whereHas('group', fn ($q) => $q->where('type', 'party'))->count());
+        $this->assertGreaterThan(80, Invoice::where('kind', 'sale')->count());
+        $this->assertGreaterThan(8, Invoice::where('kind', 'purchase')->count());
+        $this->assertGreaterThan(20, Voucher::count());
+        $this->assertGreaterThan(8, \App\Models\Expense::count());
+        $this->assertSame([14, 2, 0], [\App\Models\Item::count(), \App\Models\Shareholder::count(), \App\Models\Alert::count()]);
+        $papers = Invoice::count();
+        $this->get(route('trade.index', ['kind' => 'sales']))->assertOk();
+        $this->get(route('accounts.index', ['group' => 'customers']))->assertOk()->assertSee('Popal Restaurant');
+        $this->get('/reports/profit-and-loss')->assertOk();
+        $this->get('/reports/stock')->assertOk()->assertSee('Rice Sela 25 kg');
+        // the guide of the screen starts by itself for a visitor who has not seen it, on any page
+        $this->get('/reports/stock')->assertSee('auto\u0022:true', false);
+        // the licence of the demo never ends
+        $demo->forceFill(['licence_expires_on' => now()->subYear()->toDateString()])->save();
+        \App\Services\Licence::check();
+        $this->assertTrue($demo->fresh()->isActive());
 
         // what would lock the next visitor out is switched off
         $this->put(route('password.update'), ['current_password' => 'demo1234', 'password' => 'another-password', 'password_confirmation' => 'another-password'])->assertSessionHas('warning');
@@ -56,7 +71,8 @@ class DemoTest extends TestCase
         $this->central();
         Demo::refresh();
         $this->enter($demo->fresh());
-        $this->assertSame([0, 5], [Party::where('name', 'A visitor was here')->count(), Invoice::count()]);
+        $this->assertSame([0, $papers], [Party::where('name', 'A visitor was here')->count(), Invoice::count()]);
+        $this->assertNull($demo->fresh()->licence_expires_on);
     }
 
     public function test_an_ordinary_business_is_not_a_demo(): void
@@ -64,6 +80,7 @@ class DemoTest extends TestCase
         $this->business();
         $this->get('/login')->assertOk()->assertDontSee('This is the demo.');
         $this->owner();
-        $this->get('/')->assertOk()->assertDontSee('erased every night');
+        $this->get('/')->assertOk()->assertDontSee('erased at midnight')->assertSee('auto\u0022:true', false);
+        $this->get('/reports/profit-and-loss')->assertOk()->assertSee('auto\u0022:false', false);
     }
 }

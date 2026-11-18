@@ -52,6 +52,9 @@ class Licence
         $rules = self::rules();
         $result = ['locked' => 0, 'opened' => 0];
         foreach ($only ? [$only->fresh()] : Tenant::whereIn('status', [Tenant::ACTIVE, Tenant::SUSPENDED])->get() as $tenant) {
+            if (Demo::is($tenant)) {
+                continue;                               // the demo has no end
+            }
             $state = self::state($tenant, $today)['state'];
             if ($tenant->status === Tenant::ACTIVE && $state === 'ended' && $rules['auto_lock']) {
                 $tenant->update(['status' => Tenant::SUSPENDED, 'locked_reason' => 'licence']);

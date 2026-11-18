@@ -16,8 +16,8 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command('books:daily')->dailyAt('00:05')->timezone('Asia/Kabul');
 Schedule::command('books:evening')->hourly();
 Schedule::command('licences:check')->dailyAt('00:20')->timezone('Asia/Kabul');
-// the demo of the website is emptied and filled again every night
-Schedule::command('demo:refresh')->dailyAt('03:00')->timezone('Asia/Kabul');
+// the demo of the website is emptied and filled again at midnight
+Schedule::command('demo:refresh')->dailyAt('00:00')->timezone('Asia/Kabul');
 Schedule::command('tenants:backup')->dailyAt('01:30')->timezone('Asia/Kabul');
 
 // cPanel hosting without a wildcard certificate: a business opened in the last two days may still wait for
