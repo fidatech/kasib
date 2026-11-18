@@ -102,8 +102,25 @@ plan is `pro` (set on the business in the admin panel, or chosen when it registe
 | Stock count | The stock card of an item | The opening stock, and corrections after a count |
 | Reports | Stock on Hand, Sales by Item, Sales by Customer | Profit and margin per item, the value of the stock, who buys the most |
 
-Still to come in version 2: branches, several businesses under one login, white label, seller commissions and
-referrals, the SarafBook connection and the assistant. Tests: `tests/Feature/TradeTest.php`.
+### Branches (Pro)
+
+Every branch keeps books of its own: its cash and bank accounts, what each customer and supplier has with it,
+its papers, its stock and its profit. Customers, suppliers, items and the chart of accounts are one list for the
+whole business.
+
+- **Administration → Branches** adds a branch (with its first user). It starts with the rates of the main branch.
+- A user works in his own branch. People of the main branch who manage the settings switch branch from the top bar.
+- **Transactions → Money Between Branches** moves money from an account of one branch to an account of another;
+  each branch writes its side on a settlement account, and the two cancel out.
+- Profit & Loss, Balance Sheet and Customer & Supplier Balances can be read for one branch or for all together.
+- What a customer is told on WhatsApp, and what he reads from his private link, is his balance with the whole business.
+- Capital, drawings and profit distribution stay in the main branch.
+
+In the code: `Branch::working()` (the helper `current_branch()`) is the branch whose books are open; papers use the
+`BranchScoped` trait; `Branch::as($branch, fn)` runs something as a branch and `Branch::everywhere(fn)` reads them all.
+
+Still to come in version 2: several businesses under one login, white label, seller commissions and referrals,
+the SarafBook connection and the assistant. Tests: `tests/Feature/TradeTest.php`, `tests/Feature/BranchTest.php`.
 
 ## Stack
 
