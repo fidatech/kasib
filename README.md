@@ -51,6 +51,42 @@ The QR code and the two-step codes are written in the project itself: no package
 Every user sees the browsers he is signed in from and can sign the others out; an exchange
 without an amount received uses the average rate of the last five between the two currencies.
 
+## Version 1.5: control and insight
+
+Built on top of version 1, each part with its tests (`tests/Feature/InsightTest.php`, `SelfServiceTest.php`).
+
+| Part | Where | What it does |
+| --- | --- | --- |
+| Unusual activity | Reports, and Configuration → Alerts & Summary | Large, dated-back, after-hours and cancelled papers; told under the bell and, when asked, on WhatsApp |
+| Evening summary | Configuration → Alerts & Summary | One WhatsApp message to the owner at the hour he chose: cash per currency, the day, exchange profit, tomorrow's paybacks |
+| Balance confirmation | Reports → Balance Confirmations | Every customer and supplier is sent his balance once a month; the answer is kept |
+| Expense budgets | Transactions → Expense Budgets | A monthly limit per category (in the month of the business calendar), a warning at 80% and at 100% |
+| Cash forecast | Reports → Cash Forecast | Money of now less paybacks and recurring expenses of the days ahead, per currency |
+| Period comparison | Reports → Profit & Loss | Against the period before or the same period a year before |
+| Hawala tracking | Transactions → Hawala Tracking | Number, receiver, city and status until delivered; the money out is recorded when it is sent for an account |
+| Bank reconciliation | Finance → Bank Reconciliation | Lines of a bank or saraf account ticked against the statement |
+| Cash boxes and handover | Transactions → Cash Boxes & Handover | A box per cashier, counted and handed over at the end of the shift |
+| Rate alerts and history | Configuration → Rate Alerts, Reports → Rate History | "Tell me when the dollar reaches 71"; every rate written, with its change |
+| Depositor insights | Reports → Depositor Insights | Who holds the most, what moved, who went quiet |
+| Scheduled reports | Reports → Scheduled Reports | The Export Center workbook by email, daily, weekly or monthly (needs the mail settings in `.env`) |
+| Calendar | Reports → Calendar | A month on a page, Shamsi or Gregorian: paybacks, reminders, recurring expenses, papers that expire |
+| Zakat report | Reports → Zakat Report | A help for the calculation only; the rules are for a scholar to confirm |
+| Statement link | The statement of an account | A private read-only address for the customer |
+| Voice notes | Files of an account or a paper | Recorded in the browser or uploaded |
+| Document vault | Administration → Document Vault | The papers of the business, with a warning thirty days before one expires |
+| Free trial | Admin panel → Settings | When on, a business that registers on the website opens at once for the days of the trial |
+| Renewal through HesabPay | Licence and Invoices; Admin panel → Payment requests | The business sends the transaction number and a picture; on approval the payment is recorded and the licence moves on. A locked business can send it from its locked page |
+| Help and tour | Help | Written steps, the videos listed in the admin settings, and a tour of the screen at first sign-in |
+
+After pulling this version on a server that already runs version 1:
+
+```bash
+php artisan migrate            # the central database (payment requests)
+php artisan tenants:migrate    # the database of every business
+```
+
+The cron line is the same; `books:evening` now runs every hour for the evening summaries and scheduled reports.
+
 ## Stack
 
 Laravel 13, PHP 8.3 or newer, MySQL 8, Blade with a little JavaScript,
@@ -84,7 +120,7 @@ php artisan migrate            # the central database
 php artisan tenants:migrate    # the database of every business
 ```
 
-The server's cron runs `php artisan schedule:run` every minute (depreciation, licences, backups).
+The server's cron runs `php artisan schedule:run` every minute (depreciation, licences, backups, evening summaries, scheduled reports).
 
 ## Tests
 
