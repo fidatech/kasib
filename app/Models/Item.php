@@ -21,8 +21,9 @@ class Item extends Model
             if ($query->getQuery()->columns === null) {
                 $query->select('items.*');
             }
-            foreach (['stock', 'avg_cost'] as $column) {
-                $query->selectSub(ItemStock::selectRaw('COALESCE(SUM('.$column.'), 0)')->whereColumn('item_stocks.item_id', 'items.id')->where('item_stocks.branch_id', $branch), $column);
+            // the stock of all the warehouses of the branch together, and their average cost by weight
+            foreach (['stock' => 'COALESCE(SUM(stock), 0)', 'avg_cost' => ItemStock::AVERAGE] as $column => $sum) {
+                $query->selectSub(ItemStock::selectRaw($sum)->whereColumn('item_stocks.item_id', 'items.id')->where('item_stocks.branch_id', $branch), $column);
             }
         });
     }
@@ -40,7 +41,7 @@ class Item extends Model
 
     private function inBranch(string $column): string
     {
-        return (string) (ItemStock::where('item_id', $this->id)->where('branch_id', (int) current_branch()?->id)->value($column) ?? '0');
+        return (string) (ItemStock::where('item_id', $this->id)->where('branch_id', (int) current_branch()?->id)->selectRaw(($column === 'stock' ? 'COALESCE(SUM(stock), 0)' : ItemStock::AVERAGE).' as figure')->value('figure') ?? '0');
     }
 
     /** Saving an item never writes the two figures it was read with. */

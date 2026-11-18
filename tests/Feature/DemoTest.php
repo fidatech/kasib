@@ -64,7 +64,13 @@ class DemoTest extends TestCase
         $this->assertSame([14, 2, 0], [\App\Models\Item::count(), \App\Models\Shareholder::count(), \App\Models\Alert::count()]);
         $papers = Invoice::count();
         $this->get(route('trade.index', ['kind' => 'sales']))->assertOk();
-        $this->get(route('accounts.index', ['group' => 'customers']))->assertOk()->assertSee('Popal Restaurant');
+        $this->get(route('accounts.index', ['group' => 'customers', 'q' => 'Popal']))->assertOk()->assertSee('Popal Restaurant');
+        // purchases carry their costs, and the goods lie in three warehouses
+        $this->assertGreaterThan(5, \App\Models\InvoiceCost::count());
+        $this->assertSame(3, \App\Models\Warehouse::count());
+        $this->assertGreaterThan(3, \App\Models\StockMove::count());
+        $this->get('/warehouses')->assertOk()->assertSee('Shop no. 2, Khair Khana');
+        $this->get('/stock-moves')->assertOk();
         $this->get('/reports/profit-and-loss')->assertOk();
         $this->get('/reports/stock')->assertOk()->assertSee('Rice Sela 25 kg');
         // the guide of the screen starts by itself for a visitor who has not seen it, on any page

@@ -22,6 +22,14 @@
                     <input type="text" class="form-control" id="s-note" name="note" value="{{ old('note') }}" maxlength="255">
                 </div>
                 <div class="col-auto"><button type="submit" class="btn btn-primary"><x-icon name="check" class="me-1" /> {{ __('Save') }}</button></div>
+                @if ($warehouses->count() > 1)
+                    <div class="col-12 col-md-4">
+                        <label class="form-label" for="s-warehouse">{{ __('Warehouse') }}</label>
+                        <select class="form-select" id="s-warehouse" name="warehouse_id">
+                            @foreach ($warehouses as $row)<option value="{{ $row['warehouse']->id }}">{{ $row['warehouse']->name }} · {{ qty($row['held']?->stock ?? 0) }} {{ $item->unit }}</option>@endforeach
+                        </select>
+                    </div>
+                @endif
                 <div class="col-12"><div class="form-text">{{ __('Use it for the stock you start with, and when a count differs from the books. More than the books enters at the cost written; less leaves as cost of goods.') }}</div></div>
             </div>
         </div>

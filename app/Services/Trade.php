@@ -11,6 +11,8 @@ use App\Models\Currency;
 use App\Models\Invoice;
 use App\Models\Item;
 use App\Models\ItemStock;
+use App\Models\StockMove;
+use App\Models\Warehouse;
 use App\Models\Party;
 use App\Support\Num;
 use Illuminate\Support\Facades\DB;
@@ -52,8 +54,10 @@ class Trade
 
     /**
      * @param  array<int, array{item_id: int|string, qty: mixed, price: mixed, description?: ?string}>  $lines
+     * @param  array<int, array{name: string, amount: mixed, account: Account}>  $costs  a purchase only: customs, transport, rent ..., each paid from a money account
+     * @param  ?Warehouse  $warehouse  where the goods go to or leave from; the main warehouse of the branch when none is named
      */
-    public static function record(string $kind, Party $party, Currency $currency, string $date, array $lines, mixed $discount = 0, mixed $paid = 0, ?Account $money = null, ?string $due = null, ?string $note = null): Invoice
+    public static function record(string $kind, Party $party, Currency $currency, string $date, array $lines, mixed $discount = 0, mixed $paid = 0, ?Account $money = null, ?string $due = null, ?string $note = null, array $costs = [], ?Warehouse $warehouse = null): Invoice
     {
         if (! isset(Invoice::KINDS[$kind])) {
             throw new UserError(__('Unknown kind of invoice.'));
@@ -74,8 +78,12 @@ class Trade
             throw new UserError(__('app.errors.negative_amount'));
         }
 
-        return DB::transaction(function () use ($kind, $party, $currency, $date, $lines, $discount, $paid, $money, $due, $note) {
+        return DB::transaction(function () use ($kind, $party, $currency, $date, $lines, $discount, $paid, $money, $due, $note, $costs, $warehouse) {
             $branch = current_branch();
+            $warehouse ??= Warehouse::main($branch);
+            if ((int) $warehouse->branch_id !== (int) $branch->id || ! $warehouse->is_active) {
+                throw new UserError(__('Choose a warehouse of this branch that is in use.'));
+            }
             $rows = [];
             $subtotal = '0';
             foreach ($lines as $line) {
@@ -114,7 +122,42 @@ class Trade
             }
             unset($row);
 
+            // the costs of a purchase are carried by the goods: each line takes its share by value, and the
+            // cost of one unit (and so the average cost of the item) is counted after them
+            $extra = [];
+            $costsBase = '0';
+            foreach ($kind === Invoice::PURCHASE ? $costs : [] as $one) {
+                $amount = Num::money($one['amount'] ?? 0);
+                if (! Num::isPositive($amount)) {
+                    continue;
+                }
+                $name = trim((string) ($one['name'] ?? ''));
+                $from = $one['account'] ?? null;
+                if ($name === '') {
+                    throw new UserError(__('Write what each cost of the purchase is for.'));
+                }
+                if (! $from instanceof Account) {
+                    throw new UserError(__('Choose the account each cost of the purchase is paid from.'));
+                }
+                $inBase = Rates::toBase($amount, $from->currency, $branch);
+                $extra[] = ['name' => mb_substr($name, 0, 100), 'account' => $from, 'amount' => $amount, 'base' => $inBase];
+                $costsBase = Num::add($costsBase, $inBase);
+            }
+            $costsBase = Num::money($costsBase);
+            $counted = array_keys(array_filter($rows, fn (array $row) => $row['item']->track_stock));
+            $countedBase = Num::sum(array_map(fn (int $i) => $rows[$i]['base'], $counted));
+            $left = $costsBase;
+            foreach ($rows as $i => &$row) {
+                $row['landed'] = '0';
+                if (in_array($i, $counted, true) && Num::isPositive($countedBase)) {
+                    $row['landed'] = $i === end($counted) ? $left : Num::money(Num::div(Num::mul($costsBase, $row['base']), $countedBase));
+                    $left = Num::sub($left, $row['landed']);
+                }
+            }
+            unset($row);
+
             $invoice = Invoice::create([
+                'warehouse_id' => $warehouse->id, 'costs_total' => $costsBase,
                 'number' => Sequence::next(Invoice::KINDS[$kind][2]), 'kind' => $kind, 'date' => $date, 'party_id' => $party->id, 'currency_id' => $currency->id,
                 'subtotal' => $subtotal, 'discount' => $discount, 'total' => $total, 'base_total' => $baseTotal, 'paid' => $paid,
                 'due_date' => $due, 'note' => $note, 'created_by' => auth()->id(),
@@ -128,7 +171,7 @@ class Trade
             foreach ($rows as $row) {
                 $item = $row['item'];
                 $lineCost = '0';
-                $held = $item->track_stock ? ItemStock::of($item, $branch) : null;
+                $held = $item->track_stock ? ItemStock::of($item, $branch, $warehouse) : null;
                 if (! $item->track_stock) {
                     $otherValue = Num::add($otherValue, $row['base']);
                 } else {
@@ -140,7 +183,7 @@ class Trade
                         $lineCost = Num::money(Num::mul($row['qty'], $held->avg_cost));
                         $held->stock = Num::round(Num::sub($held->stock, $row['qty']), 3);
                     } elseif ($kind === Invoice::PURCHASE) {
-                        $lineCost = $row['base'];
+                        $lineCost = Num::money(Num::add($row['base'], $row['landed']));   // what was paid to the supplier and its share of the costs
                         $before = Num::isPositive($held->stock) ? Num::mul($held->stock, $held->avg_cost) : '0';
                         $newStock = Num::round(Num::add(Num::isPositive($held->stock) ? $held->stock : '0', $row['qty']), 3);
                         $held->avg_cost = Num::round(Num::div(Num::add($before, $lineCost), $newStock), 4);
@@ -159,6 +202,12 @@ class Trade
             }
             $cost = Num::money($cost);
             $invoice->update(['cost_total' => $cost]);
+            foreach ($extra as $one) {
+                $invoice->costs()->create(['name' => $one['name'], 'account_id' => $one['account']->id, 'currency_id' => $one['account']->currency_id, 'amount' => $one['amount'], 'base_amount' => $one['base']]);
+            }
+            // goods carry the costs; a purchase of services only books them as cost of goods
+            $onStock = $counted && Num::isPositive($countedBase) ? $costsBase : '0';
+            $onServices = Num::sub($costsBase, $onStock);
 
             $account = Accounts::party($party, $currency, $branch);
             $inventory = self::account('inventory');
@@ -169,10 +218,10 @@ class Trade
                     ['account' => $account, 'debit' => $total, 'base' => $baseTotal], ['account' => $sales, 'credit' => $baseTotal],
                     ['account' => $cogs, 'debit' => $cost], ['account' => $inventory, 'credit' => $cost],
                 ],
-                Invoice::PURCHASE => [
-                    ['account' => $inventory, 'debit' => $stockValue], ['account' => $cogs, 'debit' => $otherValue],
+                Invoice::PURCHASE => array_merge([
+                    ['account' => $inventory, 'debit' => Num::add($stockValue, $onStock)], ['account' => $cogs, 'debit' => Num::add($otherValue, $onServices)],
                     ['account' => $account, 'credit' => $total, 'base' => $baseTotal],
-                ],
+                ], array_map(fn (array $one) => ['account' => $one['account'], 'credit' => $one['amount'], 'base' => $one['base']], $extra)),
                 Invoice::SALE_RETURN => [
                     ['account' => $sales, 'debit' => $baseTotal], ['account' => $account, 'credit' => $total, 'base' => $baseTotal],
                     ['account' => $inventory, 'debit' => $cost], ['account' => $cogs, 'credit' => $cost],
@@ -225,7 +274,7 @@ class Trade
                 if (! $item || ! $item->track_stock) {
                     continue;
                 }
-                $held = ItemStock::of($item, \App\Models\Branch::findOrFail($invoice->branch_id));
+                $held = ItemStock::of($item, \App\Models\Branch::findOrFail($invoice->branch_id), $invoice->warehouse_id ? Warehouse::withoutGlobalScope('branch')->find($invoice->warehouse_id) : null);
                 if ($invoice->goodsLeave()) {
                     $held->stock = Num::round(Num::add($held->stock, $line->qty), 3);   // what left comes back
                 } else {
@@ -256,7 +305,7 @@ class Trade
      * Stock counted or corrected by hand. More than the books: it enters at the unit cost given,
      * against the opening balances. Less: it leaves at the average, as cost of goods.
      */
-    public static function adjust(Item $item, mixed $counted, mixed $unitCost = null, ?string $note = null): void
+    public static function adjust(Item $item, mixed $counted, mixed $unitCost = null, ?string $note = null, ?Warehouse $warehouse = null): void
     {
         if (! $item->track_stock) {
             throw new UserError(__('The stock of a service is not counted.'));
@@ -265,14 +314,14 @@ class Trade
         if (Num::isNegative($counted)) {
             throw new UserError(__('app.errors.negative_amount'));
         }
-        DB::transaction(function () use ($item, $counted, $unitCost, $note) {
+        DB::transaction(function () use ($item, $counted, $unitCost, $note, $warehouse) {
             $branch = current_branch();
-            $held = ItemStock::of($item, $branch);
+            $held = ItemStock::of($item, $branch, $warehouse);
             $diff = Num::round(Num::sub($counted, $held->stock), 3);
             if (Num::isZero($diff)) {
                 return;
             }
-            $text = trim(__('Stock count').' · '.$item->name.' · '.qty($held->stock).' → '.qty($counted).($note ? ' · '.$note : ''));
+            $text = trim(__('Stock count').' · '.$item->name.($warehouse ? ' · '.$warehouse->name : '').' · '.qty($held->stock).' → '.qty($counted).($note ? ' · '.$note : ''));
             if (Num::isPositive($diff)) {
                 $cost = Num::round(Num::isPositive($unitCost ?: 0) ? $unitCost : (Num::isPositive($held->avg_cost) ? $held->avg_cost : $item->cost_price), 4);
                 $value = Num::money(Num::mul($diff, $cost));
@@ -290,6 +339,47 @@ class Trade
             $held->stock = $counted;
             $held->save();
             audit('updated', null, $text);
+        });
+    }
+
+    /**
+     * Goods go from one warehouse of the branch to another. They keep their cost: the warehouse that
+     * receives them mixes it into its own average. Nothing changes in the accounts, the goods are
+     * still the business's own.
+     */
+    public static function move(Item $item, Warehouse $from, Warehouse $to, mixed $qty, ?string $date = null, ?string $note = null): StockMove
+    {
+        $qty = Num::round($qty, 3);
+        if (! $item->track_stock) {
+            throw new UserError(__('The stock of a service is not counted.'));
+        }
+        if (! Num::isPositive($qty)) {
+            throw new UserError(__('The quantity of :item must be more than zero.', ['item' => $item->name]));
+        }
+        $branch = current_branch();
+        if ((int) $from->id === (int) $to->id || (int) $from->branch_id !== (int) $branch->id || (int) $to->branch_id !== (int) $branch->id) {
+            throw new UserError(__('Choose two different warehouses of this branch.'));
+        }
+
+        return DB::transaction(function () use ($item, $from, $to, $qty, $date, $note, $branch) {
+            $gives = ItemStock::of($item, $branch, $from);
+            $takes = ItemStock::of($item, $branch, $to);
+            if (Num::cmp($gives->stock, $qty) === -1) {
+                throw new UserError(__('Not enough :item in stock: :have, needed :need.', ['item' => $item->name, 'have' => qty($gives->stock), 'need' => qty($qty)]));
+            }
+            $value = Num::mul($qty, $gives->avg_cost);
+            $before = Num::isPositive($takes->stock) ? Num::mul($takes->stock, $takes->avg_cost) : '0';
+            $after = Num::round(Num::add(Num::isPositive($takes->stock) ? $takes->stock : '0', $qty), 3);
+            $takes->avg_cost = Num::round(Num::div(Num::add($before, $value), $after), 4);
+            $takes->stock = Num::round(Num::add($takes->stock, $qty), 3);
+            $gives->stock = Num::round(Num::sub($gives->stock, $qty), 3);
+            $gives->save();
+            $takes->save();
+            $move = StockMove::create(['number' => Sequence::next('SM'), 'date' => $date ?: today_iso(), 'item_id' => $item->id, 'from_warehouse_id' => $from->id, 'to_warehouse_id' => $to->id,
+                'qty' => $qty, 'unit_cost' => $gives->avg_cost, 'note' => $note ? mb_substr($note, 0, 255) : null, 'created_by' => auth()->id()]);
+            audit('created', null, 'Stock move '.$move->number.' · '.$item->name.' · '.qty($qty).' · '.$from->name.' → '.$to->name);
+
+            return $move;
         });
     }
 }

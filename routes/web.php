@@ -306,6 +306,9 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
             Route::post('items/{id}/stock', [ItemController::class, 'count'])->name('items.count')->whereNumber('id');
             $crud('items', ItemController::class, 'items');
             $crud('units', \App\Http\Controllers\UnitController::class, 'units');
+            $crud('warehouses', \App\Http\Controllers\WarehouseController::class, 'warehouses');
+            Route::get('stock-moves', [\App\Http\Controllers\StockMoveController::class, 'index'])->name('stock-moves.index');
+            Route::post('stock-moves', [\App\Http\Controllers\StockMoveController::class, 'store'])->name('stock-moves.store');
             Route::get('reports/sales-by-item', [TradeReportController::class, 'items'])->name('trade.reports.items');
             Route::get('reports/stock', [TradeReportController::class, 'stock'])->name('trade.reports.stock');
             Route::get('reports/sales-by-customer', [TradeReportController::class, 'parties'])->name('trade.reports.parties');

@@ -82,4 +82,15 @@ class Invoice extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    /** The costs of a purchase: customs, transport, rent ... */
+    public function costs(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(InvoiceCost::class);
+    }
+
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class)->withoutGlobalScope('branch');
+    }
 }

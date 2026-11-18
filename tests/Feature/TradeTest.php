@@ -180,4 +180,89 @@ class TradeTest extends TestCase
         $this->delete('/units/'.\App\Models\Unit::where('name', 'dozen')->value('id'));
         $this->assertSame(0, \App\Models\Unit::where('name', 'dozen')->count());
     }
+
+    public function test_the_costs_of_a_purchase_go_into_the_cost_of_the_goods(): void
+    {
+        $this->business(['plan' => 'pro']);
+        $this->owner();
+        $main = \App\Models\Branch::main();
+        $afn = \App\Models\Currency::base();
+        $cash = \App\Services\Accounts::cash($main, $afn);
+        $funder = \App\Models\Party::create(['account_group_id' => \App\Models\AccountGroup::byKey('customers')->id, 'name' => 'Funder'])->fresh();
+        \App\Services\Vouchers::moneyIn($funder, $cash, today_iso(), '500000');
+        $supplier = \App\Models\Party::create(['account_group_id' => \App\Models\AccountGroup::byKey('suppliers')->id, 'name' => 'Importer'])->fresh();
+        $rice = Item::create(['name' => 'Rice', 'unit' => 'bag', 'sale_price' => '3000', 'cost_price' => '2000']);
+        $oil = Item::create(['name' => 'Oil', 'unit' => 'can', 'sale_price' => '1500', 'cost_price' => '1000']);
+
+        // 100 bags at 2,000 and 100 cans at 1,000; customs 24,000 and transport 6,000 are paid in cash
+        $this->get('/trade/purchases/create')->assertOk()->assertSee('Costs of this purchase')->assertSee('Customs duty');
+        $this->get('/trade/sales/create')->assertOk()->assertDontSee('Costs of this purchase');
+        $form = ['date' => today_iso(), 'party_id' => $supplier->id, 'currency_id' => $afn->id,
+            'lines' => [['item_id' => $rice->id, 'qty' => '100', 'price' => '2000'], ['item_id' => $oil->id, 'qty' => '100', 'price' => '1000']]];
+        // a cost without its account is refused
+        $this->post('/trade/purchases', $form + ['costs' => [['name' => 'Customs duty', 'amount' => '24000']]])->assertSessionHas('danger');
+        $this->assertSame(0, \App\Models\Invoice::count());
+        $this->post('/trade/purchases', $form + ['costs' => [['name' => 'Customs duty', 'amount' => '24000', 'account_id' => $cash->id], ['name' => 'Transport', 'amount' => '6000', 'account_id' => $cash->id], ['name' => '', 'amount' => '']]])->assertSessionHasNoErrors()->assertSessionMissing('danger');
+        $invoice = \App\Models\Invoice::sole();
+
+        // the costs are shared by value: rice carries 20,000 of them and oil 10,000, so one bag costs 2,200 and one can 1,100
+        $this->assertSame(['30000.00', '330000.00'], [Num::money($invoice->costs_total), Num::money($invoice->cost_total)]);
+        $this->assertSame(['2200.0000', '1100.0000'], [Num::round(Item::find($rice->id)->avg_cost, 4), Num::round(Item::find($oil->id)->avg_cost, 4)]);
+        // the supplier is owed what the goods cost, not the costs; those left the cash box; the stock is worth both
+        $this->assertSame(['300000.00', '470000.00', '330000.00'], [Num::money(Num::neg(\App\Services\Ledger::balance(\App\Services\Accounts::party($supplier, $afn, $main)))), Num::money(\App\Services\Ledger::balance($cash)), Num::money(\App\Services\Ledger::balance(\App\Services\Trade::account('inventory')))]);
+        $this->get('/trade/purchases/'.$invoice->id)->assertOk()->assertSee('Customs duty')->assertSee('Cost of the goods after the costs')->assertSee('2,200.00');
+
+        // a sale takes the goods out at the cost after the costs
+        \App\Services\Trade::record(\App\Models\Invoice::SALE, $funder, $afn, today_iso(), [['item_id' => $rice->id, 'qty' => '10', 'price' => '3000']]);
+        $this->assertSame('22000.00', Num::money(\App\Models\Invoice::where('kind', 'sale')->sole()->cost_total));
+
+        // cancelled, the costs come back to the cash box and the average is what it was without the purchase
+        \App\Services\Trade::cancel(\App\Models\Invoice::where('kind', 'sale')->sole());
+        \App\Services\Trade::cancel($invoice);
+        $this->assertSame(['500000.00', '0.000'], [Num::money(\App\Services\Ledger::balance($cash)), Num::round(Item::find($rice->id)->stock, 3)]);
+    }
+
+    public function test_goods_are_kept_in_warehouses_and_moved_between_them(): void
+    {
+        $this->business(['plan' => 'pro']);
+        $this->owner();
+        $main = \App\Models\Branch::main();
+        $afn = \App\Models\Currency::base();
+        $supplier = \App\Models\Party::create(['account_group_id' => \App\Models\AccountGroup::byKey('suppliers')->id, 'name' => 'Importer'])->fresh();
+        $customer = \App\Models\Party::create(['account_group_id' => \App\Models\AccountGroup::byKey('customers')->id, 'name' => 'Shopkeeper'])->fresh();
+        $rice = Item::create(['name' => 'Rice', 'unit' => 'bag', 'sale_price' => '3000', 'cost_price' => '2000']);
+
+        // every branch starts with its main warehouse; a second one is added
+        $this->get('/warehouses')->assertOk()->assertSee('Main warehouse');
+        $this->post('/warehouses', ['name' => 'Store room', 'is_active' => '1'])->assertSessionHasNoErrors();
+        $first = \App\Models\Warehouse::main($main);
+        $store = \App\Models\Warehouse::where('name', 'Store room')->sole();
+        $this->get('/trade/purchases/create')->assertOk()->assertSee('Into the warehouse');
+
+        // 100 bags at 2,000 arrive in the main warehouse, 50 at 2,600 in the store room
+        $form = ['date' => today_iso(), 'party_id' => $supplier->id, 'currency_id' => $afn->id];
+        $this->post('/trade/purchases', $form + ['lines' => [['item_id' => $rice->id, 'qty' => '100', 'price' => '2000']]])->assertSessionMissing('danger');
+        $this->post('/trade/purchases', $form + ['warehouse_id' => $store->id, 'lines' => [['item_id' => $rice->id, 'qty' => '50', 'price' => '2600']]])->assertSessionMissing('danger');
+        $held = fn ($warehouse) => \App\Models\ItemStock::where('item_id', $rice->id)->where('warehouse_id', $warehouse->id)->first();
+        $this->assertSame(['100.000', '50.000', '150.000', '2200.0000'], [Num::round($held($first)->stock, 3), Num::round($held($store)->stock, 3), Num::round(Item::find($rice->id)->stock, 3), Num::round(Item::find($rice->id)->avg_cost, 4)]);
+
+        // a sale cannot take from a warehouse more than lies in it, though the branch has enough
+        $sale = ['date' => today_iso(), 'party_id' => $customer->id, 'currency_id' => $afn->id, 'warehouse_id' => $store->id, 'lines' => [['item_id' => $rice->id, 'qty' => '60', 'price' => '3000']]];
+        $this->post('/trade/sales', $sale)->assertSessionHas('danger');
+        // 40 bags are moved to the store room: they keep their cost of 2,000, and the store room's average becomes (50 x 2,600 + 40 x 2,000) / 90
+        $this->get('/stock-moves')->assertOk()->assertSee('Move goods');
+        $this->post('/stock-moves', ['date' => today_iso(), 'item_id' => $rice->id, 'from_warehouse_id' => $first->id, 'to_warehouse_id' => $store->id, 'qty' => '40'])->assertSessionHasNoErrors()->assertSessionMissing('danger');
+        $this->post('/stock-moves', ['date' => today_iso(), 'item_id' => $rice->id, 'from_warehouse_id' => $first->id, 'to_warehouse_id' => $store->id, 'qty' => '400'])->assertSessionHas('danger');
+        $this->assertSame(['60.000', '90.000', '2333.3333', '150.000'], [Num::round($held($first)->stock, 3), Num::round($held($store)->stock, 3), Num::round($held($store)->avg_cost, 4), Num::round(Item::find($rice->id)->stock, 3)]);
+        $this->get('/stock-moves')->assertOk()->assertSee('SM-000001');
+
+        // now the sale goes through, at the cost of the store room
+        $this->post('/trade/sales', $sale)->assertSessionMissing('danger');
+        $this->assertSame(['30.000', '140000.00'], [Num::round($held($store)->stock, 3), Num::money(\App\Models\Invoice::where('kind', 'sale')->sole()->cost_total)]);
+        $this->get('/reports/stock?warehouse='.$store->id)->assertOk()->assertSee('30');
+        // a warehouse with goods or papers is not deleted, and the main one never
+        $this->delete('/warehouses/'.$store->id);
+        $this->delete('/warehouses/'.$first->id);
+        $this->assertSame(2, \App\Models\Warehouse::count());
+    }
 }

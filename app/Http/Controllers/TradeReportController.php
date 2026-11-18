@@ -51,7 +51,17 @@ class TradeReportController extends Controller
         $low = $request->query('show') === 'low';
         $rows = [];
         $total = '0';
+        $warehouses = \App\Models\Warehouse::orderByDesc('is_default')->orderBy('name')->get();
+        $warehouse = $warehouses->firstWhere('id', (int) $request->query('warehouse'));
+        $held = $warehouse ? \App\Models\ItemStock::where('warehouse_id', $warehouse->id)->get()->keyBy('item_id') : null;
         foreach (Item::where('track_stock', true)->where('is_active', true)->orderBy('name')->limit(20000)->get() as $item) {
+            if ($held !== null) {
+                // one warehouse: what it holds of the item, at its own average cost
+                $item->setRawAttributes(['stock' => (string) ($held[$item->id]->stock ?? '0'), 'avg_cost' => (string) ($held[$item->id]->avg_cost ?? '0')] + $item->getAttributes());
+                if (\App\Support\Num::isZero($item->stock)) {
+                    continue;
+                }
+            }
             $isLow = $item->reorder_level !== null && Num::cmp($item->stock, $item->reorder_level) <= 0;
             if ($low && ! $isLow) {
                 continue;
@@ -65,7 +75,8 @@ class TradeReportController extends Controller
         }
 
         return view('reports.sheet', ['title' => __('Stock on Hand'), 'icon' => 'boxes-stacked', 'columns' => [['Item'], ['Code or barcode'], ['In stock', 'end'], ['Average cost', 'end'], ['Value '.Currency::base()->code, 'end'], ['Status']], 'rows' => $rows,
-            'from' => null, 'to' => null, 'filters' => [['name' => 'show', 'label' => 'Show', 'options' => ['all' => __('All items'), 'low' => __('Low in stock')], 'value' => $low ? 'low' : 'all']]]);
+            'from' => null, 'to' => null, 'filters' => array_merge([['name' => 'show', 'label' => 'Show', 'options' => ['all' => __('All items'), 'low' => __('Low in stock')], 'value' => $low ? 'low' : 'all']],
+                $warehouses->count() > 1 ? [['name' => 'warehouse', 'label' => 'Warehouse', 'options' => ['' => __('All warehouses')] + $warehouses->pluck('name', 'id')->all(), 'value' => (string) ($warehouse?->id ?? '')]] : [])]);
     }
 
     /** Sales by customer and purchases by supplier between two dates, returns taken off, in the base currency. */

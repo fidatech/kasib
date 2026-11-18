@@ -94,6 +94,7 @@ class ItemController extends CrudController
 
         return view('trade.stock', [
             'item' => $item, 'base' => Currency::base()->code, 'canManage' => $request->user()->can('transactions.manage'),
+            'warehouses' => \App\Models\Warehouse::orderByDesc('is_default')->orderBy('name')->get()->map(fn ($w) => ['warehouse' => $w, 'held' => \App\Models\ItemStock::where('item_id', $item->id)->where('warehouse_id', $w->id)->first()]),
             'lines' => InvoiceLine::with('invoice.party')->where('item_id', $item->id)->whereHas('invoice', fn ($q) => $q->whereNull('cancelled_at'))->orderByDesc('id')->paginate(per_page()),
         ]);
     }
@@ -102,8 +103,9 @@ class ItemController extends CrudController
     {
         Gate::authorize('transactions.manage');
         $item = Item::findOrFail((int) $request->route('id'));
-        $data = $request->validate(['counted' => ['required', 'numeric', 'min:0'], 'unit_cost' => ['nullable', 'numeric', 'min:0'], 'note' => ['nullable', 'string', 'max:255']]);
-        Trade::adjust($item, $data['counted'], $data['unit_cost'] ?? null, $data['note'] ?? null);
+        $data = $request->validate(['counted' => ['required', 'numeric', 'min:0'], 'unit_cost' => ['nullable', 'numeric', 'min:0'], 'note' => ['nullable', 'string', 'max:255'], 'warehouse_id' => ['nullable', 'integer']]);
+        $warehouse = ! empty($data['warehouse_id']) ? \App\Models\Warehouse::findOrFail((int) $data['warehouse_id']) : null;
+        Trade::adjust($item, $data['counted'], $data['unit_cost'] ?? null, $data['note'] ?? null, $warehouse);
 
         return back()->with('success', __('The stock of :item is now :qty.', ['item' => $item->name, 'qty' => qty($data['counted'])]));
     }

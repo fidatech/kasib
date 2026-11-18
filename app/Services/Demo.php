@@ -161,7 +161,16 @@ class Demo
                 }
                 $paid = min($money['bank'] - 100000, (int) (round($total * (mt_rand(4, 7) / 10) / 1000) * 1000));
                 $paid = max(0, $paid);
-                Trade::record(Invoice::PURCHASE, $suppliers[$supplier], $afn, $day($ago), $lines, 0, $paid, $paid > 0 ? $bank : null);
+                // what it cost to bring the goods in: paid in cash, and carried by the goods
+                $costs = [];
+                foreach ([['Transport', 0.012], ['Loading and unloading', 0.004], ['Customs duty', $supplier === 2 ? 0.035 : 0]] as [$what, $share]) {
+                    $amount = (int) (round($total * $share / 100) * 100);
+                    if ($amount > 0 && $money['cash'] - $amount > 50000) {
+                        $costs[] = ['name' => $what, 'amount' => $amount, 'account' => $cash];
+                        $money['cash'] -= $amount;
+                    }
+                }
+                Trade::record(Invoice::PURCHASE, $suppliers[$supplier], $afn, $day($ago), $lines, 0, $paid, $paid > 0 ? $bank : null, null, null, $costs);
                 $money['bank'] -= $paid;
                 $owed[$supplier] += $total - $paid;
             };
@@ -258,6 +267,15 @@ class Demo
                 }
                 if ($ago % 11 === 5) {
                     $spend('expense_fees', mt_rand(4, 10) * 150, 'Porters and unloading');
+                }
+            }
+
+            // a store room and a second shop: some of the goods are taken there
+            $store = \App\Models\Warehouse::create(['name' => 'Store room, Sarai Haji Zaman', 'address' => 'Mandawi, Kabul']);
+            $shop = \App\Models\Warehouse::create(['name' => 'Shop no. 2, Khair Khana', 'address' => 'Khair Khana, Kabul']);
+            foreach ($items as $index => $row) {
+                if ($row['stock'] >= 12) {
+                    Trade::move($row['item'], \App\Models\Warehouse::main($main), $index % 2 ? $shop : $store, (int) floor($row['stock'] / 3), $day(1 + $index % 5), 'Sent to '.($index % 2 ? 'the second shop' : 'the store room'));
                 }
             }
 

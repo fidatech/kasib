@@ -39,6 +39,17 @@
             </div>
         </div>
 
+        @if ($warehouses->count() > 1)
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-md-4">
+                    <label class="form-label" for="i-warehouse">{{ $selling === ($kind !== 'sale_return') ? __('From the warehouse') : __('Into the warehouse') }}</label>
+                    <select class="form-select" id="i-warehouse" name="warehouse_id">
+                        @foreach ($warehouses as $warehouse)<option value="{{ $warehouse->id }}" @selected((int) old('warehouse_id', $warehouses->first()->id) === $warehouse->id)>{{ $warehouse->name }}</option>@endforeach
+                    </select>
+                </div>
+            </div>
+        @endif
+
         <div class="table-responsive">
             <table class="table w-100 keep-table" data-rows style="min-width: 40rem">
                 <thead><tr><th style="width:38%">{{ __('Item') }}</th><th class="text-end" style="width:14%">{{ __('Quantity') }}</th><th class="text-end" style="width:18%">{{ __('Price') }}</th><th class="text-end" style="width:16%">{{ __('Amount') }}</th><th>{{ __('Notes') }}</th></tr></thead>
@@ -64,6 +75,35 @@
         </div>
         @error('lines')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
         <div class="form-text mb-3">{{ __('Rows left empty are ignored. A price is offered when the invoice is in the base currency; it can be changed.') }}</div>
+
+        @if ($kind === 'purchase')
+            <div class="card bg-body-tertiary border mb-3">
+                <div class="card-body">
+                    <h2 class="h6 mb-1">{{ __('Costs of this purchase') }}</h2>
+                    <p class="form-text mt-0 mb-3">{{ __('Customs, transport, rent, porters: what was paid to bring the goods in. Each is paid from the account chosen, and all of them are shared over the goods by value, so the cost of one unit is counted after them.') }}</p>
+                    <datalist id="cost-names">@foreach (\App\Models\InvoiceCost::NAMES as $name)<option value="{{ __($name) }}"></option>@endforeach</datalist>
+                    <div class="table-responsive">
+                        <table class="table w-100 keep-table mb-0" style="min-width: 34rem">
+                            <thead><tr><th style="width:40%">{{ __('Cost') }}</th><th class="text-end" style="width:22%">{{ __('Amount') }}</th><th>{{ __('Paid from') }}</th></tr></thead>
+                            <tbody>
+                                @for ($i = 0; $i < 4; $i++)
+                                    <tr>
+                                        <td><input type="text" class="form-control" name="costs[{{ $i }}][name]" value="{{ old("costs.$i.name") }}" list="cost-names" maxlength="100" placeholder="{{ __(\App\Models\InvoiceCost::NAMES[$i]) }}" aria-label="{{ __('Cost') }}"></td>
+                                        <td><input type="text" inputmode="decimal" dir="ltr" autocomplete="off" class="form-control text-end" name="costs[{{ $i }}][amount]" value="{{ old("costs.$i.amount") }}" aria-label="{{ __('Amount') }}"></td>
+                                        <td>
+                                            <select class="form-select" name="costs[{{ $i }}][account_id]" aria-label="{{ __('Paid from') }}">
+                                                <option value="">{{ __('Choose…') }}</option>
+                                                @foreach ($money as $account)<option value="{{ $account->id }}" @selected((int) old("costs.$i.account_id") === $account->id)>{{ $account->label() }} · {{ $account->currency->code }}</option>@endforeach
+                                            </select>
+                                        </td>
+                                    </tr>
+                                @endfor
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        @endif
 
         <div class="row g-3">
             <div class="col-12 col-md-5">
