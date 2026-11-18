@@ -18,21 +18,28 @@ ledger, design and build tools.
   A category added under Configuration appears in the menu by itself. Every account keeps a
   separate balance in every currency it uses.
 - **Transactions**: Money In (with a payback date), Money Out, Transfers (with a fee),
-  Exchanges (the profit of every deal is kept), Income, Expenses. Each one posts one balanced
-  journal entry; a paper is cancelled, never deleted.
+  Exchanges (the profit of every deal is kept), Income, Expenses, Deals (what was paid and
+  what came in; the profit or loss is worked out when the deal is closed) and journal entries
+  by hand. Each one posts one balanced journal entry; a paper is cancelled, never deleted.
 - **Finance**: chart of accounts, shareholders, capital and drawings, profit distribution,
-  assets with automatic depreciation, liabilities, period closing.
+  assets with automatic depreciation, liabilities, the daily cash count, period closing.
 - **Reports**: roznamcha, account statement, trial balance, profit and loss, balance sheet,
   currency position, customer and supplier balances, due payments. Every list and report
   downloads as Excel (`?export=xlsx`) and prints or saves as PDF (`?print=1`).
 - **Exchange rates**: one rate per currency. Saving new rates values the foreign money of the
   business again; the gain or loss goes to the books.
-- **Administration**: users, roles and permissions, audit log, settings, Simple mode.
+- **Export Center**: one Excel workbook of a period, with a summary and a sheet per module.
+- **Administration**: users, roles and permissions, audit log, settings, Simple mode, and
+  backup and restore by the owner of the business (the password is asked, and what the
+  business has now is saved first).
+- **Pages open without a full load**: a click fetches the page in the background and puts only
+  its content, the row of buttons and the menu in place (`resources/assets/js/app.js`, last
+  section). Forms that save something still load the page the ordinary way.
 - Dari, Pashto and English with right-to-left layout, and Shamsi or Gregorian dates.
 
-Not built yet: opening balances import, journal entries by hand, Deals, daily cash count,
-WhatsApp messages, the setup wizard, backup and restore by the owner of a business, the
-Export Center, and the plans of the subscription. See the specification.
+Not built yet: opening balances import, WhatsApp messages, the setup wizard, attachments,
+recurring expenses, receipts with a QR code, a permission per account category, and the plans
+of the subscription. See the specification.
 
 ## Stack
 
