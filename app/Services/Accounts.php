@@ -52,10 +52,13 @@ class Accounts
         $branch ??= Branch::main();
         $party->loadMissing('group');
 
-        return Account::firstOrCreate(
+        $account = Account::firstOrCreate(
             ['branch_id' => $branch->id, 'system_key' => 'party.'.$party->id, 'currency_id' => $currency->id],
             ['account_category_id' => $party->group->account_category_id, 'party_id' => $party->id, 'name' => $party->name],
         );
+
+        // a new one is read again, so it carries what the database filled in (it is in use)
+        return $account->wasRecentlyCreated ? $account->fresh() : $account;
     }
 
     /** The cash box the business starts with. */
