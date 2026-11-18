@@ -147,7 +147,24 @@ summary and the question go to the Claude API; the key, the model (default `clau
 questions a business may ask in a day are on **Admin → Settings**. Without a key the page says it is switched off.
 Code: `App\Services\Assistant`.
 
-Tests: `TradeTest`, `BranchTest`, `GrowthTest`, `ConnectionTest`. Voice POS is not started.
+### Stock: units, warehouses, purchase costs (Pro)
+
+- **Units** are a list of their own (Stock & Warehouses → Units); an item picks its unit from it.
+- **Warehouses**: every branch has a main warehouse and may add more. Stock and average cost are kept per
+  warehouse (`item_stocks.warehouse_id`); an invoice names the warehouse; **Stock Moves** takes goods from one to
+  another at their cost (`Trade::move`). The stock of an item in a branch is the sum, its cost the weighted average.
+- **Costs of a purchase** (customs, transport, rent ...): each is paid from a money account and all are shared
+  over the goods by value, so the cost of one unit, and the average cost of the item, is counted after them
+  (`invoice_costs`, `Trade::record(..., $costs, $warehouse)`).
+
+### The demo
+
+`php artisan demo:refresh` makes (or empties and refills) the business `demo`: about fifty accounts a section,
+`DEMO_TRANSACTIONS` papers of two earlier years written in blocks by `DemoBulk` (default 100,000, under a minute)
+and two months of a food wholesaler recorded through the services. It runs every midnight and on every deploy,
+has no licence end, and its address, user and password are shown on the website.
+
+Tests: `TradeTest`, `BranchTest`, `GrowthTest`, `ConnectionTest`, `DemoTest`. Voice POS is not started.
 
 
 ## Stack
