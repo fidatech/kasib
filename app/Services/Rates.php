@@ -29,7 +29,7 @@ class Rates
             throw new UserError(__('A rate must be more than zero.'));
         }
 
-        return ExchangeRate::create([
+        $written = ExchangeRate::create([
             'branch_id' => $branch->id,
             'currency_id' => $currency->id,
             'rate' => Num::round($rate, 6),
@@ -37,6 +37,9 @@ class Rates
             'sell_rate' => Num::isPositive($sell) ? Num::round($sell, 6) : null,
             'created_by' => auth()->id(),
         ]);
+        Alerts::rate($written, $currency);
+
+        return $written;
     }
 
     /**

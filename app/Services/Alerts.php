@@ -19,7 +19,7 @@ class Alerts
 {
     public const KINDS = [
         'large' => 'Large amount', 'backdated' => 'Dated back', 'after_hours' => 'Outside working hours',
-        'cancelled' => 'Cancelled', 'budget' => 'Expense budget',
+        'cancelled' => 'Cancelled', 'budget' => 'Expense budget', 'rate' => 'Exchange rate', 'cash' => 'Cash differs from the books',
     ];
 
     public static function enabled(): bool
@@ -48,9 +48,21 @@ class Alerts
         }
     }
 
-    public static function raise(string $kind, string $text, ?Model $subject = null): void
+    /** A rate was written: tell those who were waiting for it, once. */
+    public static function rate(\App\Models\ExchangeRate $written, \App\Models\Currency $currency): void
     {
-        if (! self::enabled()) {
+        foreach (\App\Models\RateAlert::where('currency_id', $currency->id)->where('is_active', true)->get() as $alert) {
+            $side = Num::cmp($written->rate, $alert->rate);
+            if (($alert->direction === 'above' && $side >= 0) || ($alert->direction === 'below' && $side <= 0)) {
+                $alert->update(['is_active' => false, 'fired_at' => now()]);
+                self::raise('rate', $currency->code.' '.Num::format($written->rate, 6, true).' '.($alert->direction === 'above' ? '≥' : '≤').' '.Num::format($alert->rate, 6, true).($alert->note ? ' · '.$alert->note : ''), $alert, true);
+            }
+        }
+    }
+
+    public static function raise(string $kind, string $text, ?Model $subject = null, bool $always = false): void
+    {
+        if (! $always && ! self::enabled()) {
             return;
         }
         $text = mb_substr($text, 0, 255);
@@ -58,7 +70,7 @@ class Alerts
 
         $title = __(self::KINDS[$kind]).': '.$text;
         $by = auth()->user()?->name;
-        foreach (User::role(User::ADMIN_ROLE)->where('id', '!=', (int) auth()->id())->where('is_active', true)->pluck('id') as $id) {
+        foreach (User::role(User::ADMIN_ROLE)->when(! $always, fn ($q) => $q->where('id', '!=', (int) auth()->id()))->where('is_active', true)->pluck('id') as $id) {
             Notice::send((int) $id, $title, $by, route('reports.alerts', [], false));
         }
         if (setting('alerts_whatsapp') === '1' && filled(setting('owner_phone'))) {

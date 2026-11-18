@@ -185,4 +185,134 @@ class InsightTest extends TestCase
         $this->get('/reports/profit-and-loss?compare=year')->assertOk()->assertSee('Change');
         $this->get('/reports')->assertOk()->assertSee('Cash Forecast');
     }
+
+    public function test_a_hawala_is_followed_until_it_is_delivered(): void
+    {
+        $this->business();
+        $this->owner();
+        $this->openingCash('AFN', '50000');
+        $cash = $this->cash();
+        $ahmad = $this->party('Ahmad');
+        $this->get('/hawalas')->assertOk();
+        $this->get('/hawalas/create')->assertOk();
+
+        $form = ['date' => today_iso(), 'account_id' => $cash->id, 'receiver' => 'Yusuf', 'destination' => 'Herat'];
+        $this->post('/hawalas', $form + ['number' => 'HW-778', 'amount' => '3000', 'party_id' => $ahmad->id])->assertSessionHasNoErrors();
+        $this->post('/hawalas', $form + ['number' => 'HW-779', 'amount' => '500'])->assertSessionHasNoErrors();
+        [$first, $second] = \App\Models\Hawala::orderBy('id')->get()->all();
+        // sent for Ahmad: the money out is on his account; the other one is only followed
+        $this->assertNotNull($first->voucher_id);
+        $this->assertNull($second->voucher_id);
+        $this->assertSame('-3000.00', Vouchers::balances($ahmad->fresh())[0]['amount']);
+
+        $this->post('/hawalas/'.$second->id.'/deliver')->assertSessionHas('success');
+        $this->assertSame('delivered', $second->fresh()->status);
+        $this->post('/hawalas/'.$second->id.'/deliver')->assertNotFound();
+        $this->post('/hawalas/'.$first->id.'/cancel')->assertSessionHas('success');
+        $this->assertSame('cancelled', $first->fresh()->status);
+        $this->assertSame([], Vouchers::balances($ahmad->fresh()));
+
+        // never deleted
+        $this->delete('/hawalas/'.$first->id);
+        $this->assertNotNull(\App\Models\Hawala::find($first->id));
+        $this->get('/hawalas?status=delivered')->assertOk()->assertSee('HW-779')->assertDontSee('HW-778');
+    }
+
+    public function test_the_lines_of_a_bank_account_are_ticked_against_the_statement(): void
+    {
+        $this->business();
+        $this->owner();
+        $this->openingCash('AFN', '10000');
+        $cash = $this->cash();
+        $ahmad = $this->party('Ahmad');
+        Vouchers::moneyIn($ahmad, $cash, today_iso(), '2000');
+        Vouchers::moneyOut($ahmad, $cash, today_iso(), '500');
+        $lines = \App\Models\JournalLine::where('account_id', $cash->id)->orderBy('id')->pluck('id')->all();
+        $other = \App\Models\JournalLine::where('account_id', '!=', $cash->id)->value('id');
+        $this->assertCount(3, $lines);
+
+        $this->get('/reconciliation')->assertOk()->assertSee('Choose an account');
+        $this->put('/reconciliation', ['account' => $cash->id, 'shown' => array_merge($lines, [$other]), 'cleared' => [$lines[0], $lines[1], $other]])->assertSessionHasNoErrors();
+        $this->assertSame(2, \Illuminate\Support\Facades\DB::table('cleared_lines')->count());
+        // 11,500 in the books, 12,000 of it ticked, the bank says 12,000
+        $this->get('/reconciliation?from=2020-01-01&statement=12000&account='.$cash->id)->assertOk()->assertSee('11,500.00')->assertSee('12,000.00')->assertSee('Statement less ticked');
+        $this->get('/reconciliation?from=2020-01-01&show=open&account='.$cash->id)->assertOk();
+
+        $this->put('/reconciliation', ['account' => $cash->id, 'shown' => $lines, 'cleared' => [$lines[0]]])->assertSessionHasNoErrors();
+        $this->assertSame([$lines[0]], \Illuminate\Support\Facades\DB::table('cleared_lines')->pluck('journal_line_id')->map(fn ($id) => (int) $id)->all());
+    }
+
+    public function test_a_cashier_counts_his_box_and_hands_it_over(): void
+    {
+        $this->business();
+        $ali = $this->userWith(['transactions.view', 'transactions.manage']);
+        $owner = $this->owner();
+        $this->openingCash('AFN', '10000');
+        $main = Accounts::cashBox();
+        $box = Party::create(['account_group_id' => AccountGroup::byKey('cash')->id, 'name' => 'Box of Ali'])->fresh();
+        $afn = Currency::where('code', 'AFN')->firstOrFail();
+
+        $this->put('/handovers/boxes', ['holder' => [$box->id => $ali->id]])->assertSessionHasNoErrors();
+        $this->assertSame($ali->id, (int) $box->fresh()->user_id);
+        $boxAccount = Accounts::party($box, $afn);
+        Vouchers::transfer($this->cash(), $boxAccount, today_iso(), '3000');
+
+        $this->actingAs($ali);
+        $this->get('/handovers')->assertOk()->assertSee('Box of Ali');
+        // his own box comes first in his forms
+        $this->assertSame($box->id, (int) Accounts::money(Branch::main())->first()->party_id);
+        // not the box of somebody else
+        $this->post('/handovers', ['from' => $main->id, 'to' => $box->id, 'counted' => [$this->cash()->id => '100']]);
+        $this->assertSame(0, \App\Models\Handover::count());
+
+        $this->post('/handovers', ['from' => $box->id, 'to' => $main->id, 'counted' => [$boxAccount->id => '2900'], 'note' => 'End of shift'])->assertSessionHasNoErrors()->assertRedirect('/handovers');
+        $handover = \App\Models\Handover::firstOrFail();
+        $this->assertSame('-100.00', $handover->lines[0]['difference']);
+        $this->assertSame('100.00', (string) $boxAccount->fresh()->total->balance);
+        $this->assertSame(1, Alert::where('kind', 'cash')->count());
+
+        // the one who hands over does not accept his own handover
+        $this->post('/handovers/'.$handover->id.'/accept');
+        $this->assertNull($handover->fresh()->accepted_at);
+        $this->actingAs($owner);
+        $this->post('/handovers/'.$handover->id.'/accept')->assertSessionHas('success');
+        $this->assertSame($owner->id, (int) $handover->fresh()->accepted_by);
+        $this->get('/handovers')->assertOk()->assertSee('End of shift');
+    }
+
+    public function test_a_rate_alert_speaks_once_and_the_history_of_rates_is_kept(): void
+    {
+        $this->business();
+        $owner = $this->owner();
+        $this->rates(['USD' => '70']);
+        $usd = Currency::where('code', 'USD')->firstOrFail();
+
+        $this->post('/rate-alerts', ['currency_id' => $usd->id, 'direction' => 'above', 'rate' => '71', 'note' => 'Sell dollars', 'is_active' => 1])->assertSessionHasNoErrors();
+        $this->rates(['USD' => '70.5']);
+        $this->assertSame(0, Alert::where('kind', 'rate')->count());
+        $this->rates(['USD' => '71.2']);
+        $this->assertSame(1, Alert::where('kind', 'rate')->count());
+        $this->assertFalse(\App\Models\RateAlert::firstOrFail()->is_active);
+        $this->assertTrue(\App\Models\Notice::where('user_id', $owner->id)->where('title', 'like', '%Sell dollars%')->exists());
+        $this->rates(['USD' => '72']);
+        $this->assertSame(1, Alert::where('kind', 'rate')->count());
+
+        $this->get('/rate-alerts')->assertOk()->assertSee('Sell dollars');
+        $this->get('/reports/rate-history')->assertOk()->assertSee('USD')->assertSee('71.2')->assertSee('70.5');
+        $this->get('/reports/rate-history?currency='.$usd->id)->assertOk()->assertSee('72');
+    }
+
+    public function test_depositor_insights_show_who_holds_the_most(): void
+    {
+        $this->business();
+        $this->owner();
+        $cash = $this->cash();
+        $ahmad = $this->party('Ahmad');
+        Vouchers::moneyIn($ahmad, $cash, today_iso(), '9000');
+        Vouchers::moneyIn($this->party('Karim'), $cash, today_iso(), '1000');
+        Vouchers::moneyOut($ahmad, $cash, today_iso(), '1000');
+        $this->party('Silent');
+
+        $this->get('/reports/depositors')->assertOk()->assertSee('Ahmad')->assertSee('8,000.00')->assertSee('88.9%')->assertSee('11.1%')->assertSee('The five largest hold')->assertDontSee('Silent');
+    }
 }

@@ -32,6 +32,8 @@ class ReportController extends Controller
         'reports.balances' => ['Customer & Supplier Balances', 'users', 'What every party has with the business, per currency.'],
         'reports.due' => ['Due Payments', 'calendar-days', 'Money received with a payback date that has come or is near.'],
         'reports.forecast' => ['Cash Forecast', 'chart-line', 'The money expected in every currency after the paybacks and the recurring expenses ahead.'],
+        'reports.depositors' => ['Depositor Insights', 'users', 'Who leaves the most money with the business, how it moved, and who has gone quiet.'],
+        'reports.rates' => ['Rate History', 'chart-line', 'Every rate that was written, with its change from the one before.'],
         'reports.alerts' => ['Unusual Activity', 'triangle-exclamation', 'Large, dated back, after-hours and cancelled papers, and budgets nearly used up.'],
         'export.index' => ['Export Center', 'file-excel', 'One Excel workbook of a period, with a sheet for every module you tick.'],
         'treasury.index' => ['Currency Position', 'vault', 'The money of the business in every currency, and where it is.'],
@@ -350,6 +352,85 @@ class ReportController extends Controller
 
         return $this->sheet('Due Payments', 'calendar-days', [['To be paid back on'], ['Status'], ['Account'], ['Phone'], ['No.'], ['Amount received', 'end'], ['We owe them now', 'end']], $rows, null, null,
             [['name' => 'days', 'label' => 'Falling due within', 'options' => [0 => __('Overdue and today'), 7 => __('7 days'), 30 => __('30 days'), 90 => __('90 days')], 'value' => $days]]);
+    }
+
+    /** Every rate that was written, newest first, with the change from the rate before it. */
+    public function rates(Request $request): View
+    {
+        Gate::authorize('reports.view');
+        $f = $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date'], 'currency' => ['nullable', 'integer']]);
+        [$from, $to] = [$f['from'] ?? now()->subDays(90)->toDateString(), $f['to'] ?? today_iso()];
+        $currencies = Currency::where('id', '!=', Currency::base()->id)->orderBy('code')->pluck('code', 'id');
+        $written = \App\Models\ExchangeRate::where('branch_id', Branch::main()->id)->when($f['currency'] ?? null, fn ($q, $id) => $q->where('currency_id', $id))
+            ->whereDate('created_at', '<=', $to)->orderBy('id')->limit(20000)->get();
+        $users = \App\Models\User::pluck('name', 'id');
+
+        $rows = [];
+        $before = [];
+        foreach ($written as $rate) {
+            $old = $before[$rate->currency_id] ?? null;
+            $before[$rate->currency_id] = $rate->rate;
+            if ($rate->created_at->toDateString() < $from) {
+                continue;
+            }
+            $change = $old === null ? null : Num::sub($rate->rate, $old);
+            $rows[] = ['cells' => [
+                fmt_date($rate->created_at).' '.$rate->created_at->timezone(config('app.timezone'))->format('H:i'), (string) ($currencies[$rate->currency_id] ?? ''),
+                Num::format($rate->rate, 6, true), $rate->buy_rate === null ? '' : Num::format($rate->buy_rate, 6, true), $rate->sell_rate === null ? '' : Num::format($rate->sell_rate, 6, true),
+                $change === null || Num::isZero($change) ? '' : (Num::isPositive($change) ? '+' : '').Num::format($change, 6, true),
+                $change === null || Num::isZero($change) ? '' : Num::round(Num::div(Num::mul($change, '100'), $old), 2).'%',
+                (string) ($users[$rate->created_by] ?? ''),
+            ]];
+        }
+
+        return $this->sheet('Rate History', 'chart-line', [['Date'], ['Currency'], ['Rate', 'end'], ['Buy', 'end'], ['Sell', 'end'], ['Change', 'end'], ['%', 'end'], ['User']], array_reverse($rows), $from, $to,
+            [['name' => 'currency', 'label' => 'Currency', 'options' => $currencies->all()]]);
+    }
+
+    /**
+     * Depositor insights: for every customer and supplier what came in and went out in the
+     * period, what the business owes him now, his share of all it owes, and how long he has
+     * been quiet. Amounts are in the base currency.
+     */
+    public function depositors(Request $request): View
+    {
+        Gate::authorize('reports.view');
+        [$from, $to] = $this->dates($request);
+        $moves = Voucher::whereIn('kind', [Voucher::MONEY_IN, Voucher::MONEY_OUT])->whereNull('cancelled_at')->whereNotNull('party_id')
+            ->whereDate('date', '>=', $from)->whereDate('date', '<=', $to)->groupBy('party_id', 'kind')
+            ->selectRaw('party_id, kind, COUNT(*) as papers, SUM(base_amount) as total')->toBase()->get()->groupBy('party_id');
+        $last = Voucher::whereNull('cancelled_at')->whereNotNull('party_id')->groupBy('party_id')->selectRaw('party_id, MAX(date) as last')->toBase()->pluck('last', 'party_id');
+
+        $list = [];
+        foreach (Party::with(['group', 'accounts.total'])->whereHas('group', fn ($q) => $q->where('type', AccountGroup::PARTY))->limit(20000)->get() as $party) {
+            $owed = Num::money(Num::neg(Num::sum($party->accounts->map(fn ($a) => $a->total?->base_balance ?? 0))));
+            $mine = ($moves[$party->id] ?? collect())->keyBy('kind');
+            if (Num::isZero($owed) && $mine->isEmpty()) {
+                continue;
+            }
+            $list[] = ['party' => $party, 'owed' => $owed, 'in' => $mine[Voucher::MONEY_IN]->total ?? 0, 'out' => $mine[Voucher::MONEY_OUT]->total ?? 0,
+                'papers' => (int) ($mine[Voucher::MONEY_IN]->papers ?? 0) + (int) ($mine[Voucher::MONEY_OUT]->papers ?? 0), 'last' => $last[$party->id] ?? null];
+        }
+        usort($list, fn ($a, $b) => Num::cmp($b['owed'], $a['owed']));
+        $all = Num::sum(array_map(fn ($row) => Num::isPositive($row['owed']) ? $row['owed'] : '0', $list));
+        $share = fn (mixed $owed) => Num::isPositive($all) && Num::isPositive($owed) ? Num::round(Num::div(Num::mul($owed, '100'), $all), 1).'%' : '';
+
+        $rows = [];
+        foreach ($list as $row) {
+            $quiet = $row['last'] ? (int) round((strtotime(today_iso()) - strtotime(substr((string) $row['last'], 0, 10))) / 86400) : null;
+            $rows[] = ['cells' => [
+                ['text' => $row['party']->name, 'url' => route('accounts.statement', ['group' => $row['party']->group->key, 'id' => $row['party']->id])],
+                $row['party']->group->label(), $row['papers'], money($row['in']), money($row['out']), money($row['owed']), $share($row['owed']),
+                $row['last'] ? fmt_date($row['last']) : '', $quiet === null ? '' : $quiet,
+            ]];
+        }
+        if ($rows) {
+            $five = Num::sum(array_map(fn ($row) => Num::isPositive($row['owed']) ? $row['owed'] : '0', array_slice($list, 0, 5)));
+            $rows[] = ['total' => true, 'cells' => [__('Total'), '', array_sum(array_column($list, 'papers')), money(Num::sum(array_column($list, 'in'))), money(Num::sum(array_column($list, 'out'))), money($all), '', '', '']];
+            $rows[] = ['total' => true, 'cells' => [__('The five largest hold'), '', '', '', '', money($five), $share($five), '', '']];
+        }
+
+        return $this->sheet('Depositor Insights', 'users', [['Account'], ['Category'], ['Papers', 'end'], ['Received', 'end'], ['Paid back', 'end'], ['We owe them now', 'end'], ['Share', 'end'], ['Last paper'], ['Days quiet', 'end']], $rows, $from, $to);
     }
 
     private function sheet(string $title, string $icon, array $columns, array $rows, ?string $from, ?string $to, array $filters = []): View

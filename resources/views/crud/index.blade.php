@@ -66,7 +66,11 @@
                             <td class="text-end text-nowrap no-print">
                                 <div class="act-group">
                                     @foreach ($links($row) as $link)
-                                        <a class="btn btn-sm btn-light-secondary" href="{{ $link['url'] }}">{{ $link['label'] }}</a>
+                                        @if (! empty($link['post']))
+                                            <form method="POST" action="{{ $link['url'] }}" class="d-inline" @isset($link['confirm']) data-confirm="{{ $link['confirm'] }}" data-confirm-ok="{{ $link['label'] }}" @endisset>@csrf<button type="submit" class="btn btn-sm btn-light-secondary">{{ $link['label'] }}</button></form>
+                                        @else
+                                            <a class="btn btn-sm btn-light-secondary" href="{{ $link['url'] }}">{{ $link['label'] }}</a>
+                                        @endif
                                     @endforeach
                                     @if ($canManage && $editable($row))
                                         <x-act kind="edit" :href="route($route.'.edit', $routeParams + ['id' => $row->getKey()])" />

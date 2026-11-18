@@ -114,7 +114,8 @@ class Accounts
             ->where(fn ($q) => $q->whereNull('party_id')->orWhereHas('party', fn ($p) => $p->where('is_active', true)))
             ->when($baseOnly, fn ($q) => $q->where('currency_id', Currency::base()->id))
             ->orderBy('account_category_id')->orderBy('name')->orderBy('currency_id')
-            ->get();
+            ->get()
+            ->sortBy(fn (Account $a) => auth()->id() && (int) $a->party?->user_id === (int) auth()->id() ? 0 : 1)->values();
     }
 
     /** Accounts of what the business owes: bills, payables, tax and other liabilities. */
