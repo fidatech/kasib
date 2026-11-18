@@ -18,6 +18,10 @@ class Voucher extends Model
 
     public const INCOME = 'income';
 
+    public const DEAL_COST = 'deal_cost';
+
+    public const DEAL_RECEIPT = 'deal_receipt';
+
     /** kind => [name, prefix of its number] */
     public const KINDS = [
         self::MONEY_IN => ['Money In', 'MI'],
@@ -25,6 +29,8 @@ class Voucher extends Model
         self::TRANSFER => ['Transfer', 'TR'],
         self::EXCHANGE => ['Exchange', 'EX'],
         self::INCOME => ['Income', 'IN'],
+        self::DEAL_COST => ['Deal cost', 'DC'],
+        self::DEAL_RECEIPT => ['Deal receipt', 'DR'],
     ];
 
     protected $guarded = [];
@@ -37,6 +43,11 @@ class Voucher extends Model
     public function branch(): BelongsTo
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    public function deal(): BelongsTo
+    {
+        return $this->belongsTo(Deal::class);
     }
 
     public function party(): BelongsTo

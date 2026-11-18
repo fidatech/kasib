@@ -34,6 +34,8 @@ return [
         ['label' => 'Exchanges', 'route' => 'exchanges.index', 'active' => 'exchanges.*', 'can' => 'transactions.view'],
         ['label' => 'Income', 'route' => 'income.index', 'active' => 'income.*', 'can' => 'transactions.view'],
         ['label' => 'Expenses', 'route' => 'expenses.index', 'active' => 'expenses.*', 'can' => 'expenses.view'],
+        ['label' => 'Deals', 'route' => 'deals.index', 'active' => 'deals.*', 'can' => 'transactions.view'],
+        ['label' => 'Journal Entries', 'route' => 'journal.create', 'can' => 'journal.manage', 'advanced' => true],
     ]],
 
     ['label' => 'Finance', 'icon' => 'landmark', 'advanced' => true, 'children' => [
@@ -44,6 +46,7 @@ return [
         ['label' => 'Assets', 'route' => 'assets.index', 'active' => 'assets.*', 'can' => 'assets.view'],
         ['label' => 'Depreciation', 'route' => 'depreciation.index', 'active' => 'depreciation.*', 'can' => 'assets.view'],
         ['label' => 'Liabilities', 'route' => 'liabilities.index', 'active' => 'liabilities.*', 'can' => 'liabilities.view'],
+        ['label' => 'Daily Cash Count', 'route' => 'cash-counts.index', 'active' => 'cash-counts.*', 'can' => 'transactions.view'],
         ['label' => 'Period Closing', 'route' => 'closing.index', 'can' => 'settings.view'],
     ]],
 
@@ -55,6 +58,7 @@ return [
         ['label' => 'Trial Balance', 'route' => 'reports.trial', 'can' => 'reports.view', 'advanced' => true],
         ['label' => 'Profit & Loss', 'route' => 'reports.profit', 'can' => 'reports.view', 'advanced' => true],
         ['label' => 'Balance Sheet', 'route' => 'reports.balance', 'can' => 'reports.view', 'advanced' => true],
+        ['label' => 'Cancelled Papers', 'route' => 'journal.index', 'params' => ['cancelled' => 1], 'can' => 'journal.view'],
         ['label' => 'All Reports', 'route' => 'reports.index', 'can' => 'reports.view'],
     ]],
 
@@ -63,6 +67,7 @@ return [
         ['label' => 'Roles', 'route' => 'roles.index', 'active' => 'roles.*', 'can' => 'users.view'],
         ['label' => 'Permissions', 'route' => 'permissions.index', 'can' => 'users.view'],
         ['label' => 'Audit Log', 'route' => 'audit.index', 'can' => 'audit.view'],
+        ['label' => 'Backup & Restore', 'route' => 'backups.index', 'active' => 'backups.*', 'can' => 'settings.manage'],
     ]],
 
     ['label' => 'Configuration', 'icon' => 'gear', 'children' => [

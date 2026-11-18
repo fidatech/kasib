@@ -70,7 +70,8 @@ class HesabBookTest extends TestCase
             '/income', '/income/create', '/expenses', '/expenses/create', '/journal', '/chart-of-accounts', '/shareholders', '/capital', '/distributions',
             '/assets', '/depreciation', '/liabilities', '/closing', '/reports', '/reports/trial-balance', '/reports/profit-and-loss', '/reports/balance-sheet',
             '/reports/balances', '/reports/due-payments', '/currency-position', '/users', '/roles', '/permissions', '/audit', '/settings',
-            '/account-categories', '/account-categories/create', '/currencies', '/rates', '/expense-categories', '/expense-categories/create'] as $page) {
+            '/account-categories', '/account-categories/create', '/currencies', '/rates', '/expense-categories', '/expense-categories/create',
+            '/deals', '/cash-counts', '/cash-counts/create', '/journal/entries', '/backups', '/journal?cancelled=1'] as $page) {
             $this->get($page)->assertOk();
         }
         $this->get('/accounts/nothing-here')->assertNotFound();
@@ -302,6 +303,127 @@ class HesabBookTest extends TestCase
 
         $this->put('/settings', ['company_name' => 'Acme business', 'simple_mode' => 0])->assertSessionHasNoErrors();
         $this->assertContains('Finance', $sections());
+    }
+
+    public function test_a_deal_works_out_its_own_profit_or_loss(): void
+    {
+        $this->business();
+        $this->owner();
+        $this->openingCash('AFN', '100000');
+        $cash = $this->cash();
+        $main = Branch::main();
+
+        $this->post('/deals', ['name' => 'Flour from Mazar', 'notes' => '200 sacks'])->assertSessionHasNoErrors();
+        $deal = \App\Models\Deal::firstOrFail();
+        $this->assertSame(['DL-000001', 'open'], [$deal->number, $deal->status]);
+        $move = fn (string $kind, string $amount) => $this->from('/deals/'.$deal->id)->post('/deals/'.$deal->id.'/moves', ['kind' => $kind, 'date' => today_iso(), 'account_id' => $cash->id, 'amount' => $amount]);
+
+        $move('cost', '60000')->assertSessionHasNoErrors();
+        $move('receipt', '45000')->assertSessionHasNoErrors();
+        $move('receipt', '25000')->assertSessionHasNoErrors();
+        $this->assertSame('110000.00', Ledger::balance($cash));
+        $this->get('/deals/'.$deal->id)->assertOk()->assertSee('Flour from Mazar')->assertSee('60,000.00')->assertSee('70,000.00')->assertSee('10,000.00');
+        $this->get('/deals')->assertOk()->assertSee('DL-000001');
+        // nothing reaches the profit and loss statement before the deal is closed
+        $this->assertSame('0.00', Ledger::baseBalance(Accounts::expense($main, AccountCategory::byKey('trade_income'))));
+
+        $this->post('/deals/'.$deal->id.'/close')->assertSessionHasNoErrors()->assertRedirect('/deals/'.$deal->id);
+        $deal->refresh();
+        $this->assertSame(['closed', '10000.00'], [$deal->status, $deal->result]);
+        $this->assertSame('-10000.00', Ledger::baseBalance(Accounts::expense($main, AccountCategory::byKey('trade_income'))));
+        $this->assertSame('0.00', Ledger::baseBalance($deal->account_id));
+        // a closed deal takes nothing more
+        $move('cost', '100')->assertSessionHas('danger');
+        $this->from('/deals/'.$deal->id)->post('/deals/'.$deal->id.'/close')->assertSessionHas('danger');
+
+        // a deal that brought in less than it cost closes with a loss
+        $this->post('/deals', ['name' => 'Rice'])->assertSessionHasNoErrors();
+        $rice = \App\Models\Deal::orderByDesc('id')->firstOrFail();
+        $this->post('/deals/'.$rice->id.'/moves', ['kind' => 'cost', 'date' => today_iso(), 'account_id' => $cash->id, 'amount' => '5000'])->assertSessionHasNoErrors();
+        $this->post('/deals/'.$rice->id.'/moves', ['kind' => 'receipt', 'date' => today_iso(), 'account_id' => $cash->id, 'amount' => '3000'])->assertSessionHasNoErrors();
+        $this->post('/deals/'.$rice->id.'/close')->assertSessionHasNoErrors();
+        $this->assertSame('-2000.00', $rice->fresh()->result);
+        $this->assertSame('2000.00', Ledger::baseBalance(Accounts::expense($main, AccountCategory::byKey('trade_loss'))));
+        $this->booksBalance();
+    }
+
+    public function test_the_daily_cash_count_books_a_shortage_or_an_excess(): void
+    {
+        $this->business();
+        $this->owner();
+        $this->openingCash('AFN', '10000');
+        $cash = $this->cash();
+        $main = Branch::main();
+
+        $this->get('/cash-counts/create')->assertOk();
+        $this->post('/cash-counts', ['account_id' => $cash->id, 'counted' => '9800', 'note' => 'Evening'])->assertSessionHasNoErrors()->assertRedirect('/cash-counts');
+        $first = \App\Models\CashCount::firstOrFail();
+        $this->assertSame(['CC-000001', '10000.00', '9800.00', '-200.00'], [$first->number, $first->book, $first->counted, $first->difference]);
+        $this->assertSame('9800.00', Ledger::balance($cash));
+        $this->assertSame('200.00', Ledger::baseBalance(Accounts::expense($main, AccountCategory::byKey('cash_shortage'))));
+
+        $this->post('/cash-counts', ['account_id' => $cash->id, 'counted' => '9850'])->assertSessionHasNoErrors();
+        $this->assertSame('9850.00', Ledger::balance($cash));
+        $this->assertSame('-50.00', Ledger::baseBalance(Accounts::expense($main, AccountCategory::byKey('cash_excess'))));
+
+        // cash that agrees with the books leaves no entry
+        $entries = \App\Models\JournalEntry::count();
+        $this->post('/cash-counts', ['account_id' => $cash->id, 'counted' => '9850'])->assertSessionHasNoErrors();
+        $this->assertSame($entries, \App\Models\JournalEntry::count());
+        $this->get('/cash-counts')->assertOk()->assertSee('CC-000001')->assertSee('CC-000003');
+        $this->booksBalance();
+    }
+
+    public function test_a_journal_entry_is_written_by_hand_and_must_balance(): void
+    {
+        $this->business();
+        $this->owner();
+        $cash = $this->cash();
+        $opening = Accounts::system(Branch::main(), 'opening');
+
+        $this->get('/journal/entries')->assertOk();
+        $this->post('/journal/entries', ['date' => today_iso(), 'description' => 'Cash found in the safe', 'lines' => [
+            ['account_id' => $cash->id, 'debit' => '500'], ['account_id' => $opening->id, 'credit' => '500'], ['account_id' => '', 'debit' => '', 'credit' => ''],
+        ]])->assertSessionHasNoErrors()->assertRedirect('/journal/entries');
+        $entry = \App\Models\JournalEntry::where('type', 'manual')->firstOrFail();
+        $this->assertSame('500.00', Ledger::balance($cash));
+        $this->get('/journal/entries')->assertOk()->assertSee($entry->number)->assertSee('Cash found in the safe');
+
+        // debits and credits that are not equal, or a single line, are refused
+        $this->from('/journal/entries')->post('/journal/entries', ['date' => today_iso(), 'description' => 'Wrong', 'lines' => [['account_id' => $cash->id, 'debit' => '500'], ['account_id' => $opening->id, 'credit' => '300']]])->assertSessionHas('danger');
+        $this->from('/journal/entries')->post('/journal/entries', ['date' => today_iso(), 'description' => 'Wrong', 'lines' => [['account_id' => $cash->id, 'debit' => '500']]])->assertSessionHas('danger');
+        $this->assertSame(1, \App\Models\JournalEntry::where('type', 'manual')->count());
+
+        $this->delete('/journal/entries/'.$entry->id, ['reason' => 'Not needed'])->assertSessionHasNoErrors();
+        $this->assertSame('0.00', Ledger::balance($cash));
+        $this->get('/journal?cancelled=1')->assertOk();
+        $this->booksBalance();
+    }
+
+    public function test_the_owner_backs_up_and_restores_the_business(): void
+    {
+        $tenant = $this->business();
+        $this->owner();
+        $this->party('customers', 'Before');
+
+        $this->get('/backups')->assertOk();
+        $this->post('/backups')->assertSessionHasNoErrors();
+        $backup = \App\Models\Central\Backup::where('tenant_id', $tenant->id)->firstOrFail();
+        $this->get('/backups')->assertOk()->assertSee('Restore');
+        $this->get('/backups/'.$backup->id.'/download')->assertOk();
+
+        $this->party('customers', 'After');
+        // the password of the signed-in user is asked before anything is replaced
+        $this->post('/backups/'.$backup->id.'/restore', ['password' => 'not-the-password'])->assertSessionHasErrors('password');
+        $this->assertSame(2, Party::where('is_system', false)->count());
+
+        $this->post('/backups/'.$backup->id.'/restore', ['password' => 'password123'])->assertSessionHasNoErrors()->assertRedirect('/backups');
+        $this->enter($tenant);
+        $this->assertSame(['Before'], Party::where('is_system', false)->orderBy('id')->pluck('name')->all());
+        // what the business had before the restore was saved as a second copy
+        $this->assertSame(2, \App\Models\Central\Backup::where('tenant_id', $tenant->id)->count());
+        // a copy of another business is not found
+        $this->get('/backups/999/download')->assertNotFound();
     }
 
     public function test_a_user_sees_only_what_the_role_allows(): void

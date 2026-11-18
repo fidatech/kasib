@@ -8,6 +8,7 @@ use App\Models\AccountCategory;
 use App\Models\AccountGroup;
 use App\Models\Branch;
 use App\Models\Currency;
+use App\Models\Deal;
 use App\Models\Party;
 use App\Models\Voucher;
 use App\Support\Num;
@@ -177,11 +178,52 @@ class Vouchers
         });
     }
 
+    /** Money paid for a deal (the goods, the transport, the customs). */
+    public static function dealCost(Deal $deal, Account $money, string $date, mixed $amount, ?string $description = null): Voucher
+    {
+        return self::withDeal(Voucher::DEAL_COST, $deal, $money, $date, $amount, $description);
+    }
+
+    /** Money that came in from a deal (the goods sold). */
+    public static function dealReceipt(Deal $deal, Account $money, string $date, mixed $amount, ?string $description = null): Voucher
+    {
+        return self::withDeal(Voucher::DEAL_RECEIPT, $deal, $money, $date, $amount, $description);
+    }
+
+    private static function withDeal(string $kind, Deal $deal, Account $money, string $date, mixed $amount, ?string $description): Voucher
+    {
+        $amount = self::amount($amount);
+        self::mustBeMoney($money);
+        if (! $deal->isOpen()) {
+            throw new UserError(__('This deal is closed. Nothing more is recorded on it.'));
+        }
+
+        return DB::transaction(function () use ($kind, $deal, $money, $date, $amount, $description) {
+            $branch = Branch::main();
+            $base = Rates::toBase($amount, $money->currency, $branch);
+            $cost = $kind === Voucher::DEAL_COST;
+
+            $voucher = self::create($kind, $branch, $date, [
+                'deal_id' => $deal->id, 'account_id' => $money->id, 'other_account_id' => $deal->account_id, 'currency_id' => $money->currency_id,
+                'amount' => $amount, 'base_amount' => $base, 'description' => $description,
+            ]);
+
+            Ledger::post($branch, $kind, $date, self::line($voucher, $deal->number.' '.$deal->name, $description), $cost
+                ? [['account' => $deal->account_id, 'debit' => $base], ['account' => $money, 'credit' => $amount, 'base' => $base]]
+                : [['account' => $money, 'debit' => $amount, 'base' => $base], ['account' => $deal->account_id, 'credit' => $base]], $voucher);
+
+            return $voucher;
+        });
+    }
+
     /** A paper is never deleted: it is cancelled, its entry is taken back, and it stays on the list crossed out. */
     public static function cancel(Voucher $voucher, ?string $reason = null): void
     {
         if ($voucher->isCancelled()) {
             return;
+        }
+        if ($voucher->deal_id && ! $voucher->deal?->isOpen()) {
+            throw new UserError(__('This deal is closed. Nothing more is recorded on it.'));
         }
 
         DB::transaction(function () use ($voucher, $reason) {

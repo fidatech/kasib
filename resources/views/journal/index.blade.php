@@ -7,7 +7,7 @@
 
 @section('content')
 <x-page-header :title="__('Roznamcha')" icon="book" :subtitle="__('The general ledger: every entry of every transaction.')">
-    <a class="btn btn-outline-soft" href="{{ request()->fullUrlWithQuery(['print' => 1]) }}" target="_blank" rel="noopener"><x-icon name="print" class="me-1" /> {{ __('Print') }}</a>
+    @can('journal.manage')<a class="btn btn-primary" href="{{ route('journal.create') }}"><x-icon name="plus" class="me-1" /> {{ __('Journal entry by hand') }}</a>@endcan
 </x-page-header>
 
 @if ($balances)

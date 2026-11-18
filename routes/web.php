@@ -5,7 +5,9 @@ use App\Http\Controllers\Admin\AuditController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\CapitalController;
+use App\Http\Controllers\CashCountController;
 use App\Http\Controllers\Central\InvoiceController;
 use App\Http\Controllers\Central\LoginController as CentralLoginController;
 use App\Http\Controllers\Central\TenantController;
@@ -13,6 +15,7 @@ use App\Http\Controllers\ChartController;
 use App\Http\Controllers\ClosingController;
 use App\Http\Controllers\CurrencyController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DealController;
 use App\Http\Controllers\DepreciationController;
 use App\Http\Controllers\ExchangeController;
 use App\Http\Controllers\ExpenseCategoryController;
@@ -21,6 +24,7 @@ use App\Http\Controllers\FixedAssetController;
 use App\Http\Controllers\Hr\DistributionController;
 use App\Http\Controllers\IncomeController;
 use App\Http\Controllers\JournalController;
+use App\Http\Controllers\JournalEntryController;
 use App\Http\Controllers\LiabilityController;
 use App\Http\Controllers\MoneyInController;
 use App\Http\Controllers\MoneyOutController;
@@ -215,6 +219,17 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
         $paper('income', IncomeController::class, 'income');
         $paper('expenses', ExpenseController::class, 'expenses');
         Route::get('journal', [JournalController::class, 'index'])->name('journal.index');
+        Route::get('journal/entries', [JournalEntryController::class, 'create'])->name('journal.create');
+        Route::post('journal/entries', [JournalEntryController::class, 'store'])->name('journal.store');
+        Route::delete('journal/entries/{id}', [JournalEntryController::class, 'destroy'])->name('journal.destroy')->whereNumber('id');
+
+        // deals: what was paid for something bought to be sold, what came in, and its profit or loss
+        Route::get('deals', [DealController::class, 'index'])->name('deals.index');
+        Route::post('deals', [DealController::class, 'store'])->name('deals.store');
+        Route::get('deals/{id}', [DealController::class, 'show'])->name('deals.show')->whereNumber('id');
+        Route::post('deals/{id}/moves', [DealController::class, 'move'])->name('deals.move')->whereNumber('id');
+        Route::delete('deals/{id}/moves/{paper}', [DealController::class, 'cancel'])->name('deals.cancel')->whereNumber(['id', 'paper']);
+        Route::post('deals/{id}/close', [DealController::class, 'close'])->name('deals.close')->whereNumber('id');
 
         // finance
         Route::get('chart-of-accounts', [ChartController::class, 'index'])->name('chart.index');
@@ -224,6 +239,7 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
         $paper('assets', FixedAssetController::class, 'assets');
         $paper('depreciation', DepreciationController::class, 'depreciation');
         $paper('liabilities', LiabilityController::class, 'liabilities');
+        $paper('cash-counts', CashCountController::class, 'cash-counts');
         Route::get('closing', [ClosingController::class, 'index'])->name('closing.index');
         Route::post('closing', [ClosingController::class, 'store'])->name('closing.store');
 
@@ -246,6 +262,10 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
         Route::delete('roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy')->whereNumber('id');
         Route::get('permissions', [RoleController::class, 'permissions'])->name('permissions.index');
         Route::get('audit', [AuditController::class, 'index'])->name('audit.index');
+        Route::get('backups', [BackupController::class, 'index'])->name('backups.index');
+        Route::post('backups', [BackupController::class, 'store'])->name('backups.store');
+        Route::get('backups/{id}/download', [BackupController::class, 'download'])->name('backups.download')->whereNumber('id');
+        Route::post('backups/{id}/restore', [BackupController::class, 'restore'])->name('backups.restore')->whereNumber('id');
 
         // configuration
         Route::get('settings', [SettingsController::class, 'index'])->name('settings.index');
