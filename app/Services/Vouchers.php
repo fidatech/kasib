@@ -51,7 +51,7 @@ class Vouchers
             throw new UserError(__(':name is switched off.', ['name' => $party->name]));
         }
 
-        return DB::transaction(function () use ($kind, $party, $money, $date, $amount, $due, $description) {
+        $voucher = DB::transaction(function () use ($kind, $party, $money, $date, $amount, $due, $description) {
             $branch = Branch::main();
             $account = Accounts::party($party, $money->currency, $branch);
             $in = $kind === Voucher::MONEY_IN;
@@ -70,6 +70,10 @@ class Vouchers
 
             return $voucher;
         });
+        // the receipt on WhatsApp, once the paper is safely in the books
+        Whatsapp::paper($voucher);
+
+        return $voucher;
     }
 
     /** Money moves between two money accounts of the same currency. The fee, if any, is paid from the first one. */

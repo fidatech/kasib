@@ -7,6 +7,7 @@ use App\Models\Attachment;
 use App\Models\Party;
 use App\Models\PartyNote;
 use App\Models\Voucher;
+use App\Support\Permissions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -24,20 +25,20 @@ class PartyFileController extends Controller
     /** The notes of one account, and the form of a new one. */
     public function notes(Request $request): View
     {
-        Gate::authorize('accounts.view');
         $party = $this->party($request);
+        abort_unless(Permissions::group($request->user(), $party->group->key, 'view'), 403);
 
         return view('accounts.notes', [
             'party' => $party, 'group' => $party->group,
             'notes' => PartyNote::with('creator')->where('party_id', $party->id)->orderByRaw('case when done_at is null then 0 else 1 end')->orderByDesc('id')->limit(500)->get(),
-            'canManage' => $request->user()->can('accounts.manage'),
+            'canManage' => Permissions::group($request->user(), $party->group->key, 'manage'),
         ]);
     }
 
     public function storeNote(Request $request): RedirectResponse
     {
-        Gate::authorize('accounts.manage');
         $party = $this->party($request);
+        abort_unless(Permissions::group($request->user(), $party->group->key, 'manage'), 403);
         $data = $request->validate(['note' => ['required', 'string', 'max:500'], 'remind_on' => ['nullable', 'date']]);
         PartyNote::create($data + ['party_id' => $party->id, 'created_by' => $request->user()->id]);
 

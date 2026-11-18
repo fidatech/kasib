@@ -40,7 +40,9 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SetupController;
 use App\Http\Controllers\ShareholderController;
 use App\Http\Controllers\TransferController;
+use App\Http\Controllers\ReceiptCheckController;
 use App\Http\Controllers\TreasuryController;
+use App\Http\Controllers\WhatsappController;
 use Illuminate\Support\Facades\Route;
 
 // the address of an account category: /accounts/customers, /accounts/<any category the business added>
@@ -184,6 +186,9 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
     // the logo of the business is also the icon of its browser tab, so the sign-in page can ask for it too
     Route::get('company-logo', [SettingsController::class, 'logo'])->name('settings.logo');
 
+    // anyone who holds a receipt can check it, without signing in
+    Route::get('check/{number}/{code}', ReceiptCheckController::class)->name('receipts.verify')->where(['number' => '[A-Z]{2}-[0-9]{6,}', 'code' => '[a-f0-9]{12}'])->middleware('throttle:30,1');
+
     Route::middleware('guest')->group(function () {
         Route::get('login', [LoginController::class, 'show'])->name('login');
         Route::post('login', [LoginController::class, 'store'])->name('login.store');
@@ -301,5 +306,8 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
         Route::get('rates', [RateController::class, 'index'])->name('rates.index');
         Route::put('rates', [RateController::class, 'update'])->name('rates.update');
         $crud('expense-categories', ExpenseCategoryController::class, 'expense-categories');
+        Route::get('whatsapp', [WhatsappController::class, 'index'])->name('whatsapp.index');
+        Route::put('whatsapp', [WhatsappController::class, 'update'])->name('whatsapp.update');
+        Route::post('whatsapp/test', [WhatsappController::class, 'test'])->name('whatsapp.test');
     });
 });

@@ -20,7 +20,8 @@ class Menu
             // the account categories of the business, each a page of its own
             if (($item['dynamic'] ?? null) === 'account_groups') {
                 $item['children'] = \App\Models\AccountGroup::active()->orderBy('sort')->orderBy('id')->get()
-                    ->map(fn (\App\Models\AccountGroup $group) => ['label' => $group->label(), 'route' => 'accounts.index', 'params' => ['group' => $group->key], 'active' => 'accounts.*', 'can' => 'accounts.view'])->all();
+                    ->filter(fn (\App\Models\AccountGroup $group) => Permissions::group($user, $group->key, 'view'))->values()
+                    ->map(fn (\App\Models\AccountGroup $group) => ['label' => $group->label(), 'route' => 'accounts.index', 'params' => ['group' => $group->key], 'active' => 'accounts.*'])->all();
             }
             if (isset($item['children'])) {
                 $item['children'] = array_values(array_filter($item['children'], fn (array $child) => self::shown($child) && self::allowed($user, $child)));

@@ -71,6 +71,7 @@ return [
         ['label' => 'Roles', 'route' => 'roles.index', 'active' => 'roles.*', 'can' => 'users.view'],
         ['label' => 'Permissions', 'route' => 'permissions.index', 'can' => 'users.view'],
         ['label' => 'Audit Log', 'route' => 'audit.index', 'can' => 'audit.view'],
+        ['label' => 'Sign-in History', 'route' => 'audit.index', 'params' => ['action' => 'signed in'], 'can' => 'audit.view'],
         ['label' => 'Backup & Restore', 'route' => 'backups.index', 'active' => 'backups.*', 'can' => 'settings.manage'],
     ]],
 
@@ -80,6 +81,7 @@ return [
         ['label' => 'Account Categories', 'route' => 'account-categories.index', 'active' => 'account-categories.*', 'can' => 'accounts.view'],
         ['label' => 'Currencies', 'route' => 'currencies.index', 'active' => 'currencies.*', 'can' => 'currencies.view'],
         ['label' => 'Exchange Rates', 'route' => 'rates.index', 'can' => 'days.view'],
+        ['label' => 'WhatsApp Messages', 'route' => 'whatsapp.index', 'active' => 'whatsapp.*', 'can' => 'settings.view'],
         ['label' => 'Income & Expense Categories', 'route' => 'expense-categories.index', 'active' => 'expense-categories.*', 'can' => 'accounts.view'],
     ]],
 

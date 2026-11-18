@@ -31,6 +31,9 @@ class TenantManager
             'main_branch_price' => $data['main_branch_price'] ?? 0,
             'branch_price' => $data['branch_price'] ?? 0,
             'max_branches' => $data['max_branches'] ?? null,
+            'plan' => $data['plan'] ?? null,
+            'max_users' => $data['max_users'] ?? null,
+            'max_accounts' => $data['max_accounts'] ?? null,
             'licence_expires_on' => $data['licence_expires_on'] ?? null,
             'notes' => $data['notes'] ?? null,
         ]);

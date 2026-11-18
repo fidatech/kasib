@@ -102,6 +102,12 @@ class AccountGroupController extends CrudController
         return $data;
     }
 
+    protected function afterSave(Model $record, array $virtual, Request $request, bool $created): void
+    {
+        // the category can be given to a role by itself
+        \App\Support\Permissions::sync();
+    }
+
     protected function deleteProblem(Model $record): ?string
     {
         if ($record->is_system) {

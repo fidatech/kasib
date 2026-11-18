@@ -57,6 +57,10 @@ class PartyController extends CrudController
         $group = $this->group();
         $this->title = $group->label();
         $this->icon = $group->icon;
+        // "accounts" covers every category; a user may also be given this category alone
+        $user = request()->user();
+        $own = 'group-'.$group->key;
+        $this->permission = $user && ! $user->can('accounts.manage') && ($user->can($own.'.manage') || (! $user->can('accounts.view') && $user->can($own.'.view'))) ? $own : 'accounts';
 
         return parent::callAction($method, $parameters);
     }
@@ -138,6 +142,11 @@ class PartyController extends CrudController
     protected function beforeSave(array $data, ?Model $record, Request $request): array
     {
         if (! $record) {
+            // the plan of the business says how many accounts it may have
+            $limit = (int) (tenant()?->max_accounts ?? 0);
+            if ($limit > 0 && Party::count() >= $limit) {
+                throw new UserError(__('Your plan allows :count accounts. Ask Fida Technologies for a larger plan to add more.', ['count' => $limit]));
+            }
             $data['account_group_id'] = $this->group()->id;
         }
 
@@ -193,7 +202,7 @@ class PartyController extends CrudController
     /** Every line of one account in one currency between two dates, with the balance after each. */
     public function statement(Request $request): View
     {
-        Gate::authorize('accounts.view');
+        Gate::authorize($this->permission.'.view');
 
         $party = Party::with(['group', 'accounts.currency', 'accounts.total'])->where('account_group_id', $this->group()->id)->findOrFail($request->route('id'));
         $filters = $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date'], 'currency' => ['nullable', 'integer']]);

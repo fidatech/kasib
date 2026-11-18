@@ -585,15 +585,109 @@ class HesabBookTest extends TestCase
         $this->assertSame(1, \App\Models\Expense::count());
         // next month it is due again
         $this->travelTo(now()->addMonth());
-        $this->assertSame(2, \App\Services\OpeningBalances::runRecurring());
-        $this->assertSame('2700.00', Ledger::balance($cash));
+        $this->assertSame(1, \App\Services\OpeningBalances::runRecurring());
+        $this->assertSame('3000.00', Ledger::balance($cash));
 
         // one that cannot be paid is left, and the owner is told
         $this->post('/recurring-expenses', ['account_category_id' => AccountCategory::byKey('expense_staff')->id, 'paid_account_id' => $cash->id, 'amount' => '90000', 'day' => 1, 'description' => 'Salaries', 'is_active' => 1])->assertSessionHasNoErrors();
         $this->assertSame(0, \App\Services\OpeningBalances::runRecurring());
-        $this->assertSame('2700.00', Ledger::balance($cash));
+        $this->assertSame('3000.00', Ledger::balance($cash));
         $this->assertTrue(\App\Models\Notice::where('user_id', $owner->id)->where('body', 'like', 'Salaries%')->exists());
         $this->booksBalance();
+    }
+
+    public function test_a_role_can_be_given_one_account_category_alone(): void
+    {
+        $this->business();
+        $user = $this->userWith(['group-customers.view', 'group-customers.manage']);
+        $ahmad = $this->party('customers', 'Ahmad');
+
+        $this->get('/accounts/customers')->assertOk()->assertSee('Ahmad');
+        $this->post('/accounts/customers', ['name' => 'Karim', 'is_active' => 1])->assertSessionHasNoErrors();
+        $this->get('/accounts/customers/'.$ahmad->id.'/statement')->assertOk();
+        $this->get('/accounts/customers/'.$ahmad->id.'/notes')->assertOk();
+        $this->get('/accounts/suppliers')->assertForbidden();
+        $this->get('/accounts/cash')->assertForbidden();
+        $this->get('/account-categories')->assertForbidden();
+        $labels = array_column(collect(Menu::for($user))->firstWhere('label', 'Accounts')['children'], 'label');
+        $this->assertSame(['Customers'], $labels);
+
+        // the permissions page lists every category, the ones the business added too
+        $this->owner();
+        $this->post('/account-categories', ['name' => 'Agents', 'type' => 'party', 'icon' => 'users', 'sort' => 70, 'is_active' => 1])->assertSessionHasNoErrors();
+        $this->get('/roles/create')->assertOk()->assertSee('group-agents.view', false);
+        $this->assertContains('group-agents.manage', \App\Support\Permissions::all());
+    }
+
+    public function test_the_plan_of_a_business_limits_its_accounts_and_is_set_in_the_panel(): void
+    {
+        $tenant = $this->business();
+        $this->central();
+        $this->systemAdmin();
+        $this->put('/admin/tenants/'.$tenant->id, ['name' => 'Acme business', 'plan' => 'Basic', 'max_users' => 3, 'max_accounts' => 2])->assertSessionHasNoErrors();
+        $tenant->refresh();
+        $this->assertSame(['Basic', 3, 2], [$tenant->plan, (int) $tenant->max_users, (int) $tenant->max_accounts]);
+
+        $this->enter($tenant);
+        $this->owner();
+        // the cash box is the first account; one more fits, the next does not
+        $this->post('/accounts/customers', ['name' => 'Ahmad', 'is_active' => 1])->assertSessionHasNoErrors();
+        $this->from('/accounts/customers/create')->post('/accounts/customers', ['name' => 'Karim', 'is_active' => 1])->assertSessionHas('danger');
+        $this->assertSame(2, Party::count());
+    }
+
+    public function test_whatsapp_messages_go_out_and_never_stop_the_work(): void
+    {
+        \Illuminate\Support\Facades\Http::fake(['wa.example.test/*' => \Illuminate\Support\Facades\Http::response(['ok' => true])]);
+        $this->business();
+        $this->owner();
+        $ahmad = Party::create(['account_group_id' => AccountGroup::byKey('customers')->id, 'name' => 'Ahmad', 'phone' => '0700 123 456'])->fresh();
+        $cash = $this->cash();
+
+        $this->get('/whatsapp')->assertOk();
+        // nothing is sent while the messages are off
+        Vouchers::moneyIn($ahmad, $cash, today_iso(), '100');
+        \Illuminate\Support\Facades\Http::assertNothingSent();
+
+        $this->put('/whatsapp', ['whatsapp_enabled' => 1, 'whatsapp_url' => 'https://wa.example.test/send', 'whatsapp_token' => 'secret-key', 'whatsapp_phone_field' => 'number', 'whatsapp_message_field' => 'message', 'whatsapp_country' => '93'])
+            ->assertSessionHasNoErrors()->assertRedirect('/whatsapp');
+        $this->post('/money-in', ['date' => today_iso(), 'party_id' => $ahmad->id, 'account_id' => $cash->id, 'amount' => '5000', 'due_date' => now()->addDay()->toDateString()])->assertSessionHasNoErrors();
+        \Illuminate\Support\Facades\Http::assertSent(fn ($request) => $request->url() === 'https://wa.example.test/send' && $request['number'] === '93700123456'
+            && str_contains($request['message'], '5,000.00') && str_contains($request['message'], 'Ahmad') && $request->hasHeader('Authorization', 'Bearer secret-key'));
+
+        // the day before the payback date the party is reminded, once
+        $this->assertSame(1, \App\Services\Whatsapp::remindDue());
+        $this->assertSame(0, \App\Services\Whatsapp::remindDue());
+        $this->post('/whatsapp/test', ['phone' => '0700000000'])->assertSessionHasNoErrors();
+        // an empty key box keeps the key
+        $this->put('/whatsapp', ['whatsapp_enabled' => 1, 'whatsapp_url' => 'https://wa.example.test/send', 'whatsapp_phone_field' => 'number', 'whatsapp_message_field' => 'message', 'whatsapp_country' => '93'])->assertSessionHasNoErrors();
+        $this->assertSame('secret-key', setting('whatsapp_token'));
+
+        // a sender that fails does not stop the paper
+        $this->put('/whatsapp', ['whatsapp_enabled' => 1, 'whatsapp_url' => 'https://down.example.test/send', 'whatsapp_phone_field' => 'number', 'whatsapp_message_field' => 'message', 'whatsapp_country' => '93'])->assertSessionHasNoErrors();
+        \Illuminate\Support\Facades\Http::fake(['down.example.test/*' => \Illuminate\Support\Facades\Http::response('no', 500)]);
+        $this->post('/money-out', ['date' => today_iso(), 'party_id' => $ahmad->id, 'account_id' => $cash->id, 'amount' => '1000'])->assertSessionHasNoErrors();
+        $this->assertSame(1, Voucher::where('kind', 'money_out')->count());
+    }
+
+    public function test_a_receipt_can_be_checked_by_anyone_who_holds_it(): void
+    {
+        $this->business();
+        $this->owner();
+        $ahmad = $this->party('customers', 'Ahmad');
+        $voucher = Vouchers::moneyIn($ahmad, $this->cash(), today_iso(), '750');
+        $code = \App\Http\Controllers\VoucherController::code($voucher);
+
+        $this->get('/money-in/'.$voucher->id.'/receipt')->assertOk()->assertSee('/check/'.$voucher->number.'/'.$code);
+        $this->get('/audit?action=signed in')->assertOk();
+
+        auth()->logout();
+        $this->get('/check/'.$voucher->number.'/'.$code)->assertOk()->assertSee('real and unchanged')->assertSee('750.00')->assertSee('Ahmad');
+        $this->get('/check/'.$voucher->number.'/000000000000')->assertOk()->assertSee('Do not accept it')->assertDontSee('750.00');
+        $this->get('/check/MI-999999/'.$code)->assertOk()->assertSee('Do not accept it');
+
+        Vouchers::cancel($voucher, 'Mistake');
+        $this->get('/check/'.$voucher->number.'/'.$code)->assertOk()->assertSee('was cancelled');
     }
 
     public function test_a_user_sees_only_what_the_role_allows(): void

@@ -32,7 +32,7 @@ class RoleController extends Controller
 
         return view('admin.permissions', [
             'roles' => $roles,
-            'modules' => config('permissions'),
+            'modules' => Permissions::modules(),
             'granted' => $roles->mapWithKeys(fn (Role $role) => [$role->id => $role->permissions->pluck('name')->all()])->all(),
         ]);
     }
@@ -42,7 +42,7 @@ class RoleController extends Controller
         Gate::authorize('users.manage');
         Permissions::sync();
 
-        return view('admin.roles.form', ['role' => null, 'granted' => [], 'modules' => config('permissions')]);
+        return view('admin.roles.form', ['role' => null, 'granted' => [], 'modules' => Permissions::modules()]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -64,7 +64,7 @@ class RoleController extends Controller
         Permissions::sync();
         $role = $this->editable($request);
 
-        return view('admin.roles.form', ['role' => $role, 'granted' => $role->permissions->pluck('name')->all(), 'modules' => config('permissions')]);
+        return view('admin.roles.form', ['role' => $role, 'granted' => $role->permissions->pluck('name')->all(), 'modules' => Permissions::modules()]);
     }
 
     public function update(Request $request): RedirectResponse

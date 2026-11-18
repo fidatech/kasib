@@ -12,7 +12,9 @@
         $field('domain', 'Own domain', ['help' => 'Leave empty to use the short name under :domain', 'value' => $tenant ? $val('domain') : old('domain')]),
     ];
     $licence = [
-        $field('max_branches', 'Dependent branches allowed', ['col' => 3, 'type' => 'number', 'help' => 'Empty means no limit']),
+        $field('plan', 'Plan', ['col' => 3, 'help' => 'A name for the plan: Basic, Standard ...']),
+        $field('max_users', 'Users allowed', ['col' => 3, 'type' => 'number', 'help' => 'Empty means no limit']),
+        $field('max_accounts', 'Accounts allowed', ['col' => 3, 'type' => 'number', 'help' => 'Empty means no limit']),
         $field('licence_expires_on', 'Licence until', ['col' => 3, 'type' => 'date', 'value' => old('licence_expires_on', $tenant?->licence_expires_on?->format('Y-m-d'))]),
     ];
     $owner = [

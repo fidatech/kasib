@@ -18,6 +18,9 @@
         @endforeach
     </tbody>
 </table>
+@isset($verify)
+    <div class="small text-muted mt-3">{{ __('To check that this receipt is real, open:') }} <span dir="ltr">{{ $verify }}</span></div>
+@endisset
 <div class="d-flex justify-content-between mt-5 small">
     <span>{{ __('Prepared by') }}: ____________</span>
     <span>{{ __('Received by') }}: ____________</span>

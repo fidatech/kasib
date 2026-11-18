@@ -17,6 +17,7 @@ class AuditController extends Controller
 
         $logs = AuditLog::with('user')
             ->when($request->query('user'), fn ($q, $id) => $q->where('user_id', $id))
+            ->when($request->query('action'), fn ($q, $action) => $q->where('action', $action))
             ->when($request->query('from'), fn ($q, $date) => $q->whereDate('created_at', '>=', $date))
             ->when($request->query('to'), fn ($q, $date) => $q->whereDate('created_at', '<=', $date))
             ->when(trim((string) $request->query('q')), fn ($q, $term) => $q->where(fn ($i) => $i->where('description', 'like', "%$term%")->orWhere('subject_type', 'like', "%$term%")))

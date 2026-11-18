@@ -65,6 +65,11 @@ class UserController extends CrudController
 
     protected function beforeSave(array $data, ?Model $record, Request $request): array
     {
+        // the plan of the business says how many users it may have
+        $limit = (int) (tenant()?->max_users ?? 0);
+        if (! $record && $limit > 0 && User::where('email', '!=', \App\Tenancy\Support::EMAIL)->count() >= $limit) {
+            throw new \App\Exceptions\UserError(__('Your plan allows :count users. Ask Fida Technologies for a larger plan to add more.', ['count' => $limit]));
+        }
         // nobody can lock themselves out
         if ($record && $record->is($request->user())) {
             $data['is_active'] = true;

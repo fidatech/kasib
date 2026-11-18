@@ -60,6 +60,20 @@ abstract class VoucherController extends PaperController
         Vouchers::cancel($paper, $reason);
     }
 
+    /** The code printed on the receipt of a paper: nobody can make it without the key of the system. */
+    public static function code(Voucher $voucher): string
+    {
+        return substr(hash_hmac('sha256', tenant()?->id.'|'.$voucher->number.'|'.$voucher->amount.'|'.$voucher->date->toDateString(), (string) config('app.key')), 0, 12);
+    }
+
+    /** The receipt, with the address where anyone can check that it is real. */
+    public function receipt(Request $request): \Illuminate\View\View
+    {
+        $paper = $this->find((int) $request->route('id'));
+
+        return parent::receipt($request)->with('verify', route('receipts.verify', ['number' => $paper->number, 'code' => self::code($paper)]));
+    }
+
     protected function shared(): array
     {
         return parent::shared() + ['ownDate' => true, 'filters' => $this->filters(), 'attach' => true];
