@@ -368,7 +368,7 @@ class InsightTest extends TestCase
         $this->assertSame(1, Alert::where('kind', 'document')->count());
         Vouchers::moneyIn($ahmad, $this->cash(), today_iso(), '900', now()->addDays(3)->toDateString());
         $this->get('/calendar')->assertOk()->assertSee('Business licence')->assertSee('Ahmad');
-        $this->get('/calendar?month=1')->assertOk()->assertDontSee('Business licence');
+        $this->get('/calendar?month=1')->assertOk()->assertViewHas('weeks', fn ($weeks) => collect($weeks)->flatten(1)->filter()->every(fn ($day) => $day['events'] === []));
         $this->get('/calendar?month=-1')->assertOk();
 
         $this->delete('/documents/'.$document->id)->assertSessionHas('success');
@@ -389,7 +389,7 @@ class InsightTest extends TestCase
         $this->assertSame(today_iso(), $schedule->fresh()->last_sent_on->toDateString());
 
         // every week: the tests run on a Friday, the seventh day
-        $schedule->update(['frequency' => 'weekly', 'day' => 1, 'last_sent_on' => null]);
+        $schedule->refresh()->update(['frequency' => 'weekly', 'day' => 1, 'last_sent_on' => null]);
         $this->assertSame(0, \App\Services\Schedules::tick());
         $schedule->update(['day' => 7]);
         $this->assertSame(1, \App\Services\Schedules::tick());
