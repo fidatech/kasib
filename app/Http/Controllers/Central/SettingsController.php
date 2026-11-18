@@ -35,6 +35,7 @@ class SettingsController extends Controller
             'trial' => ['enabled' => \App\Services\Billing::trialDays() !== null, 'days' => (int) (CentralSetting::read('trial_days') ?: 7)],
             'planNotes' => ['starter' => (string) CentralSetting::read('plan_starter_notes'), 'pro' => (string) CentralSetting::read('plan_pro_notes')],
             'hesabpay' => \App\Services\Billing::hesabpay(), 'videos' => (string) CentralSetting::read('help_videos'),
+            'assistant' => ['on' => \App\Services\Assistant::ready(), 'model' => (string) (CentralSetting::read('assistant_model') ?: \App\Services\Assistant::MODEL), 'limit' => \App\Services\Assistant::limit()],
         ]);
     }
 
@@ -50,6 +51,7 @@ class SettingsController extends Controller
             'hesabpay_number' => ['nullable', 'string', 'max:40'], 'hesabpay_name' => ['nullable', 'string', 'max:150'], 'afn_rate' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'hesabpay_qr' => ['nullable', 'file', 'mimes:png,jpg,jpeg,webp', 'max:1024'],
             'help_videos' => ['nullable', 'string', 'max:5000'],
+            'assistant_key' => ['nullable', 'string', 'max:300'], 'assistant_model' => ['nullable', 'string', 'max:80'], 'assistant_daily_limit' => ['nullable', 'integer', 'min:1', 'max:1000'], 'assistant_off' => ['nullable', 'boolean'],
             'plan_starter_notes' => ['nullable', 'string', 'max:1000'], 'plan_pro_notes' => ['nullable', 'string', 'max:1000'],
         ] + array_fill_keys(array_keys(\App\Services\Billing::DEFAULTS), ['nullable', 'numeric', 'min:0', 'max:1000000']));
         // the four prices of the service
@@ -70,6 +72,14 @@ class SettingsController extends Controller
         foreach (['hesabpay_number', 'hesabpay_name', 'afn_rate', 'help_videos', 'plan_starter_notes', 'plan_pro_notes'] as $key) {
             CentralSetting::put($key, (string) ($data[$key] ?? ''));
         }
+        // the assistant: the key is kept encrypted, and an empty box leaves it as it is
+        if (filled($data['assistant_key'] ?? null)) {
+            CentralSetting::put('assistant_key', \Illuminate\Support\Facades\Crypt::encryptString(trim($data['assistant_key'])));
+        } elseif ($request->boolean('assistant_off')) {
+            CentralSetting::put('assistant_key', '');
+        }
+        CentralSetting::put('assistant_model', (string) ($data['assistant_model'] ?? ''));
+        CentralSetting::put('assistant_daily_limit', (string) ($data['assistant_daily_limit'] ?? ''));
         if ($request->hasFile('hesabpay_qr')) {
             if ($old = CentralSetting::read('hesabpay_qr')) {
                 Storage::disk('local')->delete($old);

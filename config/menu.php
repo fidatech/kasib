@@ -25,6 +25,8 @@
 return [
     ['label' => 'Dashboard', 'icon' => 'gauge-high', 'route' => 'dashboard'],
 
+    ['label' => 'Assistant', 'icon' => 'comments', 'route' => 'assistant.index', 'active' => 'assistant.*', 'can' => 'reports.view', 'pro' => true],
+
     ['label' => 'Accounts', 'icon' => 'address-book', 'dynamic' => 'account_groups', 'children' => []],
 
     // the row of buttons under the navbar (config/quickbar.php) opens the forms of the daily papers too
@@ -107,6 +109,7 @@ return [
 
     ['label' => 'Configuration', 'icon' => 'gear', 'children' => [
         ['label' => 'First Setup', 'route' => 'setup.show', 'can' => 'settings.manage'],
+        ['label' => 'Connections', 'route' => 'connections.index', 'active' => 'connections.*', 'can' => 'settings.manage', 'pro' => true],
         ['label' => 'System Settings', 'route' => 'settings.index', 'active' => 'settings.*', 'can' => 'settings.view'],
         ['label' => 'Account Categories', 'route' => 'account-categories.index', 'active' => 'account-categories.*', 'can' => 'accounts.view'],
         ['label' => 'Currencies', 'route' => 'currencies.index', 'active' => 'currencies.*', 'can' => 'currencies.view'],

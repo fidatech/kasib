@@ -311,6 +311,12 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
             Route::post('businesses', [\App\Http\Controllers\BusinessLinkController::class, 'store'])->name('businesses.store')->middleware('throttle:6,10');
             Route::post('businesses/{id}/open', [\App\Http\Controllers\BusinessLinkController::class, 'open'])->name('businesses.open')->whereNumber('id');
             Route::delete('businesses/{id}', [\App\Http\Controllers\BusinessLinkController::class, 'destroy'])->name('businesses.destroy')->whereNumber('id');
+            Route::get('connections', [\App\Http\Controllers\ConnectionController::class, 'index'])->name('connections.index');
+            Route::post('connections', [\App\Http\Controllers\ConnectionController::class, 'store'])->name('connections.store');
+            Route::delete('connections/{id}', [\App\Http\Controllers\ConnectionController::class, 'destroy'])->name('connections.destroy')->whereNumber('id');
+            Route::get('assistant', [\App\Http\Controllers\AssistantController::class, 'index'])->name('assistant.index');
+            Route::post('assistant', [\App\Http\Controllers\AssistantController::class, 'store'])->name('assistant.store')->middleware('throttle:10,1');
+            Route::delete('assistant', [\App\Http\Controllers\AssistantController::class, 'destroy'])->name('assistant.destroy');
             Route::post('branches/switch', [BranchController::class, 'switch'])->name('branches.switch');
             $crud('branches', BranchController::class, 'branches');
             Route::post('branch-transfers/{id}/cancel', [BranchTransferController::class, 'cancel'])->name('branch-transfers.cancel')->whereNumber('id');

@@ -125,6 +125,20 @@
         </div>
         <div class="col-12 col-xl-4">
             <div class="card mb-0 h-100">
+                <div class="card-header"><div class="set-head"><span class="set-icon"><x-icon name="comments" /></span><div><h2 class="h5">{{ __('Assistant') }}</h2><small>{{ __('Answers the questions of Pro businesses from their own figures') }}</small></div></div></div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12"><label class="form-label" for="as-key">{{ __('Key of the Claude API') }} @if ($assistant['on'])<span class="badge bg-success">{{ __('On') }}</span>@else<span class="badge bg-secondary">{{ __('Off') }}</span>@endif</label><input type="password" dir="ltr" class="form-control @error('assistant_key') is-invalid @enderror" id="as-key" name="assistant_key" autocomplete="new-password" placeholder="{{ $assistant['on'] ? '••••••••' : 'sk-ant-...' }}"></div>
+                        <div class="col-7"><label class="form-label" for="as-model">{{ __('Model') }}</label><input type="text" dir="ltr" class="form-control" id="as-model" name="assistant_model" value="{{ old('assistant_model', $assistant['model']) }}"></div>
+                        <div class="col-5"><label class="form-label" for="as-limit">{{ __('Questions a day') }}</label><input type="number" min="1" max="1000" dir="ltr" class="form-control" id="as-limit" name="assistant_daily_limit" value="{{ old('assistant_daily_limit', $assistant['limit']) }}"></div>
+                        @if ($assistant['on'])<div class="col-12"><div class="form-check"><input type="checkbox" class="form-check-input" id="as-off" name="assistant_off" value="1"><label class="form-check-label" for="as-off">{{ __('Remove the key and switch the assistant off') }}</label></div></div>@endif
+                    </div>
+                    <div class="form-text">{{ __('The key is made at console.anthropic.com and is paid for by the company. Leave the box empty to keep the key that is saved. The limit is for each business.') }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-4">
+            <div class="card mb-0 h-100">
                 <div class="card-header"><div class="set-head"><span class="set-icon"><x-icon name="circle-question" /></span><div><h2 class="h5">{{ __('Help videos') }}</h2><small>{{ __('Shown on the help page of every business') }}</small></div></div></div>
                 <div class="card-body">
                     <textarea class="form-control @error('help_videos') is-invalid @enderror" name="help_videos" rows="6" dir="ltr" placeholder="Money in and money out | https://youtu.be/...">{{ old('help_videos', $videos) }}</textarea>
