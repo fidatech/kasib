@@ -107,6 +107,9 @@ class BusinessLinkController extends Controller
         if (! $user) {
             return redirect()->route('login')->with('warning', __('That pass is no longer good. Sign in here, or open the business again from the other one.'));
         }
+        // nothing of another business or another user stays in the session
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
         Auth::login($user);
         $request->session()->regenerate();
         audit('signed in', null, $user->email.' (from a linked business)');
