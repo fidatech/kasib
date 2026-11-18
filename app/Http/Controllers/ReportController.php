@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Account;
 use App\Models\AccountCategory;
 use App\Models\AccountGroup;
+use App\Models\Branch;
 use App\Models\Currency;
 use App\Models\Party;
 use App\Models\Voucher;
 use App\Services\Vouchers;
 use App\Support\Num;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -29,6 +31,8 @@ class ReportController extends Controller
         'reports.balance' => ['Balance Sheet', 'landmark', 'What the business has, what it owes and its capital on a date.'],
         'reports.balances' => ['Customer & Supplier Balances', 'users', 'What every party has with the business, per currency.'],
         'reports.due' => ['Due Payments', 'calendar-days', 'Money received with a payback date that has come or is near.'],
+        'reports.forecast' => ['Cash Forecast', 'chart-line', 'The money expected in every currency after the paybacks and the recurring expenses ahead.'],
+        'reports.alerts' => ['Unusual Activity', 'triangle-exclamation', 'Large, dated back, after-hours and cancelled papers, and budgets nearly used up.'],
         'export.index' => ['Export Center', 'file-excel', 'One Excel workbook of a period, with a sheet for every module you tick.'],
         'treasury.index' => ['Currency Position', 'vault', 'The money of the business in every currency, and where it is.'],
         'journal.index' => ['Roznamcha', 'book', 'The general ledger: every entry of every transaction.'],
@@ -75,7 +79,126 @@ class ReportController extends Controller
         Gate::authorize('reports.view');
         [$from, $to] = $this->dates($request);
 
-        return $this->sheet('Profit & Loss', 'chart-line', [['', ''], [Currency::base()->code, 'end']], $this->profitRows($from, $to), $from, $to);
+        $compare = in_array($request->query('compare'), ['previous', 'year'], true) ? $request->query('compare') : 'none';
+        $filters = [['name' => 'compare', 'label' => 'Compare with', 'value' => $compare,
+            'options' => ['none' => __('Nothing'), 'previous' => __('The period before'), 'year' => __('The same period a year before')]]];
+        if ($compare === 'none') {
+            return $this->sheet('Profit & Loss', 'chart-line', [['', ''], [Currency::base()->code, 'end']], $this->profitRows($from, $to), $from, $to, $filters);
+        }
+        // the period before: as many days, ending the day before this one starts
+        $days = (int) round((strtotime($to) - strtotime($from)) / 86400) + 1;
+        [$from2, $to2] = $compare === 'year'
+            ? [Carbon::parse($from)->subYear()->toDateString(), Carbon::parse($to)->subYear()->toDateString()]
+            : [Carbon::parse($from)->subDays($days)->toDateString(), Carbon::parse($from)->subDay()->toDateString()];
+
+        return $this->sheet('Profit & Loss', 'chart-line', [['', ''], [fmt_date($from).' – '.fmt_date($to), 'end'], [fmt_date($from2).' – '.fmt_date($to2), 'end'], ['Change', 'end'], ['%', 'end']],
+            $this->profitCompare($from, $to, $from2, $to2), $from, $to, $filters);
+    }
+
+    /** The profit and loss statement of two periods side by side, with the change of every line. */
+    private function profitCompare(string $from, string $to, string $from2, string $to2): array
+    {
+        $now = $this->movement($from, $to);
+        $then = $this->movement($from2, $to2);
+        $line = function (string $name, mixed $a, mixed $b, bool $total = false): array {
+            $change = Num::sub($a, $b);
+            $percent = Num::isZero(Num::money($b)) ? '' : Num::round(Num::div(Num::mul($change, '100'), Num::abs($b)), 1).'%';
+
+            return ['total' => $total, 'cells' => [$name, money($a), money($b), money($change), $percent]];
+        };
+
+        $rows = [];
+        $totals = [];
+        foreach (['income' => 'Income', 'expense' => 'Expenses'] as $nature => $heading) {
+            $rows[] = ['heading' => __($heading)];
+            $amount = fn (?object $sum) => $sum === null ? '0' : ($nature === 'income' ? Num::sub($sum->credit, $sum->debit) : Num::sub($sum->debit, $sum->credit));
+            $a = $now->where('nature', $nature)->keyBy('id');
+            $b = $then->where('nature', $nature)->keyBy('id');
+            $totals[$nature] = ['0', '0'];
+            foreach ($a->keys()->merge($b->keys())->unique() as $id) {
+                [$x, $y] = [$amount($a[$id] ?? null), $amount($b[$id] ?? null)];
+                if (Num::isZero(Num::money($x)) && Num::isZero(Num::money($y))) {
+                    continue;
+                }
+                $rows[] = $line($this->categoryName($a[$id] ?? $b[$id]), $x, $y);
+                $totals[$nature] = [Num::add($totals[$nature][0], $x), Num::add($totals[$nature][1], $y)];
+            }
+            $rows[] = $line(__('Total :name', ['name' => mb_strtolower(__($heading))]), $totals[$nature][0], $totals[$nature][1], true);
+        }
+        $rows[] = $line(__('Profit of the period'), Num::sub($totals['income'][0], $totals['expense'][0]), Num::sub($totals['income'][1], $totals['expense'][1]), true);
+
+        return $rows;
+    }
+
+    /** Unusual activity: what the owner was told about. */
+    public function alerts(Request $request): View
+    {
+        Gate::authorize('reports.view');
+        $f = $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date']]);
+        [$from, $to] = [$f['from'] ?? now()->subDays(30)->toDateString(), $f['to'] ?? today_iso()];
+        $kind = $request->query('kind');
+        $rows = \App\Models\Alert::with('user')->when(isset(\App\Services\Alerts::KINDS[$kind]), fn ($q) => $q->where('kind', $kind))
+            ->whereDate('created_at', '>=', $from)->whereDate('created_at', '<=', $to)->orderByDesc('id')->limit(2000)->get()
+            ->map(fn ($alert) => ['cells' => [fmt_date($alert->created_at).' '.$alert->created_at->timezone(config('app.timezone'))->format('H:i'), __(\App\Services\Alerts::KINDS[$alert->kind] ?? $alert->kind), $alert->text, (string) $alert->user?->name]])->all();
+
+        return $this->sheet('Unusual Activity', 'triangle-exclamation', [['Date'], ['What'], ['Details'], ['User']], $rows, $from, $to,
+            [['name' => 'kind', 'label' => 'What', 'options' => array_map(fn ($label) => __($label), \App\Services\Alerts::KINDS)]]);
+    }
+
+    /**
+     * Cash forecast: the money of now in every currency, less the deposits that are to be paid
+     * back and the recurring expenses of the days ahead. A deposit counts for what is still owed.
+     */
+    public function forecast(Request $request): View
+    {
+        Gate::authorize('reports.view');
+        $days = max(1, min(365, (int) $request->query('days', 30)));
+        $today = today_iso();
+        $until = now()->addDays($days)->toDateString();
+
+        $overdue = $due = $recurring = [];
+        $left = [];   // what is still owed on each party account, so two papers never count the same money twice
+        $vouchers = Voucher::with(['party.accounts.total'])->where('kind', Voucher::MONEY_IN)->whereNull('cancelled_at')->whereNotNull('due_date')
+            ->whereDate('due_date', '<=', $until)->orderBy('due_date')->limit(5000)->get();
+        foreach ($vouchers as $voucher) {
+            $account = $voucher->party?->accounts->firstWhere('currency_id', $voucher->currency_id);
+            if (! $account) {
+                continue;
+            }
+            $left[$account->id] ??= Num::neg($account->total?->balance ?? 0);
+            if (! Num::isPositive($left[$account->id])) {
+                continue;
+            }
+            $amount = Num::cmp($voucher->amount, $left[$account->id]) === 1 ? $left[$account->id] : $voucher->amount;
+            $left[$account->id] = Num::sub($left[$account->id], $amount);
+            if ($voucher->due_date->toDateString() < $today) {
+                $overdue[$voucher->currency_id] = Num::add($overdue[$voucher->currency_id] ?? 0, $amount);
+            } else {
+                $due[$voucher->currency_id] = Num::add($due[$voucher->currency_id] ?? 0, $amount);
+            }
+        }
+        foreach (\App\Models\RecurringExpense::with('paidAccount')->where('is_active', true)->get() as $expense) {
+            $times = 0;
+            for ($day = Carbon::parse($today)->addDay(); $day->toDateString() <= $until; $day->addDay()) {
+                $times += $day->day === $expense->day ? 1 : 0;
+            }
+            $currency = $expense->paidAccount->currency_id;
+            $recurring[$currency] = Num::add($recurring[$currency] ?? 0, Num::mul($expense->amount, $times));
+        }
+
+        $rows = [];
+        foreach (\App\Services\Days::totals(Branch::main()) as $id => $total) {
+            $out = Num::add(Num::add($overdue[$id] ?? 0, $due[$id] ?? 0), $recurring[$id] ?? 0);
+            if (Num::isZero(Num::money($total['balance'])) && Num::isZero(Num::money($out))) {
+                continue;
+            }
+            $expected = Num::sub($total['balance'], $out);
+            $rows[] = ['cells' => [$total['currency']->code, money($total['balance']), money($overdue[$id] ?? 0), money($due[$id] ?? 0), money($recurring[$id] ?? 0), money($expected),
+                Num::isNegative(Num::money($expected)) ? __('Short by :amount', ['amount' => money(Num::abs($expected))]) : __('Enough')]];
+        }
+
+        return $this->sheet('Cash Forecast', 'chart-line', [['Currency'], ['Cash and bank now', 'end'], ['Paybacks overdue', 'end'], ['Paybacks falling due', 'end'], ['Recurring expenses', 'end'], ['Expected', 'end'], ['Status']], $rows, null, null,
+            [['name' => 'days', 'label' => 'The days ahead', 'options' => [7 => __('7 days'), 30 => __('30 days'), 60 => __('60 days'), 90 => __('90 days')], 'value' => $days]]);
     }
 
     /** The lines of the profit and loss statement: headings, groups, totals and the profit of the period. */
@@ -252,7 +375,7 @@ class ReportController extends Controller
             ->where('l.is_void', false)->whereIn('c.nature', ['income', 'expense'])->where('e.type', '!=', 'closing')
             ->whereDate('l.date', '>=', $from)->whereDate('l.date', '<=', $to)
             ->groupBy('c.id', 'c.name', 'c.name_local', 'c.nature', 'c.sort')->orderBy('c.sort')
-            ->selectRaw('c.name as name, c.name_local as name_local, c.nature as nature, SUM(l.base_debit) as debit, SUM(l.base_credit) as credit')->get();
+            ->selectRaw('c.id as id, c.name as name, c.name_local as name_local, c.nature as nature, SUM(l.base_debit) as debit, SUM(l.base_credit) as credit')->get();
     }
 
     private function categoryName(object $row): string

@@ -242,6 +242,7 @@ class Vouchers
             $voucher->update(['cancelled_at' => now(), 'cancel_reason' => $reason ? mb_substr($reason, 0, 255) : null]);
             Ledger::voidSource($voucher, $reason);
             audit('cancelled', $voucher, trim($voucher->number.' '.($reason ?? '')));
+            Alerts::raise('cancelled', trim($voucher->number.' · '.money($voucher->amount, $voucher->currency?->code).' · '.($reason ?? ''), ' ·'), $voucher);
         });
     }
 
@@ -274,6 +275,7 @@ class Vouchers
             'number' => Sequence::next(Voucher::KINDS[$kind][1]), 'created_by' => auth()->id(),
         ]);
         audit('created', $voucher, Voucher::KINDS[$kind][0].' '.$voucher->number.' '.$voucher->amount);
+        Alerts::entry(fn () => __(Voucher::KINDS[$kind][0]).' '.$voucher->number.' · '.money($voucher->amount, $voucher->currency?->code), $date, $data['base_amount'] ?? 0, $voucher);
 
         return $voucher;
     }

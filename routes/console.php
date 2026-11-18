@@ -7,11 +7,13 @@ use Illuminate\Support\Facades\Schedule;
 //   tenants:create     a new business
 //   tenants:migrate    update the tables of every business
 //   books:daily        the depreciation of the months that ended, in every business
+//   books:evening      the evening summary to the owner of every business, at the hour he chose
 //   licences:check     lock the businesses whose licence has ended, open those that were paid
 //   tenants:backup     save a copy of the database of every business
 
 // The server's cron runs "php artisan schedule:run" every minute.
 Schedule::command('books:daily')->dailyAt('00:05')->timezone('Asia/Kabul');
+Schedule::command('books:evening')->hourly();
 Schedule::command('licences:check')->dailyAt('00:20')->timezone('Asia/Kabul');
 Schedule::command('tenants:backup')->dailyAt('01:30')->timezone('Asia/Kabul');
 

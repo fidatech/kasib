@@ -125,7 +125,7 @@ class Whatsapp
     }
 
     /** "5,000.00 AFN, -200.00 USD": above zero the business owes the party. */
-    private static function balance(Party $party): string
+    public static function balance(Party $party): string
     {
         $parts = array_map(fn (array $row) => money($row['amount'], $row['currency']->code), Vouchers::balances($party->fresh()));
 

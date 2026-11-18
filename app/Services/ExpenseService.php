@@ -43,6 +43,8 @@ class ExpenseService
                 ['account' => $paid, 'credit' => $amount, 'base' => $base],
             ], $expense);
             audit('created', $expense, 'Expense '.$category->name.' '.$amount.' '.$paid->currency->code);
+            Alerts::entry(fn () => __('Expense').' · '.$category->label().' · '.money($amount, $paid->currency->code), $date, $base, $expense);
+            Budgets::check($category);
 
             return $expense;
         });
