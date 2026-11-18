@@ -114,7 +114,7 @@ class SelfServiceTest extends TestCase
         $this->assertSame(now()->addYear()->toDateString(), $tenant->fresh()->licence_expires_on->toDateString());
 
         // a business that was suspended by hand gets no payment form
-        $tenant->update(['status' => Tenant::SUSPENDED, 'locked_reason' => null]);
+        $tenant->refresh()->update(['status' => Tenant::SUSPENDED, 'locked_reason' => null]);
         $this->enter($tenant->fresh());
         $this->get('/login')->assertStatus(503)->assertDontSee('Pay the subscription through HesabPay');
     }

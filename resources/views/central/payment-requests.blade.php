@@ -24,7 +24,7 @@
                         <td>@if ($row->screenshot_path)<a href="{{ route('admin.payment-requests.picture', ['id' => $row->id]) }}" target="_blank" rel="noopener">{{ __('Open') }}</a>@else — @endif</td>
                         <td>{{ $row->invoice?->number ?: __('A new one for the next year') }}@if ($row->invoice)<div class="small text-muted" dir="ltr">${{ money($row->invoice->total) }}</div>@endif</td>
                         <td class="text-end no-print">
-                            @if ($row->status === 'pending' && $admin->allows('billing.manage'))
+                            @if ($row->status === 'pending' && auth('admin')->user()?->allows('billing.manage'))
                                 <form method="POST" action="{{ route('admin.payment-requests.approve', ['id' => $row->id]) }}" class="d-inline-flex gap-1 mb-1">
                                     @csrf
                                     <input type="text" inputmode="decimal" dir="ltr" class="form-control form-control-sm" name="amount" value="{{ $row->amount }}" style="width: 6.5rem" aria-label="{{ __('Amount') }}">
