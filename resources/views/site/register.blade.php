@@ -46,17 +46,8 @@
                         <div class="form-text" id="slugHelp">{{ __('Small English letters, digits and dashes. Your staff open the system at this address.') }}</div>
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label" for="licence_no">{{ __('DAB licence number') }}</label>
-                        <input type="text" class="form-control" id="licence_no" name="licence_no" value="{{ old('licence_no') }}" maxlength="60" dir="ltr">
-                    </div>
-                    <div class="col-12 col-md-6">
                         <label class="form-label" for="province">{{ __('Province') }}</label>
                         <input type="text" class="form-control" id="province" name="province" value="{{ old('province') }}" maxlength="100">
-                    </div>
-                    <div class="col-12 col-md-6">
-                        <label class="form-label" for="branches">{{ __('Branches besides the main one') }}</label>
-                        <input type="text" inputmode="numeric" dir="ltr" class="form-control @error('branches') is-invalid @enderror" id="branches" name="branches" value="{{ old('branches', 0) }}" autocomplete="off">
-                        @error('branches')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                 </div>
 
