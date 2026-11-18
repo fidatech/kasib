@@ -20,7 +20,7 @@ class TradeReportController extends Controller
         Gate::authorize('reports.view');
         [$from, $to] = $this->dates($request);
         $sums = DB::table('invoice_lines as l')->join('invoices as i', 'i.id', '=', 'l.invoice_id')->join('items as t', 't.id', '=', 'l.item_id')
-            ->whereNull('i.cancelled_at')->whereIn('i.kind', [Invoice::SALE, Invoice::SALE_RETURN])->whereDate('i.date', '>=', $from)->whereDate('i.date', '<=', $to)
+            ->whereNull('i.cancelled_at')->where('i.branch_id', (int) current_branch()?->id)->whereIn('i.kind', [Invoice::SALE, Invoice::SALE_RETURN])->whereDate('i.date', '>=', $from)->whereDate('i.date', '<=', $to)
             ->groupBy('t.id', 't.name', 't.unit', 'i.kind')->selectRaw('t.id as id, t.name as name, t.unit as unit, i.kind as kind, SUM(l.qty) as qty, SUM(l.base_amount) as value, SUM(l.base_cost) as cost')->get()->groupBy('id');
 
         $list = [];

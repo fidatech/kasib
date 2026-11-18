@@ -117,30 +117,25 @@ if (! function_exists('current_branch')) {
     /** The branch the signed-in user works in. Everything they record goes into its books. */
     function current_branch(): ?\App\Models\Branch
     {
-        return auth()->user()?->branch ?? \App\Models\Branch::where('type', \App\Models\Branch::MAIN)->first();
+        return \App\Models\Branch::working();
     }
 }
 
 if (! function_exists('can_oversee')) {
-    /** People of the main branch with the oversight permission may look into every branch. */
+    /** People of the main branch who manage the settings may switch to any branch and read all of them together. */
     function can_oversee(): bool
     {
-        return (bool) (current_branch()?->isMain() && auth()->user()?->can('oversight.view'));
+        $user = auth()->user();
+
+        return (bool) ($user instanceof \App\Models\User && ($user->branch === null || $user->branch->isMain()) && $user->can('settings.manage'));
     }
 }
 
 if (! function_exists('viewed_branch')) {
-    /** The branch whose books are on the screen: the user's own, or another one chosen with ?branch= by someone who may oversee. */
+    /** The branch whose books are on the screen: the one the user works in (see Branch::working). */
     function viewed_branch(): ?\App\Models\Branch
     {
-        $own = current_branch();
-        $id = request()->query('branch');
-
-        if ($id && can_oversee()) {
-            return \App\Models\Branch::withBooks()->find($id) ?? $own;
-        }
-
-        return $own;
+        return current_branch();
     }
 }
 

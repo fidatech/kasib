@@ -21,7 +21,7 @@ class BooksDaily extends Command
         $failed = 0;
         foreach (Tenant::where('status', Tenant::ACTIVE)->orderBy('id')->get() as $tenant) {
             try {
-                $done = $tenancy->run($tenant, fn () => [Branch::withBooks()->get()->sum(fn (Branch $branch) => AssetService::catchUp($branch)), OpeningBalances::runRecurring(), \App\Services\Whatsapp::remindDue(), \App\Services\Summary::monthly(), \App\Services\Schedules::expiring()]);
+                $done = $tenancy->run($tenant, fn () => [Branch::withBooks()->get()->sum(fn (Branch $branch) => AssetService::catchUp($branch)), Branch::withBooks()->get()->sum(fn (Branch $branch) => Branch::as($branch, fn () => OpeningBalances::runRecurring())), Branch::withBooks()->get()->sum(fn (Branch $branch) => Branch::as($branch, fn () => \App\Services\Whatsapp::remindDue())), \App\Services\Summary::monthly(), \App\Services\Schedules::expiring()]);
                 $this->info($tenant->slug.': '.$done[0].' months of depreciation, '.$done[1].' recurring expenses, '.$done[2].' reminders, '.$done[3].' balances sent');
             } catch (Throwable $e) {
                 $failed++;

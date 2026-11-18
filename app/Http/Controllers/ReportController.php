@@ -42,6 +42,14 @@ class ReportController extends Controller
         'journal.index' => ['Roznamcha', 'book', 'The general ledger: every entry of every transaction.'],
     ];
 
+    /** "?branch=all": a report of all the branches together, for those who may read them all. */
+    public function callAction($method, $parameters)
+    {
+        return request('branch') === 'all' && can_oversee()
+            ? Branch::everywhere(fn () => parent::callAction($method, $parameters))
+            : parent::callAction($method, $parameters);
+    }
+
     public function index(): View
     {
         Gate::authorize('reports.view');
@@ -54,6 +62,7 @@ class ReportController extends Controller
         Gate::authorize('reports.view');
 
         $accounts = Account::with(['category', 'currency', 'total'])
+            ->whereIn('branch_id', Branch::reading())
             ->whereHas('total', fn ($q) => $q->where(fn ($i) => $i->where('balance', '!=', 0)->orWhere('base_balance', '!=', 0)))
             ->orderBy('account_category_id')->orderBy('name')
             ->get();
@@ -86,6 +95,7 @@ class ReportController extends Controller
         $compare = in_array($request->query('compare'), ['previous', 'year'], true) ? $request->query('compare') : 'none';
         $filters = [['name' => 'compare', 'label' => 'Compare with', 'value' => $compare,
             'options' => ['none' => __('Nothing'), 'previous' => __('The period before'), 'year' => __('The same period a year before')]]];
+        $filters = array_merge($filters, $this->branchFilter());
         if ($compare === 'none') {
             return $this->sheet('Profit & Loss', 'chart-line', [['', ''], [Currency::base()->code, 'end']], $this->profitRows($from, $to), $from, $to, $filters);
         }
@@ -191,7 +201,7 @@ class ReportController extends Controller
         }
 
         $rows = [];
-        foreach (\App\Services\Days::totals(Branch::main()) as $id => $total) {
+        foreach (\App\Services\Days::totals(current_branch()) as $id => $total) {
             $out = Num::add(Num::add($overdue[$id] ?? 0, $due[$id] ?? 0), $recurring[$id] ?? 0);
             if (Num::isZero(Num::money($total['balance'])) && Num::isZero(Num::money($out))) {
                 continue;
@@ -240,7 +250,7 @@ class ReportController extends Controller
         Gate::authorize('reports.view');
         $to = $this->dates($request)[1];
 
-        return $this->sheet('Balance Sheet', 'landmark', [['', ''], [Currency::base()->code, 'end']], $this->balanceRows($to), null, $to);
+        return $this->sheet('Balance Sheet', 'landmark', [['', ''], [Currency::base()->code, 'end']], $this->balanceRows($to), null, $to, $this->branchFilter());
     }
 
     /** The lines of the balance sheet at the end of a date. */
@@ -249,7 +259,7 @@ class ReportController extends Controller
         $accounts = DB::table('journal_lines as l')
             ->join('accounts as a', 'a.id', '=', 'l.account_id')
             ->join('account_categories as c', 'c.id', '=', 'a.account_category_id')
-            ->where('l.is_void', false)->whereDate('l.date', '<=', $to)
+            ->where('l.is_void', false)->whereDate('l.date', '<=', $to)->whereIn('l.branch_id', Branch::reading())
             ->groupBy('a.id', 'c.id', 'c.name', 'c.name_local', 'c.nature', 'c.sort')
             ->selectRaw('a.id as account, c.id as category, c.name as name, c.name_local as name_local, c.nature as nature, c.sort as sort, SUM(l.base_debit) as debit, SUM(l.base_credit) as credit')
             ->orderBy('c.sort')->get();
@@ -323,7 +333,7 @@ class ReportController extends Controller
         }
 
         return $this->sheet('Customer & Supplier Balances', 'users', [['Account'], ['Category'], ['Phone'], ['Currency'], ['We owe them', 'end'], ['They owe us', 'end']], $rows, null, null,
-            [['name' => 'group', 'label' => 'Category', 'options' => $groups->mapWithKeys(fn (AccountGroup $g) => [$g->id => $g->label()])->all()]]);
+            [['name' => 'group', 'label' => 'Category', 'options' => $groups->mapWithKeys(fn (AccountGroup $g) => [$g->id => $g->label()])->all()]], ...$this->branchFilter()]);
     }
 
     /** Money received with a payback date: what is overdue, and what falls due in the days ahead. */
@@ -363,7 +373,7 @@ class ReportController extends Controller
         $f = $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date'], 'currency' => ['nullable', 'integer']]);
         [$from, $to] = [$f['from'] ?? now()->subDays(90)->toDateString(), $f['to'] ?? today_iso()];
         $currencies = Currency::where('id', '!=', Currency::base()->id)->orderBy('code')->pluck('code', 'id');
-        $written = \App\Models\ExchangeRate::where('branch_id', Branch::main()->id)->when($f['currency'] ?? null, fn ($q, $id) => $q->where('currency_id', $id))
+        $written = \App\Models\ExchangeRate::where('branch_id', current_branch()->id)->when($f['currency'] ?? null, fn ($q, $id) => $q->where('currency_id', $id))
             ->whereDate('created_at', '<=', $to)->orderBy('id')->limit(20000)->get();
         $users = \App\Models\User::pluck('name', 'id');
 
@@ -445,7 +455,7 @@ class ReportController extends Controller
     {
         Gate::authorize('reports.view');
         $f = $request->validate(['nisab' => ['nullable', 'numeric', 'min:0']]);
-        $branch = Branch::main();
+        $branch = current_branch();
         $base = Currency::base()->code;
         $line = fn (string $name, string $currency, mixed $amount, mixed $value) => ['cells' => [$name, $currency, $currency === '' ? '' : money($amount), money($value)]];
 
@@ -514,6 +524,13 @@ class ReportController extends Controller
             'note' => __('This page is a help for the calculation, as the books stand today. Which wealth counts, which debts are taken off and the nisab of the year are for a qualified scholar to confirm before zakat is paid from it.')]);
     }
 
+    /** Those who may read every branch get the choice on a report: this branch, or all of them together. */
+    private function branchFilter(): array
+    {
+        return can_oversee() && Branch::withBooks()->count() > 1
+            ? [['name' => 'branch', 'label' => 'Branch', 'options' => ['one' => (string) current_branch()?->name, 'all' => __('All branches together')], 'value' => request('branch') === 'all' ? 'all' : 'one']] : [];
+    }
+
     private function sheet(string $title, string $icon, array $columns, array $rows, ?string $from, ?string $to, array $filters = []): View
     {
         return view('reports.sheet', ['title' => __($title), 'icon' => $icon, 'columns' => $columns, 'rows' => $rows, 'from' => $from, 'to' => $to, 'filters' => $filters]);
@@ -534,7 +551,7 @@ class ReportController extends Controller
             ->join('journal_entries as e', 'e.id', '=', 'l.journal_entry_id')
             ->join('accounts as a', 'a.id', '=', 'l.account_id')
             ->join('account_categories as c', 'c.id', '=', 'a.account_category_id')
-            ->where('l.is_void', false)->whereIn('c.nature', ['income', 'expense'])->where('e.type', '!=', 'closing')
+            ->where('l.is_void', false)->whereIn('c.nature', ['income', 'expense'])->where('e.type', '!=', 'closing')->whereIn('l.branch_id', Branch::reading())
             ->whereDate('l.date', '>=', $from)->whereDate('l.date', '<=', $to)
             ->groupBy('c.id', 'c.name', 'c.name_local', 'c.nature', 'c.sort')->orderBy('c.sort')
             ->selectRaw('c.id as id, c.name as name, c.name_local as name_local, c.nature as nature, SUM(l.base_debit) as debit, SUM(l.base_credit) as credit')->get();

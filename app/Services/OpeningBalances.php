@@ -84,7 +84,7 @@ class OpeningBalances
         }
 
         return DB::transaction(function () use ($clean) {
-            $branch = Branch::main();
+            $branch = current_branch();
             $equity = Accounts::system($branch, 'opening');
             $made = 0;
             $posted = 0;
@@ -129,7 +129,7 @@ class OpeningBalances
         foreach ($due as $expense) {
             try {
                 DB::transaction(function () use ($expense, $today) {
-                    ExpenseService::record(Branch::main(), $expense->category, $today->toDateString(), $expense->amount, $expense->paidAccount, trim(($expense->description ?: $expense->category->name).' · '.$today->format('Y-m')));
+                    ExpenseService::record(\App\Models\Branch::findOrFail($expense->paidAccount->branch_id), $expense->category, $today->toDateString(), $expense->amount, $expense->paidAccount, trim(($expense->description ?: $expense->category->name).' · '.$today->format('Y-m')));
                     $expense->update(['last_posted_on' => $today->toDateString()]);
                 });
                 $posted++;

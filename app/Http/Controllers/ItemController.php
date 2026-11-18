@@ -34,7 +34,8 @@ class ItemController extends CrudController
 
     protected function query(Request $request): Builder
     {
-        return Item::query()->when($request->query('show') === 'low', fn ($q) => $q->where('track_stock', true)->whereNotNull('reorder_level')->whereColumn('stock', '<=', 'reorder_level'));
+        return Item::query()->when($request->query('show') === 'low', fn ($q) => $q->where('track_stock', true)->whereNotNull('reorder_level')
+            ->whereRaw('(select coalesce(sum(s.stock), 0) from item_stocks s where s.item_id = items.id and s.branch_id = ?) <= items.reorder_level', [(int) current_branch()?->id]));
     }
 
     protected function filters(Request $request): array
@@ -75,8 +76,8 @@ class ItemController extends CrudController
 
     protected function deleteProblem(Model $record): ?string
     {
-        return InvoiceLine::where('item_id', $record->id)->exists() || ! Num::isZero($record->stock)
-            ? __('This item is on invoices or has stock. Switch it off instead of deleting it.') : null;
+        return InvoiceLine::where('item_id', $record->id)->exists() || \App\Models\ItemStock::where('item_id', $record->id)->where('stock', '!=', 0)->exists()
+            ? __('This item is on invoices or has stock. Switch it off instead of deleting it.') : null;   // the stock of the branch one works in; another branch that holds some has it on an invoice
     }
 
     protected function rowLinks(Model $record): array

@@ -25,14 +25,20 @@ class Summary
     {
         $before = app()->getLocale();
         app()->setLocale(setting('owner_locale') ?: $before);
+        [$all, Branch::$everywhere] = [Branch::$everywhere, true];   // the owner is told about the whole business
         try {
             $today = today_iso();
-            $lines = [(setting('company_name') ?: tenant()?->name).' · '.fmt_date($today), __('Cash and bank').':'];
-            foreach (Days::summary(Branch::main(), $today)['rows'] as $row) {
-                if (Num::isZero($row['closing']) && Num::isZero($row['in']) && Num::isZero($row['out'])) {
-                    continue;
+            // every branch that keeps books, one after the other; with one branch its name is left out
+            $branches = Branch::withBooks()->where('is_active', true)->orderBy('id')->get();
+            $lines = [(setting('company_name') ?: tenant()?->name).' · '.fmt_date($today)];
+            foreach ($branches as $branch) {
+                $lines[] = ($branches->count() > 1 ? $branch->name.' · ' : '').__('Cash and bank').':';
+                foreach (Days::summary($branch, $today)['rows'] as $row) {
+                    if (Num::isZero($row['closing']) && Num::isZero($row['in']) && Num::isZero($row['out'])) {
+                        continue;
+                    }
+                    $lines[] = $row['currency']->code.': '.money($row['closing']).' ('.__('in').' '.money($row['in']).', '.__('out').' '.money($row['out']).')';
                 }
-                $lines[] = $row['currency']->code.': '.money($row['closing']).' ('.__('in').' '.money($row['in']).', '.__('out').' '.money($row['out']).')';
             }
             $profit = Voucher::where('kind', Voucher::EXCHANGE)->whereNull('cancelled_at')->whereDate('date', $today)->sum('profit');
             $lines[] = __('Exchange profit today').': '.money($profit, Currency::base()->code);
@@ -44,6 +50,7 @@ class Summary
 
             return implode("\n", $lines);
         } finally {
+            Branch::$everywhere = $all;
             app()->setLocale($before);
         }
     }

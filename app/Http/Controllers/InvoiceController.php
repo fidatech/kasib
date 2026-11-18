@@ -48,7 +48,7 @@ class InvoiceController extends Controller
         return view('trade.form', [
             'kind' => $kind, 'about' => Invoice::KINDS[$kind], 'rows' => self::ROWS, 'parties' => $this->parties(), 'walkIn' => Trade::walkIn(),
             'items' => Item::where('is_active', true)->orderBy('name')->limit(5000)->get(), 'currencies' => Currency::active()->orderBy('sort')->get(), 'base' => Currency::base(),
-            'money' => Accounts::money(Branch::main()), 'selling' => in_array($kind, [Invoice::SALE, Invoice::SALE_RETURN], true),
+            'money' => Accounts::money(current_branch()), 'selling' => in_array($kind, [Invoice::SALE, Invoice::SALE_RETURN], true),
         ]);
     }
 
@@ -66,7 +66,7 @@ class InvoiceController extends Controller
         // the rows left empty are not lines
         $lines = array_values(array_filter($data['lines'], fn (array $line) => ! empty($line['item_id']) && (float) ($line['qty'] ?? 0) > 0));
         $party = $this->parties()->firstWhere('id', (int) $data['party_id']) ?? abort(422);
-        $money = ! empty($data['account_id']) ? Accounts::money(Branch::main())->firstWhere('id', (int) $data['account_id']) : null;
+        $money = ! empty($data['account_id']) ? Accounts::money(current_branch())->firstWhere('id', (int) $data['account_id']) : null;
 
         $invoice = Trade::record($kind, $party, Currency::findOrFail($data['currency_id']), $data['date'], $lines, $data['discount'] ?? 0, $data['paid'] ?? 0, $money, $data['due_date'] ?? null, $data['note'] ?? null);
 

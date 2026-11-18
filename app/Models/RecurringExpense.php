@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** An expense that comes every month. The system records it on its day, by itself. */
 class RecurringExpense extends Model
 {
+    use \App\Models\Concerns\BranchScoped;
+
     use Audited;
 
     protected $guarded = [];

@@ -115,7 +115,7 @@ class HandoverController extends Controller
     /** The cash boxes: the accounts of the category "Cash". */
     private function boxes()
     {
-        Accounts::ensureCash(Branch::main());
+        Accounts::ensureCash(current_branch());
 
         return Party::with(['accounts.total', 'accounts.currency'])->where('is_active', true)
             ->where('account_group_id', AccountGroup::byKey('cash')->id)->orderBy('id')->get();

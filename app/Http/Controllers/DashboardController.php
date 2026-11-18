@@ -24,7 +24,7 @@ class DashboardController extends Controller
         $money = [];
         $worth = '0';
         if ($seesMoney) {
-            foreach (Days::totals(Branch::main()) as $row) {
+            foreach (Days::totals(current_branch()) as $row) {
                 if ($row['currency']->is_base || ! Num::isZero($row['balance'])) {
                     $money[] = $row;
                 }

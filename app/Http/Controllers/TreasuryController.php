@@ -20,7 +20,7 @@ class TreasuryController extends Controller
     public function index(): View
     {
         Gate::authorize('accounts.view');
-        $branch = Branch::main();
+        $branch = current_branch();
         $totals = Days::totals($branch);
         $groups = AccountGroup::active()->where('type', AccountGroup::MONEY)->orderBy('sort')->get();
         $accounts = Account::with(['total', 'party'])->where('branch_id', $branch->id)->whereNotNull('party_id')

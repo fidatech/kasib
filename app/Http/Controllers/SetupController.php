@@ -80,7 +80,7 @@ class SetupController extends Controller
                 $used = \App\Models\JournalLine::where('currency_id', $currency->id)->exists();
                 $currency->update(['is_active' => $currency->is_base || $used || in_array((int) $currency->id, $wanted, true)]);
             }
-            Accounts::ensureCash(\App\Models\Branch::main());
+            Accounts::ensureCash(current_branch());
 
             foreach (['business_type' => $data['business_type'], 'calendar' => $data['calendar'], 'simple_mode' => $request->boolean('simple_mode') ? '1' : '0', 'setup_done' => '1'] as $key => $value) {
                 Setting::updateOrCreate(['key' => $key], ['value' => $value]);

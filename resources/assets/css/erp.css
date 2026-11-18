@@ -1022,3 +1022,9 @@ body.is-loading .soft-bar { width: 70%; opacity: 1; transition: width 8s cubic-b
 .tour-text { font-size: .9rem; margin-bottom: 12px; }
 .tour-actions { display: flex; align-items: center; gap: 6px; }
 .tour-count { margin-inline-end: auto; font-size: .8rem; opacity: .7; }
+
+/* the branch one works in, in the top bar */
+.topbar-branch { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 10px; background: transparent; color: var(--heading); font-weight: 600; font-size: 14px; }
+.topbar-branch:disabled { opacity: 1; }
+.topbar-branch span { max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 560px) { .topbar-branch span { max-width: 5rem; } }

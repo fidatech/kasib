@@ -58,7 +58,7 @@ class JournalEntryController extends Controller
         if (count($lines) < 2) {
             throw new UserError(__('An entry needs at least two lines: one debit and one credit.'));
         }
-        $entry = Ledger::post(Branch::main(), 'manual', $data['date'], $data['description'], $lines);
+        $entry = Ledger::post(current_branch(), 'manual', $data['date'], $data['description'], $lines);
         audit('created', $entry, 'Journal entry '.$entry->number);
 
         return redirect()->route('journal.create')->with('success', __('Journal entry :number saved.', ['number' => $entry->number]));

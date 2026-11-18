@@ -28,7 +28,7 @@ class Deals
                 'number' => Sequence::next('DL'), 'name' => mb_substr($name, 0, 150), 'status' => 'open',
                 'opened_on' => $date ?? today_iso(), 'notes' => $notes, 'created_by' => auth()->id(),
             ]);
-            $account = Accounts::open(Branch::main(), 'deal.'.$deal->id, 'deal_goods', $deal->number.' '.$deal->name);
+            $account = Accounts::open(current_branch(), 'deal.'.$deal->id, 'deal_goods', $deal->number.' '.$deal->name);
             $deal->update(['account_id' => $account->id]);
             audit('created', $deal, 'Deal '.$deal->number.' '.$deal->name);
 
@@ -57,7 +57,7 @@ class Deals
         }
 
         return DB::transaction(function () use ($deal, $date) {
-            $branch = Branch::main();
+            $branch = current_branch();
             $date ??= today_iso();
             $held = Ledger::baseBalance($deal->account_id);   // above zero: cost not covered yet
             if (Num::isPositive($held)) {
@@ -94,7 +94,7 @@ class Deals
         }
 
         return DB::transaction(function () use ($account, $counted, $note, $date) {
-            $branch = Branch::main();
+            $branch = current_branch();
             $date ??= today_iso();
             $book = Ledger::balance($account);
             $difference = Num::money(Num::sub($counted, $book));

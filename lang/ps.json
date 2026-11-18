@@ -3166,5 +3166,22 @@
     "Your plan: :plan.": "ستاسو پلان: :plan.",
     "it adds sales, purchases and stock.": "پلور، پېرود او موجودي اضافه کوي.",
     "Purchase invoice": "د پېرود انوایس",
-    "Cost of goods sold": "د پلورل شویو اجناسو لګښت"
+    "Cost of goods sold": "د پلورل شویو اجناسو لګښت",
+    "A few letters that mark this branch, for example HRT": "څو توري چې دا نمایندګي په نښه کوي، د بېلګې په توګه HRT",
+    "A transfer is not changed. Cancel it and write it again.": "انتقال نه بدلېږي. لغوه یې کړئ او بیا یې ولیکئ.",
+    "A transfer is not deleted. Cancel it and it stays on the list.": "انتقال نه ړنګېږي. لغوه یې کړئ او په لېست کې پاتې کېږي.",
+    "An account of the same currency. The money is in the books of both branches at once.": "د همدې اسعارو حساب. پیسې په یو وخت د دواړو نمایندګیو په دفترونو کې ثبتېږي.",
+    "Both accounts are in the same branch. Use a transfer.": "دواړه حسابونه په یوه نمایندګۍ کې دي. له انتقال څخه کار واخلئ.",
+    "From (this branch)": "له (دا نمایندګي)",
+    "To (the other branch)": "ته (بله نمایندګي)",
+    "Leave the four boxes empty to add its users later, under Users.": "څلور خانې خالي پرېږدئ چې کاروونکي یې وروسته په کاروونکو کې اضافه کړئ.",
+    "Money Between Branches": "د نمایندګیو ترمنځ د پیسو لېږد",
+    "Money goes to another branch in the same currency. Exchange it first, or at the other branch.": "پیسې په همدې اسعارو بلې نمایندګۍ ته ځي. لومړی یې تبادله کړئ، یا په بله نمایندګۍ کې.",
+    "Money to another branch": "بلې نمایندګۍ ته پیسې",
+    "Name of its first user": "د هغې د لومړي کاروونکي نوم",
+    "Settlement between branches": "د نمایندګیو ترمنځ تصفیه",
+    "This branch has users or entries in its books. Switch it off instead of deleting it.": "دا نمایندګي کاروونکي یا په دفترونو کې ثبتونه لري. د ړنګولو پر ځای یې بنده کړئ.",
+    "Transfer to a branch": "نمایندګۍ ته لېږد",
+    "You are now working in :branch.": "تاسو اوس په :branch کې کار کوئ.",
+    "Your subscription allows :count branches besides the main one. Ask for more under Support.": "ستاسو ګډون له مرکزي سربېره :count نمایندګۍ ته اجازه ورکوي. د زیاتو لپاره په ملاتړ کې غوښتنه وکړئ."
 }

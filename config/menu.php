@@ -38,6 +38,7 @@ return [
         ['label' => 'Recurring Expenses', 'route' => 'recurring-expenses.index', 'active' => 'recurring-expenses.*', 'can' => 'expenses.view'],
         ['label' => 'Expense Budgets', 'route' => 'budgets.index', 'active' => 'budgets.*', 'can' => 'expenses.view'],
         ['label' => 'Deals', 'route' => 'deals.index', 'active' => 'deals.*', 'can' => 'transactions.view'],
+        ['label' => 'Money Between Branches', 'route' => 'branch-transfers.index', 'active' => 'branch-transfers.*', 'can' => 'transactions.view', 'pro' => true],
         ['label' => 'Hawala Tracking', 'route' => 'hawalas.index', 'active' => 'hawalas.*', 'can' => 'transactions.view'],
         ['label' => 'Cash Boxes & Handover', 'route' => 'handovers.index', 'active' => 'handovers.*', 'can' => 'transactions.view'],
         ['label' => 'Journal Entries', 'route' => 'journal.create', 'can' => 'journal.manage', 'advanced' => true],
@@ -91,6 +92,7 @@ return [
     ]],
 
     ['label' => 'Administration', 'icon' => 'user-shield', 'children' => [
+        ['label' => 'Branches', 'route' => 'branches.index', 'active' => 'branches.*', 'can' => 'settings.view', 'pro' => true],
         ['label' => 'Users', 'route' => 'users.index', 'active' => 'users.*', 'can' => 'users.view'],
         ['label' => 'Roles', 'route' => 'roles.index', 'active' => 'roles.*', 'can' => 'users.view'],
         ['label' => 'Permissions', 'route' => 'permissions.index', 'can' => 'users.view'],

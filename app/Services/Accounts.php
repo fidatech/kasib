@@ -49,7 +49,7 @@ class Accounts
      */
     public static function party(Party $party, Currency $currency, ?Branch $branch = null): Account
     {
-        $branch ??= Branch::main();
+        $branch ??= current_branch();
         $party->loadMissing('group');
 
         $account = Account::firstOrCreate(
@@ -59,6 +59,18 @@ class Accounts
 
         // a new one is read again, so it carries what the database filled in (it is in use)
         return $account->wasRecentlyCreated ? $account->fresh() : $account;
+    }
+
+    /**
+     * The settlement account one branch keeps with another, in one currency: what the other branch
+     * holds of this one's money (a debit), or what this one holds of the other's (a credit). The
+     * two sides cancel out when the books of all the branches are read together.
+     */
+    public static function interBranch(Branch $book, Branch $other, Currency $currency): Account
+    {
+        AccountCategory::firstOrCreate(['key' => 'interbranch'], ['name' => 'Settlement between branches', 'name_local' => 'تصفیه بین نمایندگی‌ها', 'nature' => 'asset', 'is_system' => true, 'sort' => 65]);
+
+        return self::open($book, 'ib.'.$other->id, 'interbranch', 'Settlement with '.$other->name, $currency);
     }
 
     /** The cash box the business starts with. */

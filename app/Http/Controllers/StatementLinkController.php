@@ -45,15 +45,16 @@ class StatementLinkController extends Controller
         abort_unless($party && ! $party->group->isMoney(), 404);
 
         $since = now()->subDays(90)->toDateString();
+        // the customer deals with the business, whichever branch served him: one balance per currency
         $accounts = [];
-        foreach ($party->accounts->sortBy('currency_id') as $account) {
-            $lines = JournalLine::where('account_id', $account->id)->where('is_void', false)->whereDate('date', '>=', $since)->orderByDesc('date')->orderByDesc('id')->limit(200)->get();
+        foreach ($party->allAccounts()->with(['currency', 'total'])->get()->groupBy('currency_id')->sortKeys() as $group) {
+            $lines = JournalLine::whereIn('account_id', $group->pluck('id'))->where('is_void', false)->whereDate('date', '>=', $since)->orderByDesc('date')->orderByDesc('id')->limit(200)->get();
             // from the side of the customer: above zero the business owes him
-            $balance = Num::money(Num::neg($account->total?->balance ?? 0));
+            $balance = Num::money(Num::neg(Num::sum($group->map(fn ($account) => $account->total?->balance ?? 0))));
             if ($lines->isEmpty() && Num::isZero($balance)) {
                 continue;
             }
-            $accounts[] = ['currency' => $account->currency->code, 'balance' => $balance, 'lines' => $lines];
+            $accounts[] = ['currency' => $group->first()->currency->code, 'balance' => $balance, 'lines' => $lines];
         }
 
         return view('verify.statement', ['party' => $party, 'accounts' => $accounts, 'business' => (string) (setting('company_name') ?: tenant()?->name), 'since' => $since]);

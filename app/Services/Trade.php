@@ -10,6 +10,7 @@ use App\Models\Branch;
 use App\Models\Currency;
 use App\Models\Invoice;
 use App\Models\Item;
+use App\Models\ItemStock;
 use App\Models\Party;
 use App\Support\Num;
 use Illuminate\Support\Facades\DB;
@@ -38,7 +39,7 @@ class Trade
         // a business opened before version 2 gets the group the first time it is needed
         AccountCategory::firstOrCreate(['key' => $category], ['name' => $name, 'name_local' => $local, 'nature' => $nature, 'is_system' => true, 'sort' => 900]);
 
-        return Accounts::open(Branch::main(), $key, $category, $name);
+        return Accounts::open(current_branch(), $key, $category, $name);
     }
 
     /** The customer of a sale over the counter, to nobody in particular. */
@@ -74,7 +75,7 @@ class Trade
         }
 
         return DB::transaction(function () use ($kind, $party, $currency, $date, $lines, $discount, $paid, $money, $due, $note) {
-            $branch = Branch::main();
+            $branch = current_branch();
             $rows = [];
             $subtotal = '0';
             foreach ($lines as $line) {
@@ -127,30 +128,31 @@ class Trade
             foreach ($rows as $row) {
                 $item = $row['item'];
                 $lineCost = '0';
+                $held = $item->track_stock ? ItemStock::of($item, $branch) : null;
                 if (! $item->track_stock) {
                     $otherValue = Num::add($otherValue, $row['base']);
                 } else {
                     $stockValue = Num::add($stockValue, $row['base']);
                     if ($leaves) {
-                        if (Num::cmp($item->stock, $row['qty']) === -1 && setting('negative_stock') !== '1') {
-                            throw new UserError(__('Not enough :item in stock: :have, needed :need.', ['item' => $item->name, 'have' => qty($item->stock), 'need' => qty($row['qty'])]));
+                        if (Num::cmp($held->stock, $row['qty']) === -1 && setting('negative_stock') !== '1') {
+                            throw new UserError(__('Not enough :item in stock: :have, needed :need.', ['item' => $item->name, 'have' => qty($held->stock), 'need' => qty($row['qty'])]));
                         }
-                        $lineCost = Num::money(Num::mul($row['qty'], $item->avg_cost));
-                        $item->stock = Num::round(Num::sub($item->stock, $row['qty']), 3);
+                        $lineCost = Num::money(Num::mul($row['qty'], $held->avg_cost));
+                        $held->stock = Num::round(Num::sub($held->stock, $row['qty']), 3);
                     } elseif ($kind === Invoice::PURCHASE) {
                         $lineCost = $row['base'];
-                        $before = Num::isPositive($item->stock) ? Num::mul($item->stock, $item->avg_cost) : '0';
-                        $newStock = Num::round(Num::add(Num::isPositive($item->stock) ? $item->stock : '0', $row['qty']), 3);
-                        $item->avg_cost = Num::round(Num::div(Num::add($before, $lineCost), $newStock), 4);
-                        $item->stock = Num::round(Num::add($item->stock, $row['qty']), 3);
+                        $before = Num::isPositive($held->stock) ? Num::mul($held->stock, $held->avg_cost) : '0';
+                        $newStock = Num::round(Num::add(Num::isPositive($held->stock) ? $held->stock : '0', $row['qty']), 3);
+                        $held->avg_cost = Num::round(Num::div(Num::add($before, $lineCost), $newStock), 4);
+                        $held->stock = Num::round(Num::add($held->stock, $row['qty']), 3);
                     } else {   // a sale comes back: into the stock at the average of now
-                        $lineCost = Num::money(Num::mul($row['qty'], Num::isPositive($item->avg_cost) ? $item->avg_cost : $item->cost_price));
-                        if (! Num::isPositive($item->avg_cost)) {
-                            $item->avg_cost = Num::round($item->cost_price, 4);
+                        $lineCost = Num::money(Num::mul($row['qty'], Num::isPositive($held->avg_cost) ? $held->avg_cost : $item->cost_price));
+                        if (! Num::isPositive($held->avg_cost)) {
+                            $held->avg_cost = Num::round($item->cost_price, 4);
                         }
-                        $item->stock = Num::round(Num::add($item->stock, $row['qty']), 3);
+                        $held->stock = Num::round(Num::add($held->stock, $row['qty']), 3);
                     }
-                    $item->save();
+                    $held->save();
                     $cost = Num::add($cost, $lineCost);
                 }
                 $invoice->lines()->create(['item_id' => $item->id, 'description' => $row['description'], 'qty' => $row['qty'], 'price' => $row['price'], 'amount' => $row['amount'], 'base_amount' => $row['base'], 'base_cost' => $lineCost]);
@@ -223,21 +225,22 @@ class Trade
                 if (! $item || ! $item->track_stock) {
                     continue;
                 }
+                $held = ItemStock::of($item, \App\Models\Branch::findOrFail($invoice->branch_id));
                 if ($invoice->goodsLeave()) {
-                    $item->stock = Num::round(Num::add($item->stock, $line->qty), 3);   // what left comes back
+                    $held->stock = Num::round(Num::add($held->stock, $line->qty), 3);   // what left comes back
                 } else {
-                    if (Num::cmp($item->stock, $line->qty) === -1 && setting('negative_stock') !== '1') {
+                    if (Num::cmp($held->stock, $line->qty) === -1 && setting('negative_stock') !== '1') {
                         throw new UserError(__(':item of this invoice is already sold; it cannot be cancelled.', ['item' => $item->name]));
                     }
-                    $newStock = Num::round(Num::sub($item->stock, $line->qty), 3);
+                    $newStock = Num::round(Num::sub($held->stock, $line->qty), 3);
                     if ($invoice->kind === Invoice::PURCHASE && Num::isPositive($newStock)) {
                         // the average without this purchase
-                        $value = Num::sub(Num::mul($item->stock, $item->avg_cost), $line->base_cost);
-                        $item->avg_cost = Num::isPositive($value) ? Num::round(Num::div($value, $newStock), 4) : $item->avg_cost;
+                        $value = Num::sub(Num::mul($held->stock, $held->avg_cost), $line->base_cost);
+                        $held->avg_cost = Num::isPositive($value) ? Num::round(Num::div($value, $newStock), 4) : $held->avg_cost;
                     }
-                    $item->stock = $newStock;
+                    $held->stock = $newStock;
                 }
-                $item->save();
+                $held->save();
             }
             $invoice->update(['cancelled_at' => now(), 'cancel_reason' => $reason ? mb_substr($reason, 0, 255) : null]);
             Ledger::voidSource($invoice, $reason);
@@ -263,29 +266,29 @@ class Trade
             throw new UserError(__('app.errors.negative_amount'));
         }
         DB::transaction(function () use ($item, $counted, $unitCost, $note) {
-            $item = Item::lockForUpdate()->findOrFail($item->id);
-            $diff = Num::round(Num::sub($counted, $item->stock), 3);
+            $branch = current_branch();
+            $held = ItemStock::of($item, $branch);
+            $diff = Num::round(Num::sub($counted, $held->stock), 3);
             if (Num::isZero($diff)) {
                 return;
             }
-            $branch = Branch::main();
-            $text = trim(__('Stock count').' · '.$item->name.' · '.qty($item->stock).' → '.qty($counted).($note ? ' · '.$note : ''));
+            $text = trim(__('Stock count').' · '.$item->name.' · '.qty($held->stock).' → '.qty($counted).($note ? ' · '.$note : ''));
             if (Num::isPositive($diff)) {
-                $cost = Num::round(Num::isPositive($unitCost ?: 0) ? $unitCost : (Num::isPositive($item->avg_cost) ? $item->avg_cost : $item->cost_price), 4);
+                $cost = Num::round(Num::isPositive($unitCost ?: 0) ? $unitCost : (Num::isPositive($held->avg_cost) ? $held->avg_cost : $item->cost_price), 4);
                 $value = Num::money(Num::mul($diff, $cost));
-                $before = Num::isPositive($item->stock) ? Num::mul($item->stock, $item->avg_cost) : '0';
-                $item->avg_cost = Num::round(Num::div(Num::add($before, $value), $counted), 4);
+                $before = Num::isPositive($held->stock) ? Num::mul($held->stock, $held->avg_cost) : '0';
+                $held->avg_cost = Num::round(Num::div(Num::add($before, $value), $counted), 4);
                 if (Num::isPositive($value)) {
                     Ledger::post($branch, 'stock', today_iso(), $text, [['account' => self::account('inventory'), 'debit' => $value], ['account' => Accounts::system($branch, 'opening'), 'credit' => $value]], $item);
                 }
             } else {
-                $value = Num::money(Num::mul(Num::abs($diff), $item->avg_cost));
+                $value = Num::money(Num::mul(Num::abs($diff), $held->avg_cost));
                 if (Num::isPositive($value)) {
                     Ledger::post($branch, 'stock', today_iso(), $text, [['account' => self::account('cogs'), 'debit' => $value], ['account' => self::account('inventory'), 'credit' => $value]], $item);
                 }
             }
-            $item->stock = $counted;
-            $item->save();
+            $held->stock = $counted;
+            $held->save();
             audit('updated', null, $text);
         });
     }

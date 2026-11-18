@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** Money sent through a saraf: followed by the number the saraf gave until the receiver has it. */
 class Hawala extends Model
 {
+    use \App\Models\Concerns\BranchScoped;
+
     public const STATUSES = ['sent' => 'On the way', 'delivered' => 'Delivered', 'cancelled' => 'Cancelled'];
 
     protected $guarded = [];

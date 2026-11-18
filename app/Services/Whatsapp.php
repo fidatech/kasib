@@ -127,7 +127,16 @@ class Whatsapp
     /** "5,000.00 AFN, -200.00 USD": above zero the business owes the party. */
     public static function balance(Party $party): string
     {
-        $parts = array_map(fn (array $row) => money($row['amount'], $row['currency']->code), Vouchers::balances($party->fresh()));
+        $sums = [];
+        foreach ($party->allAccounts()->with(['total', 'currency'])->get() as $account) {
+            $sums[$account->currency->code] = Num::add($sums[$account->currency->code] ?? 0, Num::neg($account->total?->balance ?? 0));
+        }
+        $parts = [];
+        foreach ($sums as $code => $amount) {
+            if (! Num::isZero(Num::money($amount))) {
+                $parts[] = money($amount, $code);
+            }
+        }
 
         return $parts ? implode(', ', $parts) : '0';
     }

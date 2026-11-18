@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class Deal extends Model
 {
+    use \App\Models\Concerns\BranchScoped;
+
     protected $guarded = [];
 
     protected $casts = ['opened_on' => 'date:Y-m-d', 'closed_on' => 'date:Y-m-d', 'result' => 'decimal:2'];

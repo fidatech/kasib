@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /** A sale, a purchase, or the return of one. */
 class Invoice extends Model
 {
+    use \App\Models\Concerns\BranchScoped;
+
     public const SALE = 'sale';
 
     public const PURCHASE = 'purchase';

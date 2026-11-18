@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** A cash box counted and handed to another box. */
 class Handover extends Model
 {
+    use \App\Models\Concerns\BranchScoped;
+
     protected $guarded = [];
 
     protected $casts = ['date' => 'date:Y-m-d', 'lines' => 'array', 'accepted_at' => 'datetime'];

@@ -63,7 +63,7 @@ class ExchangeController extends VoucherController
             return Num::round(Num::div(Num::sum($last), $last->count()), 6);
         }
 
-        return \App\Services\Rates::cross(\App\Models\Branch::main(), $from->currency, $to->currency);
+        return \App\Services\Rates::cross(current_branch(), $from->currency, $to->currency);
     }
 
     protected function record(array $data, Request $request): string
@@ -79,7 +79,7 @@ class ExchangeController extends VoucherController
         $voucher = Vouchers::exchange($from, $to, $data['date'], $data['amount'], $received, $data['description'] ?? null);
 
         // a deal far from the rates of the business is probably a typing mistake: it is saved, and pointed out
-        $worth = \App\Services\Rates::toBase($voucher->amount, $voucher->currency, \App\Models\Branch::main());
+        $worth = \App\Services\Rates::toBase($voucher->amount, $voucher->currency, current_branch());
         if (Num::isPositive($worth) && abs((float) $voucher->profit) > 0.05 * (float) $worth) {
             session()->flash('warning', __('The rate of this exchange is more than 5% away from the rates of the business. Check the two amounts; cancel the paper if one was mistyped.'));
         }

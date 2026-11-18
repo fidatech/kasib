@@ -24,7 +24,7 @@ class ReconciliationController extends Controller
     {
         Gate::authorize('accounts.view');
         $f = $request->validate(['account' => ['nullable', 'integer'], 'from' => ['nullable', 'date'], 'to' => ['nullable', 'date'], 'statement' => ['nullable', 'numeric'], 'show' => ['nullable', 'in:all,open']]);
-        $accounts = Accounts::money(Branch::main());
+        $accounts = Accounts::money(current_branch());
         $account = $accounts->firstWhere('id', (int) ($f['account'] ?? 0));
         [$from, $to] = [$f['from'] ?? now()->startOfMonth()->toDateString(), $f['to'] ?? today_iso()];
 
@@ -56,7 +56,7 @@ class ReconciliationController extends Controller
     {
         Gate::authorize('accounts.manage');
         $data = $request->validate(['account' => ['required', 'integer'], 'shown' => ['array', 'max:3000'], 'shown.*' => ['integer'], 'cleared' => ['array', 'max:3000'], 'cleared.*' => ['integer']]);
-        $account = Accounts::money(Branch::main())->firstWhere('id', (int) $data['account']) ?? abort(404);
+        $account = Accounts::money(current_branch())->firstWhere('id', (int) $data['account']) ?? abort(404);
         // only lines of this account that were shown can change
         $shown = JournalLine::where('account_id', $account->id)->where('is_void', false)->whereIn('id', $data['shown'] ?? [])->pluck('id')->all();
         $ticked = array_values(array_intersect($shown, array_map('intval', $data['cleared'] ?? [])));

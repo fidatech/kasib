@@ -59,7 +59,7 @@ class HawalaController extends CrudController
 
     protected function fields(?Model $record): array
     {
-        $accounts = Accounts::money(Branch::main());
+        $accounts = Accounts::money(current_branch());
         $parties = Party::active()->whereHas('group', fn ($q) => $q->where('type', AccountGroup::PARTY))->orderBy('name')->limit(2000)->get();
 
         return [

@@ -52,7 +52,7 @@ class Vouchers
         }
 
         $voucher = DB::transaction(function () use ($kind, $party, $money, $date, $amount, $due, $description) {
-            $branch = Branch::main();
+            $branch = current_branch();
             $account = Accounts::party($party, $money->currency, $branch);
             $in = $kind === Voucher::MONEY_IN;
             $base = Rates::toBase($amount, $money->currency, $branch);
@@ -102,7 +102,7 @@ class Vouchers
         }
 
         return DB::transaction(function () use ($from, $to, $date, $amount, $fee, $description) {
-            $branch = Branch::main();
+            $branch = current_branch();
             $base = Rates::toBase($amount, $from->currency, $branch);
 
             $voucher = self::create(Voucher::TRANSFER, $branch, $date, [
@@ -141,7 +141,7 @@ class Vouchers
         }
 
         return DB::transaction(function () use ($from, $to, $date, $given, $received, $description) {
-            $branch = Branch::main();
+            $branch = current_branch();
             $out = Rates::toBase($given, $from->currency, $branch);
             $in = Rates::toBase($received, $to->currency, $branch);
 
@@ -172,7 +172,7 @@ class Vouchers
         }
 
         return DB::transaction(function () use ($category, $money, $date, $amount, $description) {
-            $branch = Branch::main();
+            $branch = current_branch();
             $base = Rates::toBase($amount, $money->currency, $branch);
             $income = Accounts::expense($branch, $category);
 
@@ -211,7 +211,7 @@ class Vouchers
         }
 
         return DB::transaction(function () use ($kind, $deal, $money, $date, $amount, $description) {
-            $branch = Branch::main();
+            $branch = current_branch();
             $base = Rates::toBase($amount, $money->currency, $branch);
             $cost = $kind === Voucher::DEAL_COST;
 

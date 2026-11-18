@@ -14,7 +14,7 @@ class ReceiptCheckController extends Controller
 {
     public function __invoke(Request $request): View
     {
-        $voucher = Voucher::with(['party', 'currency', 'otherCurrency'])->where('number', (string) $request->route('number'))->first();
+        $voucher = Voucher::withoutGlobalScope('branch')->with(['party', 'currency', 'otherCurrency'])->where('number', (string) $request->route('number'))->first();
         if ($voucher && ! hash_equals(VoucherController::code($voucher), (string) $request->route('code'))) {
             $voucher = null;
         }

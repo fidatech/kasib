@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** The cash of one box counted by hand, and how far it was from the books. */
 class CashCount extends Model
 {
+    use \App\Models\Concerns\BranchScoped;
+
     protected $guarded = [];
 
     protected $casts = ['date' => 'date:Y-m-d', 'cancelled_at' => 'datetime', 'book' => 'decimal:2', 'counted' => 'decimal:2', 'difference' => 'decimal:2'];

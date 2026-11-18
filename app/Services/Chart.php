@@ -20,6 +20,7 @@ class Chart
         'other_asset' => ['Other assets', 'سایر دارایی ها', 'asset'],
         'deal_goods' => ['Goods of open deals', 'اموال معاملات باز', 'asset'],
         'inventory' => ['Inventory', 'موجودی اجناس', 'asset'],
+        'interbranch' => ['Settlement between branches', 'تصفیه بین نمایندگی‌ها', 'asset'],
         'tangible_asset' => ['Tangible assets', 'دارایی های ملموس', 'asset'],
         'tangible_depreciation' => ['Depreciation of tangible assets', 'استهلاک دارایی های ملموس', 'asset'],
         'intangible_asset' => ['Intangible assets', 'دارایی های غیر ملموس', 'asset'],

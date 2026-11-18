@@ -102,7 +102,7 @@ abstract class VoucherController extends PaperController
     /** Money accounts as a pick list: "Cash · USD". */
     protected function moneyOptions(): array
     {
-        return Accounts::money(Branch::main())->mapWithKeys(fn (Account $a) => [$a->id => $a->label().' · '.$a->currency->code])->all();
+        return Accounts::money(current_branch())->mapWithKeys(fn (Account $a) => [$a->id => $a->label().' · '.$a->currency->code])->all();
     }
 
     protected function dateField(): array
@@ -123,7 +123,7 @@ abstract class VoucherController extends PaperController
     {
         $options = $this->moneyOptions();
 
-        return ['name' => $name, 'label' => $label, 'type' => 'select', 'search' => true, 'col' => 4, 'default' => Accounts::cash(Branch::main(), Currency::base())->id,
+        return ['name' => $name, 'label' => $label, 'type' => 'select', 'search' => true, 'col' => 4, 'default' => Accounts::cash(current_branch(), Currency::base())->id,
             'options' => $options, 'rules' => ['required', Rule::in(array_keys($options))]] + ($help ? ['help' => $help] : []);
     }
 

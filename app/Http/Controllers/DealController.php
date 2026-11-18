@@ -57,8 +57,8 @@ class DealController extends Controller
         return view('deals.show', [
             'deal' => $deal, 'figures' => Deals::figures($deal), 'base' => \App\Models\Currency::base()->code,
             'papers' => Voucher::with(['account', 'currency', 'creator'])->where('deal_id', $deal->id)->orderBy('date')->orderBy('id')->get(),
-            'money' => Accounts::money(Branch::main())->mapWithKeys(fn (Account $a) => [$a->id => $a->label().' · '.$a->currency->code])->all(),
-            'cash' => Accounts::cash(Branch::main(), \App\Models\Currency::base())->id,
+            'money' => Accounts::money(current_branch())->mapWithKeys(fn (Account $a) => [$a->id => $a->label().' · '.$a->currency->code])->all(),
+            'cash' => Accounts::cash(current_branch(), \App\Models\Currency::base())->id,
             'canManage' => $request->user()->can('transactions.manage'),
         ]);
     }

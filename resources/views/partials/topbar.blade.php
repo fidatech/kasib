@@ -13,6 +13,23 @@
     </button>
 
     <div class="topbar-right">
+        @php $workBranches = tenant() ? \App\Models\Branch::withBooks()->where('is_active', true)->orderBy('id')->get() : collect(); @endphp
+        @if ($workBranches->count() > 1)
+            <div class="dropdown">
+                <button class="topbar-branch" @if (can_oversee()) data-bs-toggle="dropdown" aria-expanded="false" @else disabled @endif type="button" title="{{ __('Branch') }}"><x-icon name="code-branch" /> <span>{{ current_branch()?->name }}</span></button>
+                @if (can_oversee())
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        @foreach ($workBranches as $workBranch)
+                            <li>
+                                <form method="POST" action="{{ route('branches.switch') }}">@csrf<input type="hidden" name="branch" value="{{ $workBranch->id }}">
+                                    <button type="submit" class="dropdown-item {{ (int) current_branch()?->id === $workBranch->id ? 'active' : '' }}">{{ $workBranch->name }}</button>
+                                </form>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
+        @endif
         <div class="dropdown">
             <button class="topbar-icon topbar-lang" data-bs-toggle="dropdown" type="button" aria-expanded="false" title="{{ __('Language') }}" aria-label="{{ strtoupper(app()->getLocale()) }} · {{ __('Language') }}"><x-icon name="globe" /><span>{{ strtoupper(app()->getLocale()) }}</span></button>
             <ul class="dropdown-menu dropdown-menu-end">

@@ -169,7 +169,7 @@ class PartyController extends CrudController
             return;
         }
 
-        $branch = Branch::main();
+        $branch = current_branch();
         $given = $request->validate(['currencies' => ['nullable', 'array'], 'currencies.*.opening' => ['nullable', 'numeric', 'gte:0'], 'currencies.*.side' => ['nullable', 'in:debit,credit']])['currencies'] ?? [];
         $ticked = array_filter((array) $request->input('currencies', []), fn ($row) => ! empty($row['on']));
         if (! $ticked) {
@@ -197,11 +197,11 @@ class PartyController extends CrudController
         if ($record->is_system) {
             return __('The cash box of the business cannot be deleted.');
         }
-        if (JournalLine::whereIn('account_id', $record->accounts()->pluck('id'))->exists()) {
+        if (JournalLine::whereIn('account_id', $record->allAccounts()->pluck('id'))->exists()) {
             return __('This account has entries. Switch it off instead.');
         }
         // its empty ledger accounts go with it
-        $record->accounts()->delete();
+        $record->allAccounts()->delete();
 
         return null;
     }

@@ -50,7 +50,7 @@ class CashCountController extends PaperController
 
     private function boxes()
     {
-        Accounts::ensureCash(Branch::main());
+        Accounts::ensureCash(current_branch());
 
         return Account::active()->with('currency')->where('account_category_id', AccountCategory::byKey('cash')->id)->orderBy('name')->orderBy('currency_id')->get();
     }

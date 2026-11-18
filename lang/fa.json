@@ -3166,5 +3166,22 @@
     "Your plan: :plan.": "پلان شما: :plan.",
     "it adds sales, purchases and stock.": "فروش، خرید و موجودی را اضافه می‌کند.",
     "Purchase invoice": "انوایس خرید",
-    "Cost of goods sold": "قیمت تمام‌شده اجناس فروخته‌شده"
+    "Cost of goods sold": "قیمت تمام‌شده اجناس فروخته‌شده",
+    "A few letters that mark this branch, for example HRT": "چند حرف که این نمایندگی را مشخص می‌کند، مثلاً HRT",
+    "A transfer is not changed. Cancel it and write it again.": "انتقال تغییر داده نمی‌شود. آن را لغو کرده دوباره بنویسید.",
+    "A transfer is not deleted. Cancel it and it stays on the list.": "انتقال حذف نمی‌شود. آن را لغو کنید و در لیست می‌ماند.",
+    "An account of the same currency. The money is in the books of both branches at once.": "حسابی با همان اسعار. پول همزمان در دفاتر هر دو نمایندگی ثبت می‌شود.",
+    "Both accounts are in the same branch. Use a transfer.": "هر دو حساب در یک نمایندگی است. از انتقال استفاده کنید.",
+    "From (this branch)": "از (این نمایندگی)",
+    "To (the other branch)": "به (نمایندگی دیگر)",
+    "Leave the four boxes empty to add its users later, under Users.": "چهار خانه را خالی بگذارید تا کاربران آن را بعداً در بخش کاربران اضافه کنید.",
+    "Money Between Branches": "انتقال پول میان نمایندگی‌ها",
+    "Money goes to another branch in the same currency. Exchange it first, or at the other branch.": "پول با همان اسعار به نمایندگی دیگر می‌رود. اول آن را تبادله کنید، یا در نمایندگی دیگر.",
+    "Money to another branch": "پول به نمایندگی دیگر",
+    "Name of its first user": "نام اولین کاربر آن",
+    "Settlement between branches": "تصفیه بین نمایندگی‌ها",
+    "This branch has users or entries in its books. Switch it off instead of deleting it.": "این نمایندگی کاربر یا ثبت در دفاتر دارد. به جای حذف، آن را غیرفعال کنید.",
+    "Transfer to a branch": "انتقال به نمایندگی",
+    "You are now working in :branch.": "شما حالا در :branch کار می‌کنید.",
+    "Your subscription allows :count branches besides the main one. Ask for more under Support.": "اشتراک شما :count نمایندگی علاوه بر مرکزی را اجازه می‌دهد. برای بیشتر از بخش پشتیبانی درخواست کنید."
 }

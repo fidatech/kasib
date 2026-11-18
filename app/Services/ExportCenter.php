@@ -79,7 +79,7 @@ class ExportCenter
         }
         $rows[] = self::row(['', '']);
         $rows[] = self::head([__('Cash, bank and saraf'), __('Balance'), __('Value in :currency', ['currency' => $base])]);
-        foreach (Days::totals(Branch::main()) as $total) {
+        foreach (Days::totals(current_branch()) as $total) {
             $rows[] = self::row([$total['currency']->code, self::n($total['balance']), self::n($total['base'])]);
         }
 

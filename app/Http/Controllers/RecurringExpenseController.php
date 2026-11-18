@@ -37,7 +37,7 @@ class RecurringExpenseController extends CrudController
     protected function fields(?Model $record): array
     {
         $categories = AccountCategory::where('nature', 'expense')->where('key', '!=', 'depreciation')->orderBy('sort')->get();
-        $accounts = Accounts::money(Branch::main());
+        $accounts = Accounts::money(current_branch());
 
         return [
             ['name' => 'account_category_id', 'label' => 'Expense category', 'type' => 'select',

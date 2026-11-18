@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /** Money in, money out, a transfer, an exchange or an income: one paper, one journal entry. */
 class Voucher extends Model
 {
+    use \App\Models\Concerns\BranchScoped;
+
     public const MONEY_IN = 'money_in';
 
     public const MONEY_OUT = 'money_out';

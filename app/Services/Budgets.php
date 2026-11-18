@@ -30,7 +30,7 @@ class Budgets
     public static function spent(int $categoryId, string $from, string $to): string
     {
         $row = DB::table('journal_lines as l')->join('accounts as a', 'a.id', '=', 'l.account_id')
-            ->where('a.account_category_id', $categoryId)->where('l.is_void', false)
+            ->where('a.account_category_id', $categoryId)->where('l.is_void', false)->whereIn('l.branch_id', \App\Models\Branch::reading())
             ->whereDate('l.date', '>=', $from)->whereDate('l.date', '<=', $to)
             ->selectRaw('COALESCE(SUM(l.base_debit),0) as debit, COALESCE(SUM(l.base_credit),0) as credit')->first();
 

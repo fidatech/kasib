@@ -82,6 +82,7 @@ class Tenancy
     private function forgetWhatWasRemembered(string $scope): void
     {
         app()->forgetInstance('erp.settings');
+        \App\Models\Branch::forgetWorking();
 
         config(['permission.cache.key' => 'spatie.permission.cache.'.$scope]);
         if (app()->resolved(PermissionRegistrar::class)) {

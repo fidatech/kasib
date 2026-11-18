@@ -29,7 +29,19 @@ class Party extends Model
     }
 
     /** Its ledger accounts, one per currency. */
+    /** Its ledger accounts in the branch one works in (in all of them inside Branch::everywhere). */
     public function accounts(): HasMany
+    {
+        $relation = $this->hasMany(Account::class);
+        if (! Branch::$everywhere && ($branch = current_branch())) {
+            $relation->where('accounts.branch_id', $branch->id);
+        }
+
+        return $relation;
+    }
+
+    /** Its ledger accounts in every branch. */
+    public function allAccounts(): HasMany
     {
         return $this->hasMany(Account::class);
     }
