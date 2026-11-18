@@ -87,6 +87,24 @@ php artisan tenants:migrate    # the database of every business
 
 The cron line is the same; `books:evening` now runs every hour for the evening summaries and scheduled reports.
 
+## Version 2 (the Pro plan): sales and purchases
+
+A business on the Starter plan keeps versions 1 and 1.5. The pages below open only for a business whose
+plan is `pro` (set on the business in the admin panel, or chosen when it registers); others see what Pro adds.
+
+| Part | Where | What it does |
+| --- | --- | --- |
+| Items | Sales & Purchases → Items | Name, code, unit, prices, and the stock of each with its average cost. A service is an item whose stock is not counted |
+| Purchases | Sales & Purchases → Purchases | The supplier is owed the total; the goods enter the stock at what they cost, in any currency |
+| Sales | Sales & Purchases → Sales | The customer owes the total; the goods leave at the average cost, which is the cost of goods sold. Over the counter to "Cash customer", or on credit |
+| Returns | Sale Returns, Purchase Returns | The invoice turned around |
+| Paid now | On every invoice | An ordinary Money In or Money Out paper, linked to the invoice |
+| Stock count | The stock card of an item | The opening stock, and corrections after a count |
+| Reports | Stock on Hand, Sales by Item, Sales by Customer | Profit and margin per item, the value of the stock, who buys the most |
+
+Still to come in version 2: branches, several businesses under one login, white label, seller commissions and
+referrals, the SarafBook connection and the assistant. Tests: `tests/Feature/TradeTest.php`.
+
 ## Stack
 
 Laravel 13, PHP 8.3 or newer, MySQL 8, Blade with a little JavaScript,
