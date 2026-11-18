@@ -2726,5 +2726,9 @@
     "This receipt was cancelled.": "دا رسید لغوه شوی دی.",
     "This receipt is real and unchanged.": "دا رسید ریښتینی او بې بدلونه دی.",
     "To check that this receipt is real, open:": "د دې رسید د ریښتینولۍ د کتلو لپاره پرانیزئ:",
-    "Sign-in History": "د ننوتلو تاریخچه"
+    "Sign-in History": "د ننوتلو تاریخچه",
+    "Another account has the same phone number (:phone). Check that it is not the same person twice.": "بل حساب همدا د تلیفون شمېره (:phone) لري. وګورئ چې یو کس دوه ځله نه وي ثبت شوی.",
+    "A paper can be dated at most :days days back. Ask the owner to record an older one.": "د یوه سند نېټه تر ټولو زیاتې :days ورځې مخکې کېدای شي. د زاړه سند د ثبت لپاره له مالک وغواړئ.",
+    "Days a paper may be dated back": "هغه ورځې چې د سند نېټه شاته کېدای شي",
+    "0 means any day that is not in a closed period. Those who manage the settings can always date further back.": "۰ یعنې هره ورځ چې په تړل شوې دوره کې نه وي. هغه کسان چې تنظیمات اداره کوي تل زړه نېټه لیکلای شي."
 }

@@ -690,6 +690,28 @@ class HesabBookTest extends TestCase
         $this->get('/check/'.$voucher->number.'/'.$code)->assertOk()->assertSee('was cancelled');
     }
 
+    public function test_backdating_is_limited_and_a_repeated_phone_is_warned_about(): void
+    {
+        $this->business();
+        $this->owner();
+        $this->put('/settings', ['company_name' => 'Acme business', 'backdate_days' => 3])->assertSessionHasNoErrors();
+        $ahmad = $this->party('customers', 'Ahmad');
+        $cash = $this->cash();
+        $old = now()->subDays(10)->toDateString();
+
+        // the owner may date further back; a cashier may not
+        $this->post('/money-in', ['date' => $old, 'party_id' => $ahmad->id, 'account_id' => $cash->id, 'amount' => '100'])->assertSessionHasNoErrors();
+        $this->userWith(['transactions.view', 'transactions.manage']);
+        $this->from('/money-in/create')->post('/money-in', ['date' => $old, 'party_id' => $ahmad->id, 'account_id' => $cash->id, 'amount' => '100'])->assertSessionHas('danger');
+        $this->post('/money-in', ['date' => now()->subDays(2)->toDateString(), 'party_id' => $ahmad->id, 'account_id' => $cash->id, 'amount' => '100'])->assertSessionHasNoErrors();
+        $this->assertSame(2, Voucher::count());
+
+        $this->owner();
+        $this->post('/accounts/customers', ['name' => 'Karim', 'phone' => '0700555666', 'is_active' => 1])->assertSessionHasNoErrors()->assertSessionMissing('warning');
+        $this->post('/accounts/suppliers', ['name' => 'Karim Ltd', 'phone' => '0700555666', 'is_active' => 1])->assertSessionHasNoErrors()->assertSessionHas('warning');
+        $this->assertSame(2, Party::where('phone', '0700555666')->count());
+    }
+
     public function test_a_user_sees_only_what_the_role_allows(): void
     {
         $this->business();

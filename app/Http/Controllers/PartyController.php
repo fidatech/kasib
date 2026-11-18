@@ -157,6 +157,9 @@ class PartyController extends CrudController
     {
         // the ledger accounts carry the name of their party
         Account::where('party_id', $record->id)->update(['name' => $record->name, 'is_active' => $record->is_active]);
+        if ($record->phone && Party::where('phone', $record->phone)->where('id', '!=', $record->id)->exists()) {
+            session()->flash('warning', __('Another account has the same phone number (:phone). Check that it is not the same person twice.', ['phone' => $record->phone]));
+        }
         if (! $created) {
             return;
         }

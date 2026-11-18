@@ -35,6 +35,7 @@ class SettingsController extends Controller
             'logo' => ['nullable', 'image', 'mimes:png,jpg,jpeg,webp', 'max:1024'],
             'remove_logo' => ['nullable', 'boolean'],
             'simple_mode' => ['nullable', 'boolean'],
+            'backdate_days' => ['nullable', 'integer', 'min:0', 'max:3650'],
         ]);
         $data['simple_mode'] = $request->boolean('simple_mode') ? '1' : '0';
 

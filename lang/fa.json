@@ -2726,5 +2726,9 @@
     "This receipt was cancelled.": "این رسید لغو شده است.",
     "This receipt is real and unchanged.": "این رسید واقعی و بدون تغییر است.",
     "To check that this receipt is real, open:": "برای بررسی واقعی بودن این رسید باز کنید:",
-    "Sign-in History": "تاریخچه ورود"
+    "Sign-in History": "تاریخچه ورود",
+    "Another account has the same phone number (:phone). Check that it is not the same person twice.": "حساب دیگری همین شماره تلفن (:phone) را دارد. بررسی کنید که یک شخص دو بار ثبت نشده باشد.",
+    "A paper can be dated at most :days days back. Ask the owner to record an older one.": "تاریخ یک سند حداکثر :days روز قبل بوده می‌تواند. برای ثبت سند قدیمی‌تر از مالک بخواهید.",
+    "Days a paper may be dated back": "روزهایی که تاریخ سند می‌تواند عقب باشد",
+    "0 means any day that is not in a closed period. Those who manage the settings can always date further back.": "۰ یعنی هر روزی که در دوره بسته نباشد. کسانی که تنظیمات را مدیریت می‌کنند همیشه می‌توانند تاریخ قدیمی‌تر بزنند."
 }

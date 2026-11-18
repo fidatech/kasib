@@ -90,6 +90,14 @@
                     <span class="d-block small text-muted">{{ __('Hides the Finance pages and the accounting reports from the menu. The books are kept in full all the same, and the pages come back when this is switched off.') }}</span>
                 </label>
             </div>
+            <div class="row g-3 mt-1">
+                <div class="col-12 col-md-5">
+                    <label class="form-label" for="s-backdate_days">{{ __('Days a paper may be dated back') }}</label>
+                    <input type="number" min="0" max="3650" dir="ltr" class="form-control @error('backdate_days') is-invalid @enderror" id="s-backdate_days" name="backdate_days" value="{{ $text('backdate_days', '0') }}" @disabled(! $canManage)>
+                    <div class="form-text">{{ __('0 means any day that is not in a closed period. Those who manage the settings can always date further back.') }}</div>
+                    @error('backdate_days')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                </div>
+            </div>
         </div>
         @if ($canManage)
             <div class="card-footer d-flex gap-2 justify-content-end">

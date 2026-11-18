@@ -37,9 +37,15 @@ ledger, design and build tools.
   section). Forms that save something still load the page the ordinary way.
 - Dari, Pashto and English with right-to-left layout, and Shamsi or Gregorian dates.
 
-Not built yet: opening balances import, WhatsApp messages, the setup wizard, attachments,
-recurring expenses, receipts with a QR code, a permission per account category, and the plans
-of the subscription. See the specification.
+Also built: opening balances from an Excel or CSV file, the first setup for the kind of
+business, notes with reminders and attached files for accounts and papers, recurring expenses,
+WhatsApp messages through the sender of the business, a permission per account category, the
+plan of a business (users and accounts allowed), a public page that checks a receipt, the
+sign-in history, and a limit on dating papers back.
+
+Not built: two-step sign-in, a QR picture on receipts (the address to check a receipt is
+printed as text), restoring from an uploaded file (a copy is restored from the list only), and
+a copy of the backups outside the server. See the specification.
 
 ## Stack
 

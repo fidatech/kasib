@@ -29,6 +29,12 @@ class Days
             throw new UserError(__('An entry cannot be dated in the future.'));
         }
 
+        // how many days back a paper may be dated; those who manage the settings are not held by it
+        $days = (int) setting('backdate_days', '0');
+        if ($days > 0 && $date < now()->subDays($days)->toDateString() && ! auth()->user()?->can('settings.manage')) {
+            throw new UserError(__('A paper can be dated at most :days days back. Ask the owner to record an older one.', ['days' => $days]));
+        }
+
         $closed = Period::max('closed_on');
         if ($closed && $date <= substr((string) $closed, 0, 10)) {
             throw new UserError(__('This date is in a closed period. Closed periods are locked.'));
