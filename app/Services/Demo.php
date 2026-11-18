@@ -145,7 +145,7 @@ class Demo
             $due = array_fill(0, count($customers), 0);       // what each customer owes the business
 
             // a delivery from one supplier: what is short is filled up; part is paid from the bank, the rest stays owed
-            $buy = function (int $supplier, int $ago, int $upTo) use (&$items, &$owed, &$money, $suppliers, $afn, $bank, $day) {
+            $buy = function (int $supplier, int $ago, int $upTo) use (&$items, &$owed, &$money, $suppliers, $afn, $bank, $cash, $day) {
                 $lines = [];
                 $total = 0;
                 foreach ($items as $index => $row) {
