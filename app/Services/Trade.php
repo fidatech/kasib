@@ -350,6 +350,7 @@ class Trade
     public static function move(Item $item, Warehouse $from, Warehouse $to, mixed $qty, ?string $date = null, ?string $note = null): StockMove
     {
         $qty = Num::round($qty, 3);
+        $item = Item::findOrFail($item->id);                  // as the database holds it, whatever the caller read
         if (! $item->track_stock) {
             throw new UserError(__('The stock of a service is not counted.'));
         }
