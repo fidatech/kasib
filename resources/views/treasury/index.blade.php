@@ -2,8 +2,6 @@
 
 @section('content')
 <x-page-header :title="__('Currency Position')" icon="vault" :subtitle="__('The money of the business in every currency, and where it is.').' · '.fmt_date(today_iso())">
-    <a class="btn btn-outline-soft" href="{{ request()->fullUrlWithQuery(['export' => 'xlsx']) }}"><x-icon name="file-excel" class="me-1" /> {{ __('Excel') }}</a>
-    <a class="btn btn-outline-soft" href="{{ request()->fullUrlWithQuery(['print' => 1]) }}" target="_blank" rel="noopener"><x-icon name="print" class="me-1" /> {{ __('Print or PDF') }}</a>
 </x-page-header>
 
 <div class="card">

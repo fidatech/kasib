@@ -2,8 +2,6 @@
 
 @section('content')
 <x-page-header :title="$title" :icon="$icon" :subtitle="trim(($branch?->name ?? '').($hint ? ' · '.__($hint) : ''), ' ·')">
-    <a class="btn btn-outline-soft" href="{{ request()->fullUrlWithQuery(['export' => 'xlsx']) }}"><x-icon name="file-excel" class="me-1" /> {{ __('Excel') }}</a>
-    <a class="btn btn-outline-soft" href="{{ request()->fullUrlWithQuery(['print' => 1]) }}" target="_blank" rel="noopener"><x-icon name="print" class="me-1" /> {{ __('Print or PDF') }}</a>
     @if ($canManage)
         <a class="btn btn-primary" href="{{ route($route.'.create') }}"><x-icon name="plus" class="me-1" /> {{ __('Add :name', ['name' => $singular]) }}</a>
     @endif

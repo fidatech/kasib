@@ -9,6 +9,8 @@
     var ERP = (window.ERP = {});
     var SPRITE = root.getAttribute('data-icons') || '/icons.svg';
     var T = window.ERP_TEXT || {};
+    // what a page needs done once it is on the screen; run again for every page that is put in place without a full load
+    var pageInits = [];
 
     var $ = function (sel, scope) { return (scope || document).querySelector(sel); };
     var $$ = function (sel, scope) { return Array.prototype.slice.call((scope || document).querySelectorAll(sel)); };
@@ -500,7 +502,7 @@
     // Every page that shows a table (a list or a report, not a form) gets two buttons in its title bar:
     // Excel downloads the table with the filters that are on the screen, PDF opens the page as a paper
     // with the print window, where "Save as PDF" makes the file.
-    (function () {
+    pageInits.push(function () {
         var main = $('.app-content');
         var header = main ? $('.page-header', main) : null;
         if (!header || body.hasAttribute('data-no-export')) return;
@@ -529,7 +531,7 @@
         group.appendChild(link({ export: 'xlsx' }, 's-file-excel', 'Excel', false));
         group.appendChild(link({ print: '1', pdf: '1' }, 's-file-pdf', 'PDF', true));
         actions.insertBefore(group, actions.firstChild);
-    })();
+    });
 
     // ------------------------------------------------------- quick add
     // A pick list that can get a new record without leaving the page:
@@ -666,10 +668,10 @@
             if (name) el.setAttribute('aria-label', name);
         });
     };
-    ERP.nameIcons();
+    pageInits.push(function (scope) { ERP.nameIcons(scope); });
 
     // a small "+ New" link in the label of every pick list that allows it
-    $$('select[data-quick-add]').forEach(function (select) {
+    pageInits.push(function (scope) { $$('select[data-quick-add]', scope).forEach(function (select) {
         if (select.closest('.modal')) return;
         var label = select.id ? $('label[for="' + select.id + '"]') : null;
         if (!label) return;
@@ -681,7 +683,7 @@
         link.addEventListener('click', function () { quickOpen(select); });
         label.classList.add('has-quick-add');
         label.appendChild(link);
-    });
+    }); });
     document.addEventListener('click', function (e) {
         var button = e.target.closest('button[data-quick-add]');
         if (button) { e.preventDefault(); quickOpen(button); }
@@ -692,7 +694,7 @@
     // When the first list changes, the second shows the choices of that value, in a box you can
     // type in to search. A value without
     // choices gets a box to type in instead (same field name).
-    $$('select[data-follows]').forEach(function (select) {
+    pageInits.push(function (scope) { $$('select[data-follows]', scope).forEach(function (select) {
         var parent = document.querySelector(select.getAttribute('data-follows'));
         var choices = {};
         try { choices = JSON.parse(select.getAttribute('data-choices') || '{}'); } catch (e) { choices = {}; }
@@ -729,7 +731,7 @@
         select.addEventListener('change', function () { current = select.value; });
         box.addEventListener('input', function () { current = box.value; });
         fill();
-    });
+    }); });
 
     // ------------------------------------------------------- rows of a paper
     // <table data-rows> with <tbody data-rows-body>, <template data-row-template> (uses __i__ as
@@ -818,11 +820,11 @@
     document.addEventListener('change', function (e) {
         if (e.target.matches && e.target.matches('select[data-party]')) showCurrency(e.target.closest('form'));
     });
-    $$('form[data-totals]').forEach(function (form) { recalc(form); showCurrency(form); });
+    pageInits.push(function (scope) { $$('form[data-totals]', scope).forEach(function (form) { recalc(form); showCurrency(form); }); });
 
     // Currency exchange form: the currencies follow the chosen account, the rate comes from the
     // rates table (or is typed by hand), and the buying amount is worked out while typing.
-    $$('form[data-exchange]').forEach(function (form) {
+    pageInits.push(function (scope) { $$('form[data-exchange]', scope).forEach(function (form) {
         var rates = {};
         try { rates = JSON.parse(form.getAttribute('data-rates') || '{}') || {}; } catch (err) { rates = {}; }
         var holder = $('[name="holder"]', form);
@@ -921,10 +923,10 @@
         limit();
         differ(sellCur);
         if (rate.value) summary(); else tableRate();
-    });
+    }); });
 
     // Money form: show the second amount only when the two accounts use different currencies.
-    $$('form[data-money-form]').forEach(function (form) {
+    pageInits.push(function (scope) { $$('form[data-money-form]', scope).forEach(function (form) {
         var sync = function () {
             var cur = {};
             $$('select[data-currency-of]', form).forEach(function (s) {
@@ -965,7 +967,7 @@
         });
         if (form.hasAttribute('data-auto-money')) pickMoney();
         sync();
-    });
+    }); });
 
     // ------------------------------------------- tables become cards on phones
     var SKIP = '.keep-table, .table-sm';
@@ -1159,17 +1161,140 @@
     });
 
     // -------------------------------------------------------------------- boot
-    if (!$('.app-content h1')) body.classList.add('no-large-title');
+    ERP.initPage = function (scope) {
+        body.classList.toggle('no-large-title', !$('.app-content h1'));
+        pageInits.forEach(function (init) { init(scope); });
+        $$(AMOUNT, scope).forEach(function (input) { if (input.value) input.value = ERP.formatNumber(input.value); });
+        enhance(scope);
+        fitAll();
+        cardifyAll();
+    };
     var onScroll = function () { body.classList.toggle('is-scrolled', window.scrollY > 28); };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
     syncTheme();
-    $$(AMOUNT).forEach(function (input) { if (input.value) input.value = ERP.formatNumber(input.value); });
-    enhance(document);
-    fitAll();
-    cardifyAll();
+    ERP.initPage(document);
     var active = $('#sidebarMenu .menu-sublink.active, #sidebarMenu .menu-item.active > .menu-link');
     var scroller = $('#sidebarScroll');
     if (active && scroller) scroller.scrollTop = Math.max(0, active.getBoundingClientRect().top - scroller.clientHeight / 2);
+    // ------------------------------------------- pages open without a full load
+    // A click on a link (or a filter form) fetches the page in the background and puts only its
+    // content, its row of buttons and the menu in place: the sidebar, the navbar, the styles and
+    // this script stay as they are. A link is fetched as soon as the pointer rests on it, so the
+    // page is usually there before the click. Anything unusual (a download, a page of another
+    // layout, an error, a script inside the page) is opened by the browser the ordinary way.
+    (function () {
+        if (!body.hasAttribute('data-soft') || !$('.app-content') || !window.fetch || !window.DOMParser || !window.history || !history.pushState) return;
+        var SWAP = ['.app-content', '.quickbar', '#sidebarMenu'];
+        var cache = {};
+        var turn = 0;
+        var here = location.pathname + location.search;
+        var bar = document.createElement('div');
+        bar.className = 'soft-bar';
+        body.appendChild(bar);
+
+        var plain = function (url) {
+            if (url.origin !== location.origin) return false;
+            if (url.searchParams.has('export') || url.searchParams.has('print') || url.searchParams.has('pdf')) return false;
+            if (/^\/(logout|company-logo|support-enter|messages\/\d+)/.test(url.pathname)) return false;
+            return !/\/(receipt|download)(\/|$)/.test(url.pathname);
+        };
+        var linkOf = function (e) {
+            var a = e.target.closest && e.target.closest('a[href]');
+            if (!a || a.target || a.hasAttribute('download') || a.hasAttribute('data-no-soft') || a.hasAttribute('data-bs-toggle')) return null;
+            if (a.getAttribute('href').charAt(0) === '#') return null;
+            var url;
+            try { url = new URL(a.href, location.href); } catch (err) { return null; }
+            if (!plain(url)) return null;
+            // a jump inside the page that is open
+            if (url.hash && url.pathname + url.search === here) return null;
+            return url;
+        };
+        var load = function (href) {
+            var hit = cache[href];
+            if (hit && Date.now() - hit.at < 15000) return hit.promise;
+            var promise = fetch(href, { credentials: 'same-origin', headers: { 'X-Soft-Navigation': '1', Accept: 'text/html' } }).then(function (response) {
+                if (!response.ok || (response.headers.get('Content-Type') || '').indexOf('text/html') === -1) throw new Error('not a page');
+                return response.text().then(function (html) {
+                    var doc = new DOMParser().parseFromString(html, 'text/html');
+                    if (!doc.body.hasAttribute('data-soft') || !doc.querySelector('.app-content') || doc.querySelector('.app-content script')) throw new Error('another layout');
+                    return { doc: doc, url: response.redirected && response.url ? response.url : href };
+                });
+            });
+            cache[href] = { at: Date.now(), promise: promise };
+            promise.catch(function () { delete cache[href]; });
+            return promise;
+        };
+        var show = function (page, push, top) {
+            if (push) {
+                history.replaceState({ soft: true, y: window.scrollY }, '');
+                history.pushState({ soft: true, y: 0 }, '', page.url);
+            }
+            SWAP.forEach(function (selector) {
+                var fresh = page.doc.querySelector(selector);
+                var old = $(selector);
+                if (fresh && old) old.innerHTML = fresh.innerHTML;
+            });
+            document.title = page.doc.title;
+            if (page.doc.body.hasAttribute('data-no-export')) body.setAttribute('data-no-export', ''); else body.removeAttribute('data-no-export');
+            here = location.pathname + location.search;
+            // what was fetched before may be out of date after this page
+            cache = {};
+            closeDrawer();
+            closeDropdowns();
+            Array.prototype.slice.call(page.doc.querySelectorAll('[data-toast]')).forEach(function (el) { ERP.toast(el.textContent.trim(), el.getAttribute('data-toast')); });
+            ERP.initPage($('.app-content'));
+            window.scrollTo(0, top || 0);
+        };
+        var go = function (href, push, top) {
+            var mine = ++turn;
+            body.classList.add('is-loading');
+            return load(href).then(function (page) {
+                // a newer click won
+                if (mine === turn) show(page, push, top);
+            }).catch(function () {
+                if (mine !== turn) return;
+                if (push) location.href = href; else location.reload();
+            }).then(function () {
+                if (mine === turn) body.classList.remove('is-loading');
+            });
+        };
+        ERP.visit = function (href) { return go(new URL(href, location.href).href, true); };
+
+        document.addEventListener('click', function (e) {
+            if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+            var url = linkOf(e);
+            if (!url) return;
+            e.preventDefault();
+            go(url.href, true);
+        });
+        // the page is fetched while the pointer (or the finger) is still on its link
+        var warm = function (e) {
+            var url = linkOf(e);
+            if (url && url.pathname + url.search !== here) load(url.href).catch(function () { return null; });
+        };
+        document.addEventListener('mouseover', warm, { passive: true });
+        document.addEventListener('touchstart', warm, { passive: true });
+        // a form that only asks (search boxes, the filters of a list or a report)
+        document.addEventListener('submit', function (e) {
+            var form = e.target;
+            if (e.defaultPrevented || (form.getAttribute('method') || 'get').toLowerCase() !== 'get' || form.target || form.hasAttribute('data-no-soft')) return;
+            var url;
+            try { url = new URL(form.getAttribute('action') || location.href, location.href); } catch (err) { return; }
+            url.search = new URLSearchParams(new FormData(form)).toString();
+            url.hash = '';
+            if (!plain(url)) return;
+            e.preventDefault();
+            go(url.href, true).then(function () {
+                form._sent = false;
+                $$('.is-busy', form).forEach(function (b) { b.classList.remove('is-busy'); b.removeAttribute('aria-disabled'); });
+            });
+        });
+        window.addEventListener('popstate', function (e) {
+            if (location.pathname + location.search === here) return;
+            go(location.href, false, e.state && e.state.y ? e.state.y : 0);
+        });
+    })();
+
     body.classList.add('is-ready', 'app-ready');
 })();

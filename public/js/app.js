@@ -5,6 +5,7 @@ var body = document.body;
 var ERP = (window.ERP = {});
 var SPRITE = root.getAttribute('data-icons') || '/icons.svg';
 var T = window.ERP_TEXT || {};
+var pageInits = [];
 var $ = function (sel, scope) { return (scope || document).querySelector(sel); };
 var $$ = function (sel, scope) { return Array.prototype.slice.call((scope || document).querySelectorAll(sel)); };
 var mq = function (q) { return window.matchMedia(q).matches; };
@@ -437,7 +438,7 @@ if (select.multiple || select.hasAttribute('data-plain') || select.closest('.inp
 if (select.hasAttribute('data-search') || select.options.length >= 9) ERP.searchSelect(select);
 });
 };
-(function () {
+pageInits.push(function () {
 var main = $('.app-content');
 var header = main ? $('.page-header', main) : null;
 if (!header || body.hasAttribute('data-no-export')) return;
@@ -466,7 +467,7 @@ group.className = 'export-buttons';
 group.appendChild(link({ export: 'xlsx' }, 's-file-excel', 'Excel', false));
 group.appendChild(link({ print: '1', pdf: '1' }, 's-file-pdf', 'PDF', true));
 actions.insertBefore(group, actions.firstChild);
-})();
+});
 var quickModal = null;
 var quickFor = null;
 var quickOpen = function (trigger) {
@@ -590,8 +591,8 @@ var name = el.getAttribute('title') || el.getAttribute('data-bs-original-title')
 if (name) el.setAttribute('aria-label', name);
 });
 };
-ERP.nameIcons();
-$$('select[data-quick-add]').forEach(function (select) {
+pageInits.push(function (scope) { ERP.nameIcons(scope); });
+pageInits.push(function (scope) { $$('select[data-quick-add]', scope).forEach(function (select) {
 if (select.closest('.modal')) return;
 var label = select.id ? $('label[for="' + select.id + '"]') : null;
 if (!label) return;
@@ -603,12 +604,12 @@ link.title = select.getAttribute('data-quick-title') || '';
 link.addEventListener('click', function () { quickOpen(select); });
 label.classList.add('has-quick-add');
 label.appendChild(link);
-});
+}); });
 document.addEventListener('click', function (e) {
 var button = e.target.closest('button[data-quick-add]');
 if (button) { e.preventDefault(); quickOpen(button); }
 });
-$$('select[data-follows]').forEach(function (select) {
+pageInits.push(function (scope) { $$('select[data-follows]', scope).forEach(function (select) {
 var parent = document.querySelector(select.getAttribute('data-follows'));
 var choices = {};
 try { choices = JSON.parse(select.getAttribute('data-choices') || '{}'); } catch (e) { choices = {}; }
@@ -644,7 +645,7 @@ parent.addEventListener('change', function () { current = ''; fill(); });
 select.addEventListener('change', function () { current = select.value; });
 box.addEventListener('input', function () { current = box.value; });
 fill();
-});
+}); });
 var rowCounter = 1000;
 document.addEventListener('click', function (e) {
 var add = e.target.closest('[data-add-row]');
@@ -723,8 +724,8 @@ $$('[data-party-cur]', form).forEach(function (el) { el.textContent = code; });
 document.addEventListener('change', function (e) {
 if (e.target.matches && e.target.matches('select[data-party]')) showCurrency(e.target.closest('form'));
 });
-$$('form[data-totals]').forEach(function (form) { recalc(form); showCurrency(form); });
-$$('form[data-exchange]').forEach(function (form) {
+pageInits.push(function (scope) { $$('form[data-totals]', scope).forEach(function (form) { recalc(form); showCurrency(form); }); });
+pageInits.push(function (scope) { $$('form[data-exchange]', scope).forEach(function (form) {
 var rates = {};
 try { rates = JSON.parse(form.getAttribute('data-rates') || '{}') || {}; } catch (err) { rates = {}; }
 var holder = $('[name="holder"]', form);
@@ -818,8 +819,8 @@ fetch(url + query, { headers: { 'Accept': 'application/json' }, credentials: 'sa
 limit();
 differ(sellCur);
 if (rate.value) summary(); else tableRate();
-});
-$$('form[data-money-form]').forEach(function (form) {
+}); });
+pageInits.push(function (scope) { $$('form[data-money-form]', scope).forEach(function (form) {
 var sync = function () {
 var cur = {};
 $$('select[data-currency-of]', form).forEach(function (s) {
@@ -857,7 +858,7 @@ sync();
 });
 if (form.hasAttribute('data-auto-money')) pickMoney();
 sync();
-});
+}); });
 var SKIP = '.keep-table, .table-sm';
 ERP.cardify = function (table) {
 if (table.matches(SKIP)) return;
@@ -1032,17 +1033,126 @@ document.addEventListener('click', function (e) {
 var tip = e.target.closest && e.target.closest('.help-tip');
 if (tip) { e.preventDefault(); tip.focus(); }
 });
-if (!$('.app-content h1')) body.classList.add('no-large-title');
+ERP.initPage = function (scope) {
+body.classList.toggle('no-large-title', !$('.app-content h1'));
+pageInits.forEach(function (init) { init(scope); });
+$$(AMOUNT, scope).forEach(function (input) { if (input.value) input.value = ERP.formatNumber(input.value); });
+enhance(scope);
+fitAll();
+cardifyAll();
+};
 var onScroll = function () { body.classList.toggle('is-scrolled', window.scrollY > 28); };
 window.addEventListener('scroll', onScroll, { passive: true });
 onScroll();
 syncTheme();
-$$(AMOUNT).forEach(function (input) { if (input.value) input.value = ERP.formatNumber(input.value); });
-enhance(document);
-fitAll();
-cardifyAll();
+ERP.initPage(document);
 var active = $('#sidebarMenu .menu-sublink.active, #sidebarMenu .menu-item.active > .menu-link');
 var scroller = $('#sidebarScroll');
 if (active && scroller) scroller.scrollTop = Math.max(0, active.getBoundingClientRect().top - scroller.clientHeight / 2);
+(function () {
+if (!body.hasAttribute('data-soft') || !$('.app-content') || !window.fetch || !window.DOMParser || !window.history || !history.pushState) return;
+var SWAP = ['.app-content', '.quickbar', '#sidebarMenu'];
+var cache = {};
+var turn = 0;
+var here = location.pathname + location.search;
+var bar = document.createElement('div');
+bar.className = 'soft-bar';
+body.appendChild(bar);
+var plain = function (url) {
+if (url.origin !== location.origin) return false;
+if (url.searchParams.has('export') || url.searchParams.has('print') || url.searchParams.has('pdf')) return false;
+if (/^\/(logout|company-logo|support-enter|messages\/\d+)/.test(url.pathname)) return false;
+return !/\/(receipt|download)(\/|$)/.test(url.pathname);
+};
+var linkOf = function (e) {
+var a = e.target.closest && e.target.closest('a[href]');
+if (!a || a.target || a.hasAttribute('download') || a.hasAttribute('data-no-soft') || a.hasAttribute('data-bs-toggle')) return null;
+if (a.getAttribute('href').charAt(0) === '#') return null;
+var url;
+try { url = new URL(a.href, location.href); } catch (err) { return null; }
+if (!plain(url)) return null;
+if (url.hash && url.pathname + url.search === here) return null;
+return url;
+};
+var load = function (href) {
+var hit = cache[href];
+if (hit && Date.now() - hit.at < 15000) return hit.promise;
+var promise = fetch(href, { credentials: 'same-origin', headers: { 'X-Soft-Navigation': '1', Accept: 'text/html' } }).then(function (response) {
+if (!response.ok || (response.headers.get('Content-Type') || '').indexOf('text/html') === -1) throw new Error('not a page');
+return response.text().then(function (html) {
+var doc = new DOMParser().parseFromString(html, 'text/html');
+if (!doc.body.hasAttribute('data-soft') || !doc.querySelector('.app-content') || doc.querySelector('.app-content script')) throw new Error('another layout');
+return { doc: doc, url: response.redirected && response.url ? response.url : href };
+});
+});
+cache[href] = { at: Date.now(), promise: promise };
+promise.catch(function () { delete cache[href]; });
+return promise;
+};
+var show = function (page, push, top) {
+if (push) {
+history.replaceState({ soft: true, y: window.scrollY }, '');
+history.pushState({ soft: true, y: 0 }, '', page.url);
+}
+SWAP.forEach(function (selector) {
+var fresh = page.doc.querySelector(selector);
+var old = $(selector);
+if (fresh && old) old.innerHTML = fresh.innerHTML;
+});
+document.title = page.doc.title;
+if (page.doc.body.hasAttribute('data-no-export')) body.setAttribute('data-no-export', ''); else body.removeAttribute('data-no-export');
+here = location.pathname + location.search;
+cache = {};
+closeDrawer();
+closeDropdowns();
+Array.prototype.slice.call(page.doc.querySelectorAll('[data-toast]')).forEach(function (el) { ERP.toast(el.textContent.trim(), el.getAttribute('data-toast')); });
+ERP.initPage($('.app-content'));
+window.scrollTo(0, top || 0);
+};
+var go = function (href, push, top) {
+var mine = ++turn;
+body.classList.add('is-loading');
+return load(href).then(function (page) {
+if (mine === turn) show(page, push, top);
+}).catch(function () {
+if (mine !== turn) return;
+if (push) location.href = href; else location.reload();
+}).then(function () {
+if (mine === turn) body.classList.remove('is-loading');
+});
+};
+ERP.visit = function (href) { return go(new URL(href, location.href).href, true); };
+document.addEventListener('click', function (e) {
+if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+var url = linkOf(e);
+if (!url) return;
+e.preventDefault();
+go(url.href, true);
+});
+var warm = function (e) {
+var url = linkOf(e);
+if (url && url.pathname + url.search !== here) load(url.href).catch(function () { return null; });
+};
+document.addEventListener('mouseover', warm, { passive: true });
+document.addEventListener('touchstart', warm, { passive: true });
+document.addEventListener('submit', function (e) {
+var form = e.target;
+if (e.defaultPrevented || (form.getAttribute('method') || 'get').toLowerCase() !== 'get' || form.target || form.hasAttribute('data-no-soft')) return;
+var url;
+try { url = new URL(form.getAttribute('action') || location.href, location.href); } catch (err) { return; }
+url.search = new URLSearchParams(new FormData(form)).toString();
+url.hash = '';
+if (!plain(url)) return;
+e.preventDefault();
+go(url.href, true).then(function () {
+form._sent = false;
+$$('.is-busy', form).forEach(function (b) { b.classList.remove('is-busy'); b.removeAttribute('aria-disabled'); });
+});
+});
+window.addEventListener('popstate', function (e) {
+if (location.pathname + location.search === here) return;
+go(location.href, false, e.state && e.state.y ? e.state.y : 0);
+});
+})();
 body.classList.add('is-ready', 'app-ready');
 })();

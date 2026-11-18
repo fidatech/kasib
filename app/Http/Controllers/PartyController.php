@@ -185,12 +185,6 @@ class PartyController extends CrudController
         return null;
     }
 
-    protected function shared(): array
-    {
-        return parent::shared() + ['headerLinks' => [
-            ['label' => __('Excel'), 'url' => request()->fullUrlWithQuery(['export' => 'xlsx'])],
-        ]];
-    }
 
     /** Every line of one account in one currency between two dates, with the balance after each. */
     public function statement(Request $request): View

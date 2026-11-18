@@ -3,8 +3,6 @@
 {{-- One table for every report: headings, lines, totals. Cells may be text or ['text' => .., 'url' => ..]. --}}
 @section('content')
 <x-page-header :title="$title" :icon="$icon" :crumbs="[[__('Reports'), route('reports.index')], [$title]]" :subtitle="trim(($from ? fmt_date($from).' – ' : '').($to ? fmt_date($to) : ''))">
-    <a class="btn btn-outline-soft" href="{{ request()->fullUrlWithQuery(['export' => 'xlsx']) }}"><x-icon name="file-excel" class="me-1" /> {{ __('Excel') }}</a>
-    <a class="btn btn-outline-soft" href="{{ request()->fullUrlWithQuery(['print' => 1]) }}" target="_blank" rel="noopener"><x-icon name="print" class="me-1" /> {{ __('Print or PDF') }}</a>
 </x-page-header>
 
 <div class="card">

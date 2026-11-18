@@ -7,7 +7,7 @@
 <head>
     @include('partials.head')
 </head>
-<body>
+<body data-soft>
 <div class="app-wrapper">
     @include('partials.sidebar')
     <div class="app-main">
