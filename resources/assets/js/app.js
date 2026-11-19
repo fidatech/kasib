@@ -1680,7 +1680,9 @@
             dialog.classList.toggle('modal-lg', !wide && !small);
             dialog.classList.toggle('modal-md', small);
             var box = $('.modal-body', formModal);
-            box.innerHTML = '<div class="erp-form-in">' + content.innerHTML + '</div>';
+            // the page keeps its content in a container of its own: the form is taken out of it
+            var holder = content.children.length === 1 && content.firstElementChild.classList.contains('content-container') ? content.firstElementChild : content;
+            box.innerHTML = '<div class="erp-form-in">' + holder.innerHTML + '</div>';
             formModal.classList.remove('is-waiting', 'is-saving');
             formModal._changed = false;
             formAt = page.url;
