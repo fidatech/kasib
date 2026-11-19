@@ -1440,6 +1440,8 @@ Array.prototype.slice.call(content.querySelectorAll('[autofocus]')).forEach(func
 var phone = window.matchMedia && window.matchMedia('(max-width: 575.98px)').matches;
 var start = content.querySelector('.is-invalid') || (phone ? null : content.querySelector('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="date"]):not([data-shamsi-date]):not([readonly]):not([disabled]), textarea:not([readonly])'));
 if (start) start.setAttribute('autofocus', '');
+if (!formModal) buildModal();
+$('.btn-close', formModal).toggleAttribute('autofocus', !start);
 var ids = {};
 Array.prototype.slice.call(content.querySelectorAll('[id]')).forEach(function (el) { ids[el.id] = 'mf-' + el.id; el.id = ids[el.id]; });
 ['for', 'aria-describedby', 'aria-labelledby', 'aria-controls', 'list', 'form'].forEach(function (attr) {

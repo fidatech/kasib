@@ -1610,6 +1610,9 @@
             var phone = window.matchMedia && window.matchMedia('(max-width: 575.98px)').matches;
             var start = content.querySelector('.is-invalid') || (phone ? null : content.querySelector('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="date"]):not([data-shamsi-date]):not([readonly]):not([disabled]), textarea:not([readonly])'));
             if (start) start.setAttribute('autofocus', '');
+            // with nothing to start in, the close button takes the focus (never a date box: its calendar would open)
+            if (!formModal) buildModal();
+            $('.btn-close', formModal).toggleAttribute('autofocus', !start);
             // the modal must not reuse the ids of the page under it
             var ids = {};
             Array.prototype.slice.call(content.querySelectorAll('[id]')).forEach(function (el) { ids[el.id] = 'mf-' + el.id; el.id = ids[el.id]; });
