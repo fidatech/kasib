@@ -3336,5 +3336,7 @@
     "Paid in": "جمع شوي",
     "Receipts": "رسیدونه",
     "Paid out": "ورکړل شوي",
-    "The amount is in the currency of this account.": "مبلغ د همدې حساب په اسعارو دی."
+    "The amount is in the currency of this account.": "مبلغ د همدې حساب په اسعارو دی.",
+    "Close without saving?": "پرته له ثبت وتړل شي؟",
+    "What you typed will be lost.": "هغه څه چې مو لیکلي له منځه ځي."
 }

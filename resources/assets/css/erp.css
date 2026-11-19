@@ -707,28 +707,69 @@ button.ws-mark { cursor: pointer; } button.ws-mark:hover { border-style: solid; 
 }
 
 /* ------------------------------------------------------------------ forms in a modal */
-.erp-form-modal .modal-content { border: 0; border-radius: 18px; background: var(--card); box-shadow: var(--shadow-lg); }
-.erp-form-modal .modal-header { gap: 12px; padding: 16px 22px; border-bottom: 1px solid var(--border); }
-.erp-form-modal .modal-header .btn-close { margin-inline-start: auto; }
+.erp-form-modal .modal-content { border: 0; border-radius: 20px; background: var(--card); box-shadow: 0 24px 70px rgba(15, 23, 42, .28), 0 2px 8px rgba(15, 23, 42, .08); overflow: hidden; }
+.erp-form-modal .modal-header { gap: 14px; padding: 18px 24px; border-bottom: 1px solid var(--border); align-items: center; }
+.erp-form-head { min-width: 0; flex: 1; }
+.erp-form-modal .modal-title { font-size: 18px; font-weight: 800; color: var(--heading); margin: 0; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.erp-form-sub { margin: 2px 0 0; font-size: 13px; color: var(--muted); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .erp-form-icon:empty { display: none; }
+.erp-form-icon { flex: none; width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; font-size: 17px; background: color-mix(in srgb, var(--primary) 11%, transparent); color: var(--primary); }
+.erp-form-modal .modal-header .btn-close { flex: none; margin: 0; width: 36px; height: 36px; padding: 0; border-radius: 50%; background-color: var(--hover); background-size: 11px; opacity: .75; transition: opacity .12s, background-color .12s, transform .12s; }
+.erp-form-modal .modal-header .btn-close:hover { opacity: 1; background-color: color-mix(in srgb, var(--danger) 14%, var(--card)); transform: rotate(90deg); }
 /* the bar of the phone at the bottom is not tappable under an open form */
 body.modal-open .app-tabbar { visibility: hidden; }
-.erp-form-icon { flex: none; width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: color-mix(in srgb, var(--primary) 11%, transparent); color: var(--primary); }
-.erp-form-modal .modal-title { font-size: 17px; font-weight: 800; color: var(--heading); margin: 0; }
-.erp-form-modal .modal-body { padding: 18px 22px 0; background: var(--card); }
+.erp-form-progress { height: 3px; margin-top: -3px; position: relative; z-index: 4; overflow: hidden; }
+.erp-form-modal.is-waiting .erp-form-progress::before, .erp-form-modal.is-saving .erp-form-progress::before { content: ""; position: absolute; inset-block: 0; width: 40%; border-radius: 3px; background: var(--primary); animation: erp-form-run 1s ease-in-out infinite; }
+@keyframes erp-form-run { from { inset-inline-start: -40%; } to { inset-inline-start: 100%; } }
+.erp-form-modal .modal-body { padding: 22px 24px 0; background: var(--card); scrollbar-width: thin; overscroll-behavior: contain; }
+.erp-form-modal.is-saving .modal-body { pointer-events: none; }
+.erp-form-modal.is-saving .erp-form-in > form > :not(.card-footer), .erp-form-modal.is-saving .erp-form-in > :not(form) { opacity: .55; transition: opacity .15s; }
+.erp-form-in { animation: erp-form-in .18s ease-out; }
+@keyframes erp-form-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 /* the cards of a form page lose their frame inside the modal; its buttons stay in sight at the bottom */
-.erp-form-modal .modal-body > .card, .erp-form-modal .modal-body > form.card, .erp-form-modal .modal-body > form > .card { border: 0; box-shadow: none; background: transparent; margin-bottom: 0; }
-.erp-form-modal .modal-body .card > .card-body, .erp-form-modal .modal-body form.card > .card-body { padding: 0 0 18px; }
-.erp-form-modal .modal-body .card > .card-header { padding-inline: 0; background: transparent; }
-.erp-form-modal .modal-body .card-footer { position: sticky; bottom: 0; z-index: 3; margin: 0 -22px; padding: 14px 22px; background: var(--card); border-top: 1px solid var(--border); }
-.erp-form-modal .modal-body > :last-child:not(form):not(.card) { margin-bottom: 18px; }
-.erp-form-modal .modal-body .crumbs { display: none; }
+.erp-form-in > .card, .erp-form-in > form.card, .erp-form-in > form > .card { border: 0; box-shadow: none; background: transparent; margin-bottom: 0; border-radius: 0; }
+.erp-form-in .card > .card-body, .erp-form-in form.card > .card-body { padding: 0 0 22px; }
+.erp-form-in .card > .card-header { padding: 0 0 12px; background: transparent; border: 0; }
+.erp-form-in .card + .card { border-top: 1px solid var(--border); padding-top: 20px; }
+.erp-form-in .card-footer { position: sticky; bottom: 0; z-index: 3; margin: 0 -24px; padding: 14px 24px; background: color-mix(in srgb, var(--card) 92%, transparent); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-top: 1px solid var(--border); border-radius: 0; }
+.erp-form-in .card-footer .btn { min-height: 42px; padding-inline: 20px; border-radius: 11px; font-weight: 700; }
+.erp-form-in .card-footer .btn-primary { min-width: 128px; box-shadow: 0 6px 16px color-mix(in srgb, var(--primary) 30%, transparent); }
+.erp-form-in > :last-child:not(form):not(.card) { margin-bottom: 22px; }
+.erp-form-in .crumbs { display: none; }
+.erp-form-in .form-label { font-size: 13px; font-weight: 700; color: var(--heading); margin-bottom: 6px; }
+.erp-form-in .form-control, .erp-form-in .form-select, .erp-form-in .ss-control { min-height: 44px; border-radius: 11px; border-color: var(--border-strong, var(--border)); }
+.erp-form-in textarea.form-control { min-height: 84px; }
+.erp-form-in .form-control:focus, .erp-form-in .form-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent); }
+.erp-form-in .form-text { font-size: 12.5px; margin-top: 5px; }
+.erp-form-in .row { --bs-gutter-y: 1.1rem; }
+/* the outline shown until the form has arrived */
+.erp-form-skeleton { padding-bottom: 24px; }
+.erp-form-skeleton .sk-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.erp-form-skeleton .sk-row > div:only-child { grid-column: 1 / -1; }
+.erp-form-skeleton i { display: block; border-radius: 10px; background: linear-gradient(90deg, var(--hover) 25%, color-mix(in srgb, var(--hover) 40%, var(--border)) 37%, var(--hover) 63%); background-size: 400% 100%; animation: erp-form-shine 1.2s ease infinite; }
+.erp-form-skeleton .sk-label { width: 34%; height: 11px; margin-bottom: 9px; }
+.erp-form-skeleton .sk-box { height: 44px; }
+.erp-form-skeleton .sk-box.is-tall { height: 84px; }
+@keyframes erp-form-shine { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.modal-dialog.is-wrong { animation: erp-form-wrong .32s ease; }
+@keyframes erp-form-wrong { 20%, 60% { translate: -7px 0; } 40%, 80% { translate: 7px 0; } 100% { translate: 0 0; } }
+@media (min-width: 576px) {
+    .erp-form-modal .modal-dialog { margin-block: 4vh; max-height: 92vh; transition: transform .2s cubic-bezier(.2, .8, .2, 1), max-width .2s ease; }
+    .erp-form-modal .modal-dialog.modal-md { max-width: 560px; }
+    .erp-form-modal.fade:not(.show) .modal-dialog { transform: translateY(14px) scale(.97); }
+    .erp-form-modal.fade.show .modal-dialog { transform: none; }
+    .erp-form-modal .modal-dialog-scrollable { height: auto; }
+    .erp-form-modal .modal-dialog-scrollable .modal-content { max-height: 92vh; }
+}
 @media (max-width: 575.98px) {
     .erp-form-modal .modal-content { border-radius: 0; }
-    .erp-form-modal .modal-body { padding: 14px 16px 0; }
-    .erp-form-modal .modal-body .card-footer { margin: 0 -16px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
-    .erp-form-modal .modal-body .card-footer .btn { flex: 1 1 0; }
+    .erp-form-modal .modal-header { padding: 14px 16px; }
+    .erp-form-modal .modal-body { padding: 16px 16px 0; }
+    .erp-form-in .card-footer { margin: 0 -16px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
+    .erp-form-in .card-footer .btn { flex: 1 1 0; min-height: 46px; }
+    .erp-form-skeleton .sk-row { grid-template-columns: 1fr; }
 }
+@media (prefers-reduced-motion: reduce) { .erp-form-in, .modal-dialog.is-wrong, .erp-form-skeleton i { animation: none; } }
 
 /* ------------------------------------------------------------------ tables, second pass
    A list reads like a ledger sheet: a quiet head that stays in sight, lines that are easy to follow,

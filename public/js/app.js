@@ -138,11 +138,14 @@ modal.dispatchEvent(new CustomEvent('erp:shown'));
 ERP.hideModal = function (modal) {
 if (!modal || !modal.classList.contains('show')) return;
 modal.classList.remove('show');
-if (modal._back) modal._back.classList.remove('show');
+var back = modal._back;
+modal._back = null;
+if (back) back.classList.remove('show');
 setTimeout(function () {
+if (back) back.remove();
+if (modal.classList.contains('show')) return;          // opened again meanwhile
 modal.style.display = '';
 modal.setAttribute('aria-hidden', 'true');
-if (modal._back) { modal._back.remove(); modal._back = null; }
 if (!$('.modal.show')) body.classList.remove('modal-open');
 modal.dispatchEvent(new CustomEvent('erp:hidden'));
 }, 160);
@@ -1353,9 +1356,9 @@ Array.prototype.slice.call(page.doc.querySelectorAll('[data-toast]')).forEach(fu
 ERP.initPage($('.app-content'));
 window.scrollTo(0, top || 0);
 };
-var go = function (href, push, top) {
+var go = function (href, push, top, quiet) {
 var mine = ++turn;
-body.classList.add('is-loading');
+if (!quiet) body.classList.add('is-loading');
 return load(href).then(function (page) {
 if (mine === turn) show(page, push, top);
 }).catch(function () {
@@ -1401,15 +1404,26 @@ formModal.setAttribute('role', 'dialog');
 formModal.setAttribute('aria-modal', 'true');
 formModal.setAttribute('data-static', '');
 formModal.innerHTML = '<div class="modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down"><div class="modal-content">'
-+ '<div class="modal-header"><span class="erp-form-icon"></span><h2 class="h5 modal-title" id="erpFormTitle"></h2>'
++ '<div class="modal-header"><span class="erp-form-icon"></span><div class="erp-form-head"><h2 class="h5 modal-title" id="erpFormTitle"></h2><p class="erp-form-sub"></p></div>'
 + '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="' + ERP.escape(T.cancel || 'Cancel') + '"></button></div>'
-+ '<div class="modal-body"></div></div></div>';
++ '<div class="erp-form-progress"></div><div class="modal-body"></div></div></div>';
 formModal.setAttribute('aria-labelledby', 'erpFormTitle');
+formModal.addEventListener('input', function (e) { if (e.isTrusted) formModal._changed = true; });
+formModal.addEventListener('change', function (e) { if (e.isTrusted) formModal._changed = true; });
+formModal.addEventListener('keydown', function (e) {
+if (e.key !== 'Enter' || !(e.ctrlKey || e.metaKey)) return;
+var form = $('.modal-body form[method="POST"], .modal-body form[method="post"]', formModal);
+if (!form) return;
+e.preventDefault();
+if (form.requestSubmit) form.requestSubmit(); else form.submit();
+});
 formModal.addEventListener('erp:hidden', function () {
 formAt = null;
 ERP.modalFormUrl = null;
 $('.modal-body', formModal).innerHTML = '';
-if (formModal._dirty) { formModal._dirty = false; go(location.href, false, window.scrollY); }
+formModal._changed = false;
+formModal.classList.remove('is-waiting', 'is-saving');
+if (formModal._dirty) { formModal._dirty = false; go(location.href, false, window.scrollY, true); }
 });
 formModal.addEventListener('click', function (e) {
 var a = e.target.closest('a[href]');
@@ -1419,11 +1433,40 @@ try { url = new URL(a.href, location.href); } catch (err) { return; }
 if (url.origin !== location.origin) return;
 e.preventDefault();
 e.stopPropagation();
+closeForm(function () {
+if (a.hasAttribute('data-modal') || /\/(create|\d+\/edit)$/.test(url.pathname)) { formOpen(url.href, a); return; }
 ERP.hideModal(formModal);
-if (a.hasAttribute('data-modal') || /\/(create|\d+\/edit)$/.test(url.pathname)) setTimeout(function () { formOpen(url.href); }, 200);
-else if (url.pathname !== location.pathname) go(url.href, true);
+if (url.pathname !== location.pathname) go(url.href, true);
+});
 });
 body.appendChild(formModal);
+};
+var closeForm = function (then) {
+then = then || function () { ERP.hideModal(formModal); };
+if (!formModal._changed) { then(); return; }
+ERP.confirm({ title: T.discardTitle || 'Close without saving?', text: T.discardText || 'What you typed will be lost.', ok: T.discardOk || 'Close', style: 'danger' }, function () { formModal._changed = false; then(); });
+};
+var isTop = function () { var open = $$('.modal.show'); return formModal && open.length && open[open.length - 1] === formModal; };
+document.addEventListener('click', function (e) {
+if (!formModal || !formModal._changed || !isTop()) return;
+var dismiss = e.target.closest && e.target.closest('[data-bs-dismiss="modal"]');
+if (!dismiss || !formModal.contains(dismiss)) return;
+e.preventDefault();
+e.stopPropagation();
+closeForm();
+}, true);
+document.addEventListener('keydown', function (e) {
+if (e.key !== 'Escape' || !formModal || !formModal._changed || !isTop()) return;
+e.preventDefault();
+e.stopPropagation();
+closeForm();
+}, true);
+var setHead = function (title, sub, icon) {
+$('.modal-title', formModal).textContent = title || '';
+var line = $('.erp-form-sub', formModal);
+line.textContent = sub || '';
+line.hidden = !sub;
+$('.erp-form-icon', formModal).innerHTML = icon || '';
 };
 var fill = function (page) {
 var content = page.doc.querySelector('.app-content');
@@ -1431,9 +1474,9 @@ if (!content || content.querySelector('script') || !content.querySelector('form[
 if (!formModal) buildModal();
 var header = content.querySelector('.page-header');
 var heading = header ? header.querySelector('h1') : content.querySelector('h1');
-$('.modal-title', formModal).textContent = heading ? heading.textContent.trim() : document.title;
 var icon = header ? header.querySelector('.page-header-icon') : null;
-$('.erp-form-icon', formModal).innerHTML = icon ? icon.innerHTML : '';
+var sub = header ? header.querySelector('.page-header-sub') : null;
+setHead(heading ? heading.textContent.trim() : document.title, sub ? sub.textContent.trim() : '', icon ? icon.innerHTML : '');
 if (header) header.remove();
 Array.prototype.slice.call(content.querySelectorAll('[data-page-only]')).forEach(function (el) { el.remove(); });
 Array.prototype.slice.call(content.querySelectorAll('[autofocus]')).forEach(function (el) { el.removeAttribute('autofocus'); });
@@ -1455,10 +1498,14 @@ if (value && value.charAt(0) === '#' && ids[value.slice(1)]) el.setAttribute(att
 });
 var wide = content.querySelector('form[data-invoice], table[data-rows], .table-responsive table, .row .col-xl-8, .col-lg-8');
 var dialog = $('.modal-dialog', formModal);
+var small = !wide && content.querySelectorAll('input:not([type="hidden"]), select, textarea').length <= 4 && !content.querySelector('[data-modal-stay]');
 dialog.classList.toggle('modal-xl', !!wide);
-dialog.classList.toggle('modal-lg', !wide);
+dialog.classList.toggle('modal-lg', !wide && !small);
+dialog.classList.toggle('modal-md', small);
 var box = $('.modal-body', formModal);
-box.innerHTML = content.innerHTML;
+box.innerHTML = '<div class="erp-form-in">' + content.innerHTML + '</div>';
+formModal.classList.remove('is-waiting', 'is-saving');
+formModal._changed = false;
 formAt = page.url;
 ERP.modalFormUrl = page.url;
 ERP.initPage(box);
@@ -1471,29 +1518,49 @@ if (!first) { $('.btn-close', formModal).focus(); return; }
 try { first.focus({ preventScroll: true }); } catch (err) { first.focus(); }
 if (first.classList.contains('is-invalid')) first.scrollIntoView({ block: 'center' });
 };
-var formOpen = function (href) {
+var formCache = {};
+var formFetch = function (href) {
+var hit = formCache[href];
+if (hit && Date.now() - hit.at < 20000) return hit.promise;
+var promise = fetchPage(href);
+formCache[href] = { at: Date.now(), promise: promise };
+promise.catch(function () { delete formCache[href]; });
+return promise;
+};
+var SKELETON = '<div class="erp-form-skeleton" aria-hidden="true">' + new Array(4).join('<div class="sk-row"><div><i class="sk-label"></i><i class="sk-box"></i></div><div><i class="sk-label"></i><i class="sk-box"></i></div></div>')
++ '<div class="sk-row"><div><i class="sk-label"></i><i class="sk-box is-tall"></i></div></div></div>';
+var formOpen = function (href, trigger) {
 var mine = ++formTurn;
-body.classList.add('is-loading');
 closeDrawer();
 closeDropdowns();
-return fetchPage(href).then(function (page) {
-if (mine !== formTurn) return;
-if (!page.ok || !fill(page)) { go(href, true); return; }
+if (!formModal) buildModal();
+var label = trigger ? (trigger.getAttribute('title') || trigger.getAttribute('aria-label') || trigger.textContent.replace(/\s+/g, ' ').trim()) : '';
+setHead(label, '', '');
+$('.modal-body', formModal).innerHTML = SKELETON;
+formModal.classList.add('is-waiting');
+formModal.classList.remove('is-saving');
+formModal._changed = false;
+formAt = href;
+if (!formModal.classList.contains('show')) ERP.showModal(formModal);
+var away = function () { formModal._changed = false; ERP.hideModal(formModal); go(href, true); };
+return formFetch(href).then(function (page) {
+delete formCache[href];                                 // the page that was read is used up
+if (mine !== formTurn || !formModal.classList.contains('show')) return;
+if (!page.ok || !fill(page)) { away(); return; }
 toastsOf(page.doc);
-ERP.showModal(formModal);
 focusFirst();
 }).catch(function () {
-if (mine === formTurn) go(href, true);
-}).then(function () {
-if (mine === formTurn) body.classList.remove('is-loading');
+if (mine === formTurn && formModal.classList.contains('show')) away();
 });
 };
-ERP.openForm = function (href) { return formOpen(new URL(href, location.href).href); };
+ERP.openForm = function (href, trigger) { return formOpen(new URL(href, location.href).href, trigger); };
 var formSend = function (form, submitter) {
 var data;
 try { data = submitter && submitter.name ? new FormData(form, submitter) : new FormData(form); } catch (err) { data = new FormData(form); if (submitter && submitter.name) data.append(submitter.name, submitter.value); }
 var sentFrom = formAt;
+formModal.classList.add('is-saving');
 var done = function () {
+formModal.classList.remove('is-saving');
 form._sent = false;
 $$('.is-busy', form).forEach(function (b) { b.classList.remove('is-busy'); b.removeAttribute('aria-disabled'); });
 };
@@ -1504,22 +1571,31 @@ var success = !!page.doc.querySelector('[data-toast="success"]');
 if (!page.ok) { done(); toastsOf(page.doc, 'danger'); if (!page.doc.querySelector('[data-toast="danger"]')) ERP.toast(T.failed || 'Could not save.', 'danger'); return; }
 if (back.pathname + back.search === from.pathname + from.search && !success) {
 if (!fill(page)) { done(); return; }
+formModal._changed = true;                           // what was typed is still not saved
 toastsOf(page.doc, 'danger');
 toastsOf(page.doc, 'warning');
 focusFirst();
+var dialog = $('.modal-dialog', formModal);
+dialog.classList.remove('is-wrong');
+void dialog.offsetWidth;
+dialog.classList.add('is-wrong');
 return;
 }
 if (back.pathname + back.search === from.pathname + from.search && page.doc.querySelector('[data-modal-stay]')) {
 if (fill(page)) { toastsOf(page.doc, 'success'); formModal._dirty = true; focusFirst(); return; }
 }
+formCache = {};
+formModal._changed = false;
+formModal._dirty = false;
 ERP.hideModal(formModal);
-if (back.pathname + back.search === from.pathname + from.search) {
-toastsOf(page.doc, 'success');
-go(location.href, false, window.scrollY);
-return;
+if (back.pathname + back.search === here) {
+show({ doc: page.doc, url: page.url }, false, window.scrollY);
+} else if (/\/\d+$/.test(back.pathname)) {
+show({ doc: page.doc, url: page.url }, true, 0);
+} else {
+toastsOf(page.doc);
+go(location.href, false, window.scrollY, true);
 }
-var same = back.pathname + back.search === here;
-show({ doc: page.doc, url: page.url }, !same, same ? window.scrollY : 0);
 }).catch(function () {
 done();
 ERP.toast(T.failed || 'Could not save.', 'danger');
@@ -1537,12 +1613,14 @@ if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey
 var url = linkOf(e);
 if (!url) return;
 e.preventDefault();
-if (isFormLink(e.target.closest('a[href]'), url)) { formOpen(url.href); return; }
+if (isFormLink(e.target.closest('a[href]'), url)) { formOpen(url.href, e.target.closest('a[href]')); return; }
 go(url.href, true);
 });
 var warm = function (e) {
 var url = linkOf(e);
-if (url && url.pathname + url.search !== here && !isFormLink(e.target.closest('a[href]'), url)) load(url.href).catch(function () { return null; });
+if (!url || url.pathname + url.search === here) return;
+if (isFormLink(e.target.closest('a[href]'), url)) formFetch(url.href).catch(function () { return null; });
+else load(url.href).catch(function () { return null; });
 };
 document.addEventListener('mouseover', warm, { passive: true });
 document.addEventListener('touchstart', warm, { passive: true });

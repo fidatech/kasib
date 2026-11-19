@@ -3336,5 +3336,7 @@
     "Paid in": "واریز",
     "Receipts": "دریافت‌ها",
     "Paid out": "پرداخت شده",
-    "The amount is in the currency of this account.": "مبلغ به اسعار همین حساب است."
+    "The amount is in the currency of this account.": "مبلغ به اسعار همین حساب است.",
+    "Close without saving?": "بدون ثبت بسته شود؟",
+    "What you typed will be lost.": "آنچه نوشته‌اید از بین می‌رود."
 }

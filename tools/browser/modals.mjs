@@ -39,9 +39,17 @@ for (const [label, viewport, locale] of [['desktop', { width: 1440, height: 900 
     await page.keyboard.press('Escape');
     await page.screenshot({ path: `shots/${label}-2-customers.png` });
     const add = page.locator('.app-content a[href$="/create"]').first();
+    // the modal is there at once, before the form has arrived
+    let t0 = Date.now();
     await add.click();
     const modal = page.locator('.erp-form-modal.show');
     await modal.waitFor({ timeout: 15000 }).catch(() => {});
+    const opened = Date.now() - t0;
+    check(`${label}: the modal is on the screen within 300 ms of the click`, opened < 300, opened + ' ms');
+    await page.screenshot({ path: `shots/${label}-3a-opening.png` });
+    await modal.locator('.erp-form-in').waitFor({ timeout: 15000 }).catch(() => {});
+    check(`${label}: the form arrives in it`, (await modal.locator('.erp-form-in form').count()) > 0, (Date.now() - t0) + ' ms');
+    check(`${label}: the page under it was not loaded anew`, await page.evaluate(() => !document.body.classList.contains('is-loading')));
     check(`${label}: Add opens a modal`, await modal.isVisible(), page.url());
     check(`${label}: the address stays on the list`, !/\/create$/.test(page.url()), page.url());
     await page.waitForTimeout(400);
@@ -65,6 +73,40 @@ for (const [label, viewport, locale] of [['desktop', { width: 1440, height: 900 
     const listed = await page.locator('.app-content').innerText();
     check(`${label}: the new customer is on the page`, listed.includes(name));
     await page.screenshot({ path: `shots/${label}-5-after-save.png` });
+
+    // the pencil of a row opens its form the same way, and what was typed is not lost by a slip
+    const pencil = page.locator('.app-content a[href$="/edit"]').first();
+    await pencil.click();
+    await modal.locator('.erp-form-in').waitFor({ timeout: 15000 }).catch(() => {});
+    check(`${label}: Edit opens in the modal with its record`, (await modal.locator('input[name="name"]').inputValue().catch(() => '')) !== '');
+    await page.screenshot({ path: `shots/${label}-5a-edit.png` });
+    await modal.locator('input[name="phone"]').fill('0700 000 001');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(500);
+    check(`${label}: closing a changed form asks first`, (await page.locator('.erp-confirm.show').count()) === 1 && await modal.isVisible());
+    await page.screenshot({ path: `shots/${label}-5a2-discard.png` });
+    await page.locator('.erp-confirm.show [data-ok]').click();
+    await page.waitForTimeout(600);
+    check(`${label}: and then closes`, !(await modal.isVisible()));
+
+    // a paper saved from the dashboard: one stays on the dashboard
+    await page.goto(site + '/');
+    await page.waitForLoadState('networkidle');
+    const quick = page.locator('.quickbar a[href$="/money-in/create"]').first();
+    if (await quick.count() && await quick.isVisible()) {
+        await quick.click();
+        await modal.locator('.erp-form-in').waitFor({ timeout: 15000 }).catch(() => {});
+        check(`${label}: the quick bar opens Money In in the modal`, await modal.isVisible() && new URL(page.url()).pathname === '/');
+        await modal.locator('select[name="party_id"]').selectOption({ index: 1 }, { force: true }).catch(() => {});
+        await modal.locator('input[name="amount"]').fill('1250');
+        await page.screenshot({ path: `shots/${label}-5a3-money-in-filled.png` });
+        await modal.locator('button[type="submit"]').last().click();
+        await page.waitForTimeout(3500);
+        check(`${label}: saved from the dashboard, one stays on the dashboard`, !(await modal.isVisible()) && new URL(page.url()).pathname === '/', page.url());
+        await page.screenshot({ path: `shots/${label}-5a4-after-money-in.png` });
+    }
+    await page.goto(site + '/accounts/customers');
+    await page.waitForLoadState('networkidle');
 
     // the notes of an account: a list with its own form, which stays open after a note is added
     const notes = page.locator('.app-content a[data-modal]', { hasText: /Notes|یادداشت|یادښت/ }).first();

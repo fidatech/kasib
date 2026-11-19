@@ -6,6 +6,7 @@
         'noResults' => __('app.nav.no_results'),
         'addNew' => __('New'),
         'failed' => __('Something went wrong. Please try again.'),
+        'discardTitle' => __('Close without saving?'), 'discardText' => __('What you typed will be lost.'), 'discardOk' => __('Close'),
         'moreFilters' => __('More filters'), 'fewerFilters' => __('Fewer filters'), 'clearFilters' => __('Clear all'), 'removeFilter' => __('Remove'),
         // heads of table columns, by the colour their amounts are shown in
         'tones' => [
