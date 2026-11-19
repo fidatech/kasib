@@ -1,0 +1,35 @@
+name: probe
+
+# Times the live demo from outside, signed in as its public user: where a slow page spends its time.
+# Runs when .github/probe-kasib changes on development.
+on:
+  push:
+    branches: [development]
+    paths: ['.github/probe-kasib']
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Time the pages of the demo
+        run: |
+          site=https://demo.kasib.af
+          fmt='dns %{time_namelookup}  connect %{time_connect}  tls %{time_appconnect}  first byte %{time_starttransfer}  whole %{time_total}  %{http_code}  %{size_download} bytes\n'
+          for round in 1 2 3; do
+            for page in https://kasib.af/ $site/login $site/css/app.css $site/js/app.js; do
+              printf '%-44s ' "$page"; curl -sS -o /dev/null --compressed --max-time 40 -w "$fmt" "$page" || true
+            done
+          done
+          jar=$(mktemp)
+          token=$(curl -sS --compressed -c "$jar" "$site/login" | grep -o 'name="_token" value="[^"]*"' | head -1 | sed 's/.*value="//; s/"$//')
+          printf '%-44s ' "POST /login"; curl -sS -o /dev/null -b "$jar" -c "$jar" --max-time 40 -w "$fmt" --data-urlencode "_token=$token" --data-urlencode "email=demo@kasib.af" --data-urlencode "password=demo1234" "$site/login" || true
+          for round in 1 2; do
+            for page in / /accounts/customers /money-in /journal /trade/sales /reports/trial-balance /reports/balances /items; do
+              printf '%-44s ' "$page"; curl -sS -o /tmp/page.html -b "$jar" -c "$jar" --compressed --max-time 60 -w "$fmt" "$site$page" || true
+            done
+          done
+          echo "--- what the dashboard asks the browser to load"
+          curl -sS -b "$jar" --compressed "$site/" | grep -o '\(src\|href\)="[^"]*\.\(js\|css\|svg\|woff2\|png\|jpg\)[^"]*"' | sort | uniq -c | head -30
+          echo "--- response headers of the dashboard"
+          curl -sS -o /dev/null -D - -b "$jar" --compressed "$site/" | head -25
