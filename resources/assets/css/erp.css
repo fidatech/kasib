@@ -706,6 +706,28 @@ button.ws-mark { cursor: pointer; } button.ws-mark:hover { border-style: solid; 
     .page-header-actions { flex-shrink: 0; flex-wrap: nowrap; }
 }
 
+/* ------------------------------------------------------------------ forms in a modal */
+.erp-form-modal .modal-content { border: 0; border-radius: 18px; background: var(--card); box-shadow: var(--shadow-lg); }
+.erp-form-modal .modal-header { gap: 12px; padding: 16px 22px; border-bottom: 1px solid var(--border); }
+.erp-form-modal .modal-header .btn-close { margin-inline-start: auto; }
+.erp-form-icon:empty { display: none; }
+.erp-form-icon { flex: none; width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: color-mix(in srgb, var(--primary) 11%, transparent); color: var(--primary); }
+.erp-form-modal .modal-title { font-size: 17px; font-weight: 800; color: var(--heading); margin: 0; }
+.erp-form-modal .modal-body { padding: 18px 22px 0; background: var(--card); }
+/* the cards of a form page lose their frame inside the modal; its buttons stay in sight at the bottom */
+.erp-form-modal .modal-body > .card, .erp-form-modal .modal-body > form.card, .erp-form-modal .modal-body > form > .card { border: 0; box-shadow: none; background: transparent; margin-bottom: 0; }
+.erp-form-modal .modal-body .card > .card-body, .erp-form-modal .modal-body form.card > .card-body { padding: 0 0 18px; }
+.erp-form-modal .modal-body .card > .card-header { padding-inline: 0; background: transparent; }
+.erp-form-modal .modal-body .card-footer { position: sticky; bottom: 0; z-index: 3; margin: 0 -22px; padding: 14px 22px; background: var(--card); border-top: 1px solid var(--border); }
+.erp-form-modal .modal-body > :last-child:not(form):not(.card) { margin-bottom: 18px; }
+.erp-form-modal .modal-body .crumbs { display: none; }
+@media (max-width: 575.98px) {
+    .erp-form-modal .modal-content { border-radius: 0; }
+    .erp-form-modal .modal-body { padding: 14px 16px 0; }
+    .erp-form-modal .modal-body .card-footer { margin: 0 -16px; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
+    .erp-form-modal .modal-body .card-footer .btn { flex: 1 1 0; }
+}
+
 /* ------------------------------------------------------------------ tables, second pass
    A list reads like a ledger sheet: a quiet head that stays in sight, lines that are easy to follow,
    figures in one column width, and amounts in the colour of what they mean. */

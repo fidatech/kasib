@@ -174,7 +174,8 @@
         if (open) { e.preventDefault(); closeDrawer(); ERP.showModal(open.getAttribute('data-bs-target')); return; }
         var dismiss = e.target.closest('[data-bs-dismiss="modal"]');
         if (dismiss) { ERP.hideModal(dismiss.closest('.modal')); return; }
-        if (e.target.classList && e.target.classList.contains('modal')) ERP.hideModal(e.target);
+        // a click beside a form never closes it: what was typed would be lost
+        if (e.target.classList && e.target.classList.contains('modal') && !e.target.hasAttribute('data-static')) ERP.hideModal(e.target);
     });
     document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;
@@ -553,6 +554,7 @@
                 + '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="' + ERP.escape(T.cancel || 'Cancel') + '"></button></div><div class="modal-body"></div></div></div>';
             body.appendChild(quickModal);
         }
+        body.appendChild(quickModal);              // above a form that is open in a modal
         var box = $('.modal-body', quickModal);
         $('.modal-title', quickModal).textContent = trigger.getAttribute('data-quick-title') || trigger.textContent.trim() || '';
         box.innerHTML = '<div class="text-center text-muted py-5">\u2026</div>';
@@ -618,7 +620,8 @@
         var selector = trigger.getAttribute('data-quick-target');
         var targets = selector ? $$(selector) : [trigger];
         var templates = selector ? $$('template') : [];
-        fetch(window.location.href, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        var source = (trigger.closest && trigger.closest('.erp-form-modal') && ERP.modalFormUrl) || window.location.href;
+        fetch(source, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (response) { return response.text(); })
             .then(function (html) {
                 var fresh = new DOMParser().parseFromString(html, 'text/html');
@@ -1519,17 +1522,186 @@
         };
         ERP.visit = function (href) { return go(new URL(href, location.href).href, true); };
 
+        // ------------------------------------------------------------ forms in a modal
+        // A link to a form ("Add", "Edit", a button of the quick bar) opens the form over the page instead
+        // of on a page of its own. The form page is fetched and its content shown in the modal; on Save it
+        // is sent in the background: with a mistake the form comes back with its errors, done, the page
+        // the form leads to (usually the list, now with the new record) is shown under the closed modal.
+        // A form page opened directly by its address is still an ordinary page.
+        var formModal = null;
+        var formAt = null;                     // the address of the form that is open
+        var formTurn = 0;
+        var isFormLink = function (a, url) {
+            if (!a || a.hasAttribute('data-no-modal') || (a.closest && a.closest('.erp-form-modal'))) return false;
+            return a.hasAttribute('data-modal') || /\/(create|\d+\/edit)$/.test(url.pathname);
+        };
+        var fetchPage = function (href, init) {
+            init = init || {};
+            init.credentials = 'same-origin';
+            init.headers = { 'X-Soft-Navigation': '1', Accept: 'text/html' };
+            return fetch(href, init).then(function (response) {
+                if (response.status === 419) { location.reload(); throw new Error('expired'); }
+                if ((response.headers.get('Content-Type') || '').indexOf('text/html') === -1) throw new Error('not a page');
+                return response.text().then(function (html) {
+                    var doc = new DOMParser().parseFromString(html, 'text/html');
+                    if (!doc.body.hasAttribute('data-soft') || !doc.querySelector('.app-content')) throw new Error('another layout');
+                    return { doc: doc, url: response.url || href, ok: response.ok };
+                });
+            });
+        };
+        var toastsOf = function (doc, only) {
+            Array.prototype.slice.call(doc.querySelectorAll('[data-toast]')).forEach(function (el) {
+                if (!only || el.getAttribute('data-toast') === only) ERP.toast(el.textContent.trim(), el.getAttribute('data-toast'));
+            });
+        };
+        var buildModal = function () {
+            formModal = document.createElement('div');
+            formModal.className = 'modal fade erp-form-modal';
+            formModal.setAttribute('tabindex', '-1');
+            formModal.setAttribute('aria-hidden', 'true');
+            formModal.setAttribute('role', 'dialog');
+            formModal.setAttribute('aria-modal', 'true');
+            formModal.setAttribute('data-static', '');
+            formModal.innerHTML = '<div class="modal-dialog modal-dialog-scrollable modal-fullscreen-sm-down"><div class="modal-content">'
+                + '<div class="modal-header"><span class="erp-form-icon"></span><h2 class="h5 modal-title" id="erpFormTitle"></h2>'
+                + '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="' + ERP.escape(T.cancel || 'Cancel') + '"></button></div>'
+                + '<div class="modal-body"></div></div></div>';
+            formModal.setAttribute('aria-labelledby', 'erpFormTitle');
+            formModal.addEventListener('erp:hidden', function () { formAt = null; ERP.modalFormUrl = null; $('.modal-body', formModal).innerHTML = ''; });
+            // a link inside the form: one back to the page under it (Cancel) only closes the modal,
+            // any other one closes it and is followed
+            formModal.addEventListener('click', function (e) {
+                var a = e.target.closest('a[href]');
+                if (!a || a.target || a.hasAttribute('download') || a.hasAttribute('data-bs-toggle') || a.getAttribute('href').charAt(0) === '#') return;
+                var url;
+                try { url = new URL(a.href, location.href); } catch (err) { return; }
+                if (url.origin !== location.origin) return;
+                e.preventDefault();
+                e.stopPropagation();
+                ERP.hideModal(formModal);
+                if (/\/(create|\d+\/edit)$/.test(url.pathname)) setTimeout(function () { formOpen(url.href); }, 200);
+                // Cancel leads back to the list under the modal: closing it is enough
+                else if (url.pathname !== location.pathname) go(url.href, true);
+            });
+            body.appendChild(formModal);
+        };
+        // put the content of a form page into the modal; false when the page holds no form to send
+        var fill = function (page) {
+            var content = page.doc.querySelector('.app-content');
+            if (!content || content.querySelector('script') || !content.querySelector('form[method="POST"], form[method="post"]')) return false;
+            if (!formModal) buildModal();
+            var header = content.querySelector('.page-header');
+            var heading = header ? header.querySelector('h1') : content.querySelector('h1');
+            $('.modal-title', formModal).textContent = heading ? heading.textContent.trim() : document.title;
+            var icon = header ? header.querySelector('.page-header-icon') : null;
+            $('.erp-form-icon', formModal).innerHTML = icon ? icon.innerHTML : '';
+            if (header) header.remove();
+            // the modal must not reuse the ids of the page under it
+            var ids = {};
+            Array.prototype.slice.call(content.querySelectorAll('[id]')).forEach(function (el) { ids[el.id] = 'mf-' + el.id; el.id = ids[el.id]; });
+            ['for', 'aria-describedby', 'aria-labelledby', 'aria-controls', 'list', 'form'].forEach(function (attr) {
+                Array.prototype.slice.call(content.querySelectorAll('[' + attr + ']')).forEach(function (el) {
+                    el.setAttribute(attr, el.getAttribute(attr).split(/\s+/).map(function (id) { return ids[id] || id; }).join(' '));
+                });
+            });
+            Array.prototype.slice.call(content.querySelectorAll('[data-bs-target], a[href^="#"]')).forEach(function (el) {
+                var attr = el.hasAttribute('data-bs-target') ? 'data-bs-target' : 'href', value = el.getAttribute(attr);
+                if (value && value.charAt(0) === '#' && ids[value.slice(1)]) el.setAttribute(attr, '#' + ids[value.slice(1)]);
+            });
+            // a wide form (an invoice with its lines, a table of rows) gets a wide modal
+            var wide = content.querySelector('form[data-invoice], table[data-rows], .table-responsive table, .row .col-xl-8, .col-lg-8');
+            var dialog = $('.modal-dialog', formModal);
+            dialog.classList.toggle('modal-xl', !!wide);
+            dialog.classList.toggle('modal-lg', !wide);
+            var box = $('.modal-body', formModal);
+            box.innerHTML = content.innerHTML;
+            formAt = page.url;
+            ERP.modalFormUrl = page.url;
+            ERP.initPage(box);
+            return true;
+        };
+        var focusFirst = function () {
+            var box = $('.modal-body', formModal);
+            var wrong = $('.is-invalid', box);
+            var first = wrong || $('[autofocus], input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([readonly]), select, textarea', box);
+            if (first) { try { first.focus({ preventScroll: !!wrong }); } catch (err) { first.focus(); } if (wrong) wrong.scrollIntoView({ block: 'center' }); }
+        };
+        var formOpen = function (href) {
+            var mine = ++formTurn;
+            body.classList.add('is-loading');
+            closeDrawer();
+            closeDropdowns();
+            return fetchPage(href).then(function (page) {
+                if (mine !== formTurn) return;
+                if (!page.ok || !fill(page)) { go(href, true); return; }
+                toastsOf(page.doc);
+                ERP.showModal(formModal);
+                focusFirst();
+            }).catch(function () {
+                if (mine === formTurn) go(href, true);
+            }).then(function () {
+                if (mine === formTurn) body.classList.remove('is-loading');
+            });
+        };
+        ERP.openForm = function (href) { return formOpen(new URL(href, location.href).href); };
+        var formSend = function (form, submitter) {
+            var data;
+            try { data = submitter && submitter.name ? new FormData(form, submitter) : new FormData(form); } catch (err) { data = new FormData(form); if (submitter && submitter.name) data.append(submitter.name, submitter.value); }
+            var sentFrom = formAt;
+            var done = function () {
+                form._sent = false;
+                $$('.is-busy', form).forEach(function (b) { b.classList.remove('is-busy'); b.removeAttribute('aria-disabled'); });
+            };
+            // the form page is named as the page the form was sent from, so a mistake leads back to it
+            fetchPage(form.action, { method: 'POST', body: data, referrer: sentFrom, referrerPolicy: 'same-origin' }).then(function (page) {
+                if (!formModal.classList.contains('show') || formAt !== sentFrom) return;
+                var back = new URL(page.url, location.href), from = new URL(sentFrom, location.href);
+                var success = !!page.doc.querySelector('[data-toast="success"]');
+                if (!page.ok) { done(); toastsOf(page.doc, 'danger'); if (!page.doc.querySelector('[data-toast="danger"]')) ERP.toast(T.failed || 'Could not save.', 'danger'); return; }
+                if (back.pathname + back.search === from.pathname + from.search && !success) {
+                    // a mistake: the same form, now with what is wrong marked
+                    if (!fill(page)) { done(); return; }
+                    toastsOf(page.doc, 'danger');
+                    toastsOf(page.doc, 'warning');
+                    focusFirst();
+                    return;
+                }
+                ERP.hideModal(formModal);
+                if (back.pathname + back.search === from.pathname + from.search) {
+                    // saved, and sent back to the form: the page under it is read again
+                    toastsOf(page.doc, 'success');
+                    go(location.href, false, window.scrollY);
+                    return;
+                }
+                var same = back.pathname + back.search === here;
+                show({ doc: page.doc, url: page.url }, !same, same ? window.scrollY : 0);
+            }).catch(function () {
+                done();
+                ERP.toast(T.failed || 'Could not save.', 'danger');
+            });
+        };
+        // after the other handlers of a submit (the confirmation, the guard against sending twice)
+        document.addEventListener('submit', function (e) {
+            var form = e.target;
+            if (e.defaultPrevented || !formModal || !formModal.contains(form) || form.hasAttribute('data-quick-form')) return;
+            if ((form.getAttribute('method') || 'get').toLowerCase() !== 'post' || form.target) return;
+            e.preventDefault();
+            formSend(form, e.submitter);
+        });
+
         document.addEventListener('click', function (e) {
             if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
             var url = linkOf(e);
             if (!url) return;
             e.preventDefault();
+            if (isFormLink(e.target.closest('a[href]'), url)) { formOpen(url.href); return; }
             go(url.href, true);
         });
         // the page is fetched while the pointer (or the finger) is still on its link
         var warm = function (e) {
             var url = linkOf(e);
-            if (url && url.pathname + url.search !== here) load(url.href).catch(function () { return null; });
+            // a form is fetched when it is asked for, never ahead: it must be fresh
+            if (url && url.pathname + url.search !== here && !isFormLink(e.target.closest('a[href]'), url)) load(url.href).catch(function () { return null; });
         };
         document.addEventListener('mouseover', warm, { passive: true });
         document.addEventListener('touchstart', warm, { passive: true });

@@ -1,0 +1,32 @@
+name: browser
+
+# Opens the live demo in Chrome, checks the forms in their modals, and keeps screenshots as an artifact.
+# Runs when .github/browser-kasib changes on development.
+on:
+  push:
+    branches: [development]
+    paths: ['.github/browser-kasib']
+  workflow_dispatch:
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check the forms of the demo in Chrome
+        working-directory: tools/browser
+        run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright@1 >/dev/null
+          node modals.mjs
+      - name: Keep the screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shots
+          path: tools/browser/shots
+          retention-days: 7
