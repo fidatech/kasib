@@ -47,7 +47,9 @@ for (const [label, viewport, locale] of [['desktop', { width: 1440, height: 900 
     await page.waitForTimeout(400);
     await page.screenshot({ path: `shots/${label}-3-add-customer.png` });
 
-    // sent empty: the form comes back in the modal with what is missing marked
+    // sent empty: the form comes back in the modal with what is missing marked. The browser's own check of
+    // required boxes is switched off for this, so it is the server that answers.
+    await modal.locator('form').first().evaluate((f) => { f.noValidate = true; });
     await modal.locator('button[type="submit"]').last().click();
     await page.waitForTimeout(2500);
     check(`${label}: a mistake keeps the modal open`, await modal.isVisible());
