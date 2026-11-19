@@ -38,7 +38,7 @@ class JournalController extends Controller
 
         $lines = JournalLine::with(['account.currency', 'entry.creator'])
             ->where('journal_lines.branch_id', $branch?->id)
-            ->whereDate('journal_lines.date', '>=', $from)->whereDate('journal_lines.date', '<=', $to)
+            ->whereDay('journal_lines.date', '>=', $from)->whereDay('journal_lines.date', '<=', $to)
             ->when(empty($f['cancelled']), fn ($q) => $q->where('is_void', false))
             ->when($f['account'] ?? null, fn ($q, $id) => $q->where('account_id', $id))
             ->when($f['currency'] ?? null, fn ($q, $id) => $q->where('currency_id', $id))
@@ -58,7 +58,7 @@ class JournalController extends Controller
             'from' => $from, 'to' => $to, 'term' => $term, 'f' => $f, 'branch' => $branch,
             'branches' => can_oversee() ? Branch::withBooks()->orderBy('id')->pluck('name', 'id')->all() : [],
             'accounts' => Account::with('currency')->where('branch_id', $branch?->id)->orderBy('name')->get(),
-            'types' => JournalEntry::where('branch_id', $branch?->id)->distinct()->orderBy('type')->pluck('type'),
+            'types' => cache()->remember('journal-types:'.tenant()?->id.':'.$branch?->id, 600, fn () => JournalEntry::where('branch_id', $branch?->id)->distinct()->orderBy('type')->pluck('type')),
             'currencies' => Currency::orderByDesc('is_base')->orderBy('code')->get(),
             'users' => User::orderBy('name')->pluck('name', 'id'),
             'totals' => ['debit' => Num::money($totals->debit ?? 0), 'credit' => Num::money($totals->credit ?? 0)],
@@ -81,10 +81,19 @@ class JournalController extends Controller
         if ($accounts->isEmpty()) {
             return [];
         }
-        $sum = fn (string $operator, string $date) => JournalLine::whereIn('account_id', $accounts->pluck('id'))->where('is_void', false)->whereDate('date', $operator, $date)
+        $sum = fn (string $operator, string $date) => JournalLine::whereIn('account_id', $accounts->pluck('id'))->where('is_void', false)->whereDay('date', $operator, $date)
             ->groupBy('currency_id')->selectRaw('currency_id, COALESCE(SUM(debit),0) - COALESCE(SUM(credit),0) as amount')->toBase()->pluck('amount', 'currency_id');
-        $before = $sum('<', $from);
-        $after = $sum('<=', $to);
+        if ($to >= today_iso() && ! JournalLine::whereIn('account_id', $accounts->pluck('id'))->where('date', '>', $to.' 23:59:59')->exists()) {
+            // up to today: what every account holds is already known, and only the days shown are added up
+            $after = \Illuminate\Support\Facades\DB::table('account_balances as b')->join('accounts as a', 'a.id', '=', 'b.account_id')->whereIn('a.id', $accounts->pluck('id'))
+                ->groupBy('a.currency_id')->selectRaw('a.currency_id as currency_id, COALESCE(SUM(b.balance), 0) as amount')->pluck('amount', 'currency_id');
+            $moved = JournalLine::whereIn('account_id', $accounts->pluck('id'))->where('is_void', false)->where('date', '>=', $from)
+                ->groupBy('currency_id')->selectRaw('currency_id, COALESCE(SUM(debit),0) - COALESCE(SUM(credit),0) as amount')->toBase()->pluck('amount', 'currency_id');
+            $before = $after->map(fn ($amount, $currency) => Num::sub($amount, $moved[$currency] ?? '0'));
+        } else {
+            $before = $sum('<', $from);
+            $after = $sum('<=', $to);
+        }
 
         $rows = [];
         foreach ($accounts->pluck('currency')->unique('id')->sortByDesc('is_base') as $currency) {

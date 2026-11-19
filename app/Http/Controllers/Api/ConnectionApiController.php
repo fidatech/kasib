@@ -111,7 +111,7 @@ class ConnectionApiController extends Controller
         $running = $opening;
         $lines = [];
         if ($account) {
-            foreach (JournalLine::with('entry')->where('account_id', $account->id)->where('is_void', false)->whereDate('date', '>=', $from)->whereDate('date', '<=', $to)->orderBy('date')->orderBy('id')->limit(5000)->get() as $line) {
+            foreach (JournalLine::with('entry')->where('account_id', $account->id)->where('is_void', false)->whereDay('date', '>=', $from)->whereDay('date', '<=', $to)->orderBy('date')->orderBy('id')->limit(5000)->get() as $line) {
                 $running = Num::money(Num::add($running, Num::mul(Num::sub($line->debit, $line->credit), $sign)));
                 $lines[] = ['date' => substr((string) $line->date, 0, 10), 'number' => $line->entry?->number, 'description' => $line->memo ?: $line->entry?->description,
                     'debit' => Num::money($line->debit), 'credit' => Num::money($line->credit), 'balance' => $running];

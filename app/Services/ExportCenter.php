@@ -105,7 +105,7 @@ class ExportCenter
     private static function vouchers(string $kind, string $from, string $to)
     {
         return Voucher::with(['party', 'account', 'otherAccount.category', 'currency', 'otherCurrency', 'creator'])->where('kind', $kind)
-            ->whereDate('date', '>=', $from)->whereDate('date', '<=', $to)->orderBy('date')->orderBy('id')->limit(self::LIMIT)->get();
+            ->whereDay('date', '>=', $from)->whereDay('date', '<=', $to)->orderBy('date')->orderBy('id')->limit(self::LIMIT)->get();
     }
 
     private static function state(Voucher|Expense|CashCount|CapitalEntry $paper): string
@@ -170,7 +170,7 @@ class ExportCenter
     {
         $base = Currency::base()->code;
         $rows = [self::head([__('Date'), __('Expense category'), __('Amount'), __('Currency'), __('Value in :currency', ['currency' => $base]), __('Paid from'), __('Details'), __('User'), __('Status')])];
-        $expenses = Expense::with(['category', 'paidAccount', 'currency', 'creator'])->whereDate('date', '>=', $from)->whereDate('date', '<=', $to)->orderBy('date')->orderBy('id')->limit(self::LIMIT)->get();
+        $expenses = Expense::with(['category', 'paidAccount', 'currency', 'creator'])->whereDay('date', '>=', $from)->whereDay('date', '<=', $to)->orderBy('date')->orderBy('id')->limit(self::LIMIT)->get();
         foreach ($expenses as $e) {
             $rows[] = self::row([fmt_date($e->date), $e->category->label(), self::n($e->amount), $e->currency->code, self::n($e->base_amount), $e->paidAccount->label(), (string) $e->description, (string) $e->creator?->name, self::state($e)]);
         }
@@ -182,7 +182,7 @@ class ExportCenter
     {
         $base = Currency::base()->code;
         $rows = [self::head([__('No.'), __('Deal'), __('Opened on'), __('Status'), __('Closed on'), __('Cost').' '.$base, __('Received').' '.$base, __('Profit or loss').' '.$base])];
-        foreach (Deal::whereDate('opened_on', '<=', $to)->where(fn ($q) => $q->whereNull('closed_on')->orWhereDate('closed_on', '>=', $from))->orderBy('id')->limit(self::LIMIT)->get() as $deal) {
+        foreach (Deal::whereDay('opened_on', '<=', $to)->where(fn ($q) => $q->whereNull('closed_on')->orWhereDate('closed_on', '>=', $from))->orderBy('id')->limit(self::LIMIT)->get() as $deal) {
             $f = Deals::figures($deal);
             $rows[] = self::row([$deal->number, $deal->name, fmt_date($deal->opened_on), $deal->isOpen() ? __('Open') : __('Closed'), fmt_date($deal->closed_on), self::n($f['cost']), self::n($f['received']), self::n($deal->isOpen() ? $f['result'] : $deal->result)]);
         }
@@ -193,7 +193,7 @@ class ExportCenter
     private static function sheetCashCounts(string $from, string $to): array
     {
         $rows = [self::head([__('No.'), __('Date'), __('Account'), __('Currency'), __('In the books'), __('Counted'), __('Difference'), __('Notes'), __('User'), __('Status')])];
-        foreach (CashCount::with(['account', 'currency', 'creator'])->whereDate('date', '>=', $from)->whereDate('date', '<=', $to)->orderBy('date')->orderBy('id')->limit(self::LIMIT)->get() as $c) {
+        foreach (CashCount::with(['account', 'currency', 'creator'])->whereDay('date', '>=', $from)->whereDay('date', '<=', $to)->orderBy('date')->orderBy('id')->limit(self::LIMIT)->get() as $c) {
             $rows[] = self::row([$c->number, fmt_date($c->date), $c->account->label(), $c->currency->code, self::n($c->book), self::n($c->counted), self::n($c->difference), (string) $c->note, (string) $c->creator?->name, self::state($c)]);
         }
 
@@ -203,7 +203,7 @@ class ExportCenter
     private static function sheetCapital(string $from, string $to): array
     {
         $rows = [self::head([__('Date'), __('Shareholder'), __('Kind'), __('Amount'), __('Notes'), __('Status')])];
-        foreach (CapitalEntry::with('shareholder')->whereDate('date', '>=', $from)->whereDate('date', '<=', $to)->orderBy('date')->orderBy('id')->limit(self::LIMIT)->get() as $e) {
+        foreach (CapitalEntry::with('shareholder')->whereDay('date', '>=', $from)->whereDay('date', '<=', $to)->orderBy('date')->orderBy('id')->limit(self::LIMIT)->get() as $e) {
             $rows[] = self::row([fmt_date($e->date), (string) $e->shareholder?->name, __(CapitalEntry::KINDS[$e->kind] ?? $e->kind), self::n($e->amount), (string) $e->notes, self::state($e)]);
         }
 
@@ -215,7 +215,7 @@ class ExportCenter
         $base = Currency::base()->code;
         $rows = [self::head([__('Date'), __('No.'), __('Transaction type'), __('Details'), __('Account'), __('Currency'), __('Debit'), __('Credit'), __('Debit').' '.$base, __('Credit').' '.$base, __('User')])];
         $lines = JournalLine::with(['entry.creator', 'account.currency'])->where('is_void', false)
-            ->whereDate('date', '>=', $from)->whereDate('date', '<=', $to)->orderBy('date')->orderBy('id')->limit(self::LIMIT)->get();
+            ->whereDay('date', '>=', $from)->whereDay('date', '<=', $to)->orderBy('date')->orderBy('id')->limit(self::LIMIT)->get();
         foreach ($lines as $line) {
             $rows[] = self::row([fmt_date($line->date), $line->entry->number, $line->entry->type, (string) ($line->memo ?: $line->entry->description), $line->account->label(), $line->account->currency->code,
                 self::n($line->debit), self::n($line->credit), self::n($line->base_debit), self::n($line->base_credit), (string) $line->entry->creator?->name]);
@@ -229,7 +229,7 @@ class ExportCenter
     {
         $base = Currency::base()->code;
         $rows = [self::head([__('Account'), __('Group'), __('Currency'), __('Balance'), __('Debit').' '.$base, __('Credit').' '.$base])];
-        $sums = JournalLine::where('is_void', false)->whereDate('date', '<=', $to)->groupBy('account_id')
+        $sums = JournalLine::where('is_void', false)->whereDay('date', '<=', $to)->groupBy('account_id')
             ->selectRaw('account_id, SUM(debit) as debit, SUM(credit) as credit, SUM(base_debit) as base_debit, SUM(base_credit) as base_credit')->toBase()->get()->keyBy('account_id');
         $debit = '0';
         $credit = '0';

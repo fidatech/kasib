@@ -48,7 +48,7 @@ class StatementLinkController extends Controller
         // the customer deals with the business, whichever branch served him: one balance per currency
         $accounts = [];
         foreach ($party->allAccounts()->with(['currency', 'total'])->get()->groupBy('currency_id')->sortKeys() as $group) {
-            $lines = JournalLine::whereIn('account_id', $group->pluck('id'))->where('is_void', false)->whereDate('date', '>=', $since)->orderByDesc('date')->orderByDesc('id')->limit(200)->get();
+            $lines = JournalLine::whereIn('account_id', $group->pluck('id'))->where('is_void', false)->whereDay('date', '>=', $since)->orderByDesc('date')->orderByDesc('id')->limit(200)->get();
             // from the side of the customer: above zero the business owes him
             $balance = Num::money(Num::neg(Num::sum($group->map(fn ($account) => $account->total?->balance ?? 0))));
             if ($lines->isEmpty() && Num::isZero($balance)) {

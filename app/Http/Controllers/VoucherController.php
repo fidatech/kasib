@@ -35,8 +35,8 @@ abstract class VoucherController extends PaperController
 
         return Voucher::with(['party', 'account.currency', 'otherAccount.currency', 'otherAccount.category', 'currency', 'otherCurrency', 'creator'])
             ->where('kind', $this->kind)
-            ->when($f['from'] ?? null, fn ($q, $v) => $q->whereDate('date', '>=', $v))
-            ->when($f['to'] ?? null, fn ($q, $v) => $q->whereDate('date', '<=', $v))
+            ->when($f['from'] ?? null, fn ($q, $v) => $q->whereDay('date', '>=', $v))
+            ->when($f['to'] ?? null, fn ($q, $v) => $q->whereDay('date', '<=', $v))
             ->when($f['party'] ?? null, fn ($q, $v) => $q->where('party_id', $v))
             ->when($f['currency'] ?? null, fn ($q, $v) => $q->where(fn ($w) => $w->where('currency_id', $v)->orWhere('other_currency_id', $v)))
             ->when($f['account'] ?? null, fn ($q, $v) => $q->where(fn ($w) => $w->where('account_id', $v)->orWhere('other_account_id', $v)))

@@ -73,7 +73,7 @@ class Days
     {
         $accounts = self::moneyAccounts($branch);
         $moves = JournalLine::whereIn('account_id', $accounts->pluck('id'))
-            ->where('is_void', false)->whereDate('date', $date)
+            ->where('is_void', false)->whereDay('date', $date)
             ->groupBy('currency_id')
             ->selectRaw('currency_id, COALESCE(SUM(debit),0) as debit, COALESCE(SUM(credit),0) as credit')
             ->toBase()->get()->keyBy('currency_id');

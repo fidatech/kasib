@@ -33,12 +33,12 @@ class ReconciliationController extends Controller
         if ($account) {
             $cleared = DB::table('cleared_lines')->pluck('journal_line_id')->flip();
             $lines = JournalLine::with('entry')->where('account_id', $account->id)->where('is_void', false)
-                ->whereDate('date', '>=', $from)->whereDate('date', '<=', $to)->orderBy('date')->orderBy('id')->limit(3000)->get()
+                ->whereDay('date', '>=', $from)->whereDay('date', '<=', $to)->orderBy('date')->orderBy('id')->limit(3000)->get()
                 ->each(fn (JournalLine $line) => $line->setAttribute('is_cleared', $cleared->has($line->id)))
                 ->when(($f['show'] ?? 'all') === 'open', fn ($all) => $all->where('is_cleared', false)->values());
 
             $sum = fn ($query) => Num::money((clone $query)->selectRaw('COALESCE(SUM(debit),0) - COALESCE(SUM(credit),0) as total')->value('total') ?? 0);
-            $upTo = JournalLine::where('account_id', $account->id)->where('is_void', false)->whereDate('date', '<=', $to);
+            $upTo = JournalLine::where('account_id', $account->id)->where('is_void', false)->whereDay('date', '<=', $to);
             $book = $sum($upTo);
             $ticked = $sum((clone $upTo)->whereIn('id', DB::table('cleared_lines')->select('journal_line_id')));
             $figures = ['book' => $book, 'cleared' => $ticked, 'open' => Num::money(Num::sub($book, $ticked)),

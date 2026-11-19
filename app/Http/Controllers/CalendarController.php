@@ -30,12 +30,12 @@ class CalendarController extends Controller
         $add = function (string $date, string $kind, string $text, ?string $url = null) use (&$events) {
             $events[$date][] = ['kind' => $kind, 'text' => $text, 'url' => $url];
         };
-        foreach (Voucher::with(['party.group', 'currency'])->where('kind', Voucher::MONEY_IN)->whereNull('cancelled_at')->whereDate('due_date', '>=', $first)->whereDate('due_date', '<=', $last)->orderBy('due_date')->limit(2000)->get() as $voucher) {
+        foreach (Voucher::with(['party.group', 'currency'])->where('kind', Voucher::MONEY_IN)->whereNull('cancelled_at')->whereDay('due_date', '>=', $first)->whereDay('due_date', '<=', $last)->orderBy('due_date')->limit(2000)->get() as $voucher) {
             $add($voucher->due_date->toDateString(), 'due', $voucher->party?->name.' · '.money($voucher->amount, $voucher->currency->code),
                 $voucher->party?->group ? route('accounts.statement', ['group' => $voucher->party->group->key, 'id' => $voucher->party->id, 'currency' => $voucher->currency_id]) : null);
         }
         if ($request->user()->can('accounts.view')) {
-            foreach (PartyNote::with('party')->whereNull('done_at')->whereDate('remind_on', '>=', $first)->whereDate('remind_on', '<=', $last)->limit(2000)->get() as $note) {
+            foreach (PartyNote::with('party')->whereNull('done_at')->whereDay('remind_on', '>=', $first)->whereDay('remind_on', '<=', $last)->limit(2000)->get() as $note) {
                 $add(substr((string) $note->remind_on, 0, 10), 'reminder', $note->party?->name.': '.$note->note, route('reminders.index'));
             }
         }
@@ -48,7 +48,7 @@ class CalendarController extends Controller
             }
         }
         if ($request->user()->can('settings.view')) {
-            foreach (Document::whereDate('expires_on', '>=', $first)->whereDate('expires_on', '<=', $last)->get() as $document) {
+            foreach (Document::whereDay('expires_on', '>=', $first)->whereDay('expires_on', '<=', $last)->get() as $document) {
                 $add($document->expires_on->toDateString(), 'document', $document->title, route('documents.index'));
             }
         }

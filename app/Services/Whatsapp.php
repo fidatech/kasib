@@ -88,7 +88,7 @@ class Whatsapp
         }
         $sent = 0;
         $papers = Voucher::with(['party.accounts.total', 'currency'])->where('kind', Voucher::MONEY_IN)->whereNull('cancelled_at')->whereNull('reminded_at')
-            ->whereNotNull('due_date')->whereDate('due_date', '<=', now()->addDay()->toDateString())->orderBy('id')->limit(500)->get();
+            ->whereNotNull('due_date')->whereDay('due_date', '<=', now()->addDay()->toDateString())->orderBy('id')->limit(500)->get();
         foreach ($papers as $voucher) {
             $account = $voucher->party?->accounts->firstWhere('currency_id', $voucher->currency_id);
             if (! $voucher->party?->phone || ! Num::isPositive(Num::neg($account?->total?->balance ?? 0))) {

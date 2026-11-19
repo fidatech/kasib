@@ -208,7 +208,7 @@ class Ledger
     {
         $row = JournalLine::where('account_id', $accountId)
             ->where('is_void', false)
-            ->whereDate('date', $before ? '<' : '<=', $date)
+            ->whereDay('date', $before ? '<' : '<=', $date)
             ->selectRaw('COALESCE(SUM(debit),0) as debit, COALESCE(SUM(credit),0) as credit')
             ->toBase()
             ->first();

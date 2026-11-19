@@ -36,7 +36,7 @@ class DashboardController extends Controller
             $month = Carbon::parse($today)->startOfMonth()->subMonths($i);
             $months[$month->format('Y-m')] = '0';
         }
-        foreach (Payment::whereNull('cancelled_at')->whereDate('paid_on', '>=', array_key_first($months).'-01')->get(['paid_on', 'amount']) as $payment) {
+        foreach (Payment::whereNull('cancelled_at')->whereDay('paid_on', '>=', array_key_first($months).'-01')->get(['paid_on', 'amount']) as $payment) {
             $key = $payment->paid_on->format('Y-m');
             if (isset($months[$key])) {
                 $months[$key] = Num::add($months[$key], $payment->amount);

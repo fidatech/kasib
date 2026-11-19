@@ -288,7 +288,7 @@ jobs:
           "$PHP" artisan demo:refresh || echo "::warning::The demo could not be made; run: php artisan demo:refresh"
           [ -e public/storage ] || "$PHP" artisan storage:link || true
           "$PHP" artisan config:cache
-          "$PHP" artisan route:clear
+          "$PHP" artisan route:cache || "$PHP" artisan route:clear
           "$PHP" artisan view:cache
           # the daily jobs (depreciation, licences, backups, summaries): one line in the crontab of this user
           line="* * * * * cd $FOLDER && $PHP artisan schedule:run >> /dev/null 2>&1"
@@ -304,6 +304,8 @@ jobs:
           echo "OPcache of the website: $(curl -s --max-time 20 "https://$DOMAIN/$once" | head -c 200)"
           rm -f "public/$once"
           "$PHP" artisan up
+          echo "How long the pages of the demo take on this server:"
+          "$PHP" artisan demo:profile --slow=150 || true
           echo "Deployed: $("$PHP" artisan --version)"
           SH
           echo "Deployed commit ${GITHUB_SHA} to kasib.af" >> "$GITHUB_STEP_SUMMARY"
@@ -323,6 +325,9 @@ jobs:
           echo "Registration page: $(echo "$page" | grep -c 'js/register.js') x register.js, $(echo "$page" | grep -o '<option value=' | wc -l) options, $(echo "$page" | wc -c) bytes" | tee -a "$GITHUB_STEP_SUMMARY"
           home=$(curl -sS -L --max-time 25 "https://$DOMAIN/" 2>/dev/null || true)
           echo "Home page: $(echo "$home" | grep -o '<title>[^<]*</title>' | head -1), $(echo "$home" | grep -c 'site-hero') x site-hero, $(echo "$home" | wc -c) bytes" | tee -a "$GITHUB_STEP_SUMMARY"
+          for page in "https://$DOMAIN/" "https://demo.$DOMAIN/login" "https://demo.$DOMAIN/css/app.css"; do
+            echo "From outside: $page $(curl -sS -o /dev/null -w 'first byte %{time_starttransfer}s, whole %{time_total}s, %{size_download} bytes' --compressed --max-time 30 "$page" 2>/dev/null || true)" | tee -a "$GITHUB_STEP_SUMMARY"
+          done
           echo "Demo on the home page: $(echo "$home" | grep -c 'site-demo-facts') box; its sign-in page answers $(curl -sS -o /dev/null -w '%{http_code}' -L --max-time 25 "https://demo.$DOMAIN/login" 2>/dev/null || true) and names the demo $(curl -sS -L --max-time 25 "https://demo.$DOMAIN/login" 2>/dev/null | grep -c 'demo@') time(s)" | tee -a "$GITHUB_STEP_SUMMARY"
           # no certificate for the domain yet: cPanel is asked to get one now (AutoSSL), which takes some minutes
           if [ "$PANEL" = cpanel ] && ! curl -s -o /dev/null --max-time 25 "https://$DOMAIN/"; then

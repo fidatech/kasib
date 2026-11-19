@@ -232,7 +232,7 @@ class PartyController extends CrudController
         $opening = Num::money(Num::mul(Ledger::balanceOn($account->id, $from, true), $sign));
         $lines = JournalLine::with('entry')
             ->where('account_id', $account->id)->where('is_void', false)
-            ->whereDate('date', '>=', $from)->whereDate('date', '<=', $to)
+            ->whereDay('date', '>=', $from)->whereDay('date', '<=', $to)
             ->orderBy('date')->orderBy('id')->limit(5000)->get();
 
         $running = $opening;
