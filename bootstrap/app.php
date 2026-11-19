@@ -35,6 +35,8 @@ return Application::configure(basePath: dirname(__DIR__))
         );
         // the connection (routes/api.php) is called at the address of a business too
         $middleware->api(prepend: [InitializeTenancy::class]);
+        // every page leaves gzipped (outermost, so it packs what all the others produced)
+        $middleware->web(prepend: [\App\Http\Middleware\CompressResponse::class]);
         $middleware->alias(['central' => EnsureCentral::class, 'tenant' => EnsureTenant::class, 'staff' => \App\Http\Middleware\StaffMay::class, 'pro' => \App\Http\Middleware\RequirePro::class]);
         // the address is checked before anyone is asked to sign in
         $middleware->prependToPriorityList(AuthenticatesRequests::class, EnsureCentral::class);

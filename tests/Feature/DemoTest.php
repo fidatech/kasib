@@ -94,6 +94,21 @@ class DemoTest extends TestCase
         $this->assertNull($demo->fresh()->licence_expires_on);
     }
 
+    public function test_pages_leave_gzipped_for_a_browser_that_takes_gzip(): void
+    {
+        $this->business();
+        $this->owner();
+        $plain = $this->get('/reports')->assertOk();
+        $this->assertFalse($plain->headers->has('Content-Encoding'));
+        $packed = $this->withHeaders(['Accept-Encoding' => 'gzip, deflate, br'])->get('/reports');
+        $packed->assertOk()->assertHeader('Content-Encoding', 'gzip');
+        $this->assertSame($plain->getContent() !== '' ? strlen(gzdecode($packed->getContent())) > 5000 : false, true);
+        $this->assertLessThan(strlen($plain->getContent()) / 3, strlen($packed->getContent()));
+        // the roznamcha opens twice: the second time its list of kinds comes from the cache
+        $this->withHeaders(['Accept-Encoding' => ''])->get('/journal')->assertOk();
+        $this->get('/journal')->assertOk();
+    }
+
     public function test_an_ordinary_business_is_not_a_demo(): void
     {
         $this->business();

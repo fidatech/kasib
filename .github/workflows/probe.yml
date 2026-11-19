@@ -31,5 +31,7 @@ jobs:
           done
           echo "--- what the dashboard asks the browser to load"
           curl -sS -b "$jar" --compressed "$site/" | grep -o '\(src\|href\)="[^"]*\.\(js\|css\|svg\|woff2\|png\|jpg\)[^"]*"' | sort | uniq -c | head -30
-          echo "--- response headers of the dashboard"
-          curl -sS -o /dev/null -D - -b "$jar" --compressed "$site/" | head -25
+          for page in / /money-in /journal /reports/balances; do
+            echo "--- response headers of $page"
+            curl -sS -o /dev/null -D - -b "$jar" -H 'Accept-Encoding: gzip, br' "$site$page" | grep -i 'HTTP/\|content-encoding\|content-length\|content-type\|server\|vary\|x-litespeed\|transfer-encoding' || true
+          done

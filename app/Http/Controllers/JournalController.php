@@ -58,7 +58,7 @@ class JournalController extends Controller
             'from' => $from, 'to' => $to, 'term' => $term, 'f' => $f, 'branch' => $branch,
             'branches' => can_oversee() ? Branch::withBooks()->orderBy('id')->pluck('name', 'id')->all() : [],
             'accounts' => Account::with('currency')->where('branch_id', $branch?->id)->orderBy('name')->get(),
-            'types' => cache()->remember('journal-types:'.tenant()?->id.':'.$branch?->id, 600, fn () => JournalEntry::where('branch_id', $branch?->id)->distinct()->orderBy('type')->pluck('type')),
+            'types' => cache()->remember('journal-types:'.tenant()?->id.':'.$branch?->id, 600, fn () => JournalEntry::where('branch_id', $branch?->id)->distinct()->orderBy('type')->pluck('type')->all()),   // a plain list: the cache does not bring objects back
             'currencies' => Currency::orderByDesc('is_base')->orderBy('code')->get(),
             'users' => User::orderBy('name')->pluck('name', 'id'),
             'totals' => ['debit' => Num::money($totals->debit ?? 0), 'credit' => Num::money($totals->credit ?? 0)],
