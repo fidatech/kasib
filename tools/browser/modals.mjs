@@ -100,6 +100,7 @@ for (const [label, viewport, locale] of [['desktop', { width: 1440, height: 900 
         await modal.locator('select[name="party_id"]').selectOption({ index: 1 }, { force: true }).catch(() => {});
         await modal.locator('input[name="amount"]').fill('1250');
         await page.screenshot({ path: `shots/${label}-5a3-money-in-filled.png` });
+        console.log('FRAME ' + JSON.stringify(await page.evaluate(() => Array.from(document.querySelectorAll('.erp-form-modal .modal-body, .erp-form-modal .modal-body *')).filter((e) => { const c = getComputedStyle(e); return (parseFloat(c.borderLeftWidth) > 0 || c.boxShadow !== 'none' || c.outlineStyle !== 'none') && e.getBoundingClientRect().width > 600; }).map((e) => { const c = getComputedStyle(e); return [e.tagName, e.className, c.borderLeftWidth, c.boxShadow.slice(0, 50), c.outlineStyle, e.parentElement.className]; })) + ' CSS ' + Array.from(document.styleSheets).map((x) => x.href).join(' ')));
         await modal.locator('button[type="submit"]').last().click();
         await page.waitForTimeout(3500);
         check(`${label}: saved from the dashboard, one stays on the dashboard`, !(await modal.isVisible()) && new URL(page.url()).pathname === '/', page.url());
