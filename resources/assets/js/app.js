@@ -153,7 +153,7 @@
         void modal.offsetWidth;
         modal.classList.add('show');
         back.classList.add('show');
-        var focus = $('[autofocus], input:not([type="hidden"]), .btn-primary, .btn', modal);
+        var focus = $('[autofocus]', modal) || $('input:not([type="hidden"]), .btn-primary, .btn', modal);
         if (focus) focus.focus();
         modal.dispatchEvent(new CustomEvent('erp:shown'));
     };
@@ -1567,7 +1567,13 @@
                 + '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="' + ERP.escape(T.cancel || 'Cancel') + '"></button></div>'
                 + '<div class="modal-body"></div></div></div>';
             formModal.setAttribute('aria-labelledby', 'erpFormTitle');
-            formModal.addEventListener('erp:hidden', function () { formAt = null; ERP.modalFormUrl = null; $('.modal-body', formModal).innerHTML = ''; });
+            formModal.addEventListener('erp:hidden', function () {
+                formAt = null;
+                ERP.modalFormUrl = null;
+                $('.modal-body', formModal).innerHTML = '';
+                // something was added while it was open (a note, a file): the page under it is read again
+                if (formModal._dirty) { formModal._dirty = false; go(location.href, false, window.scrollY); }
+            });
             // a link inside the form: one back to the page under it (Cancel) only closes the modal,
             // any other one closes it and is followed
             formModal.addEventListener('click', function (e) {
@@ -1579,7 +1585,7 @@
                 e.preventDefault();
                 e.stopPropagation();
                 ERP.hideModal(formModal);
-                if (/\/(create|\d+\/edit)$/.test(url.pathname)) setTimeout(function () { formOpen(url.href); }, 200);
+                if (a.hasAttribute('data-modal') || /\/(create|\d+\/edit)$/.test(url.pathname)) setTimeout(function () { formOpen(url.href); }, 200);
                 // Cancel leads back to the list under the modal: closing it is enough
                 else if (url.pathname !== location.pathname) go(url.href, true);
             });
@@ -1596,6 +1602,14 @@
             var icon = header ? header.querySelector('.page-header-icon') : null;
             $('.erp-form-icon', formModal).innerHTML = icon ? icon.innerHTML : '';
             if (header) header.remove();
+            // what belongs to the whole page (the notice of the demo, the announcements) stays on the page
+            Array.prototype.slice.call(content.querySelectorAll('[data-page-only]')).forEach(function (el) { el.remove(); });
+            // the box to start typing in: the first one with a mistake, else the first ordinary box, not a
+            // date (its calendar would cover the form); on a phone none, so the keyboard does not jump up
+            Array.prototype.slice.call(content.querySelectorAll('[autofocus]')).forEach(function (el) { el.removeAttribute('autofocus'); });
+            var phone = window.matchMedia && window.matchMedia('(max-width: 575.98px)').matches;
+            var start = content.querySelector('.is-invalid') || (phone ? null : content.querySelector('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="date"]):not([data-shamsi-date]):not([readonly]):not([disabled]), textarea:not([readonly])'));
+            if (start) start.setAttribute('autofocus', '');
             // the modal must not reuse the ids of the page under it
             var ids = {};
             Array.prototype.slice.call(content.querySelectorAll('[id]')).forEach(function (el) { ids[el.id] = 'mf-' + el.id; el.id = ids[el.id]; });
@@ -1622,9 +1636,10 @@
         };
         var focusFirst = function () {
             var box = $('.modal-body', formModal);
-            var wrong = $('.is-invalid', box);
-            var first = wrong || $('[autofocus], input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([readonly]), select, textarea', box);
-            if (first) { try { first.focus({ preventScroll: !!wrong }); } catch (err) { first.focus(); } if (wrong) wrong.scrollIntoView({ block: 'center' }); }
+            var first = $('[autofocus]', box);
+            if (!first) { $('.btn-close', formModal).focus(); return; }
+            try { first.focus({ preventScroll: true }); } catch (err) { first.focus(); }
+            if (first.classList.contains('is-invalid')) first.scrollIntoView({ block: 'center' });
         };
         var formOpen = function (href) {
             var mine = ++formTurn;
@@ -1665,6 +1680,10 @@
                     toastsOf(page.doc, 'warning');
                     focusFirst();
                     return;
+                }
+                if (back.pathname + back.search === from.pathname + from.search && page.doc.querySelector('[data-modal-stay]')) {
+                    // a list of its own (notes, files): it stays open, with what was just added
+                    if (fill(page)) { toastsOf(page.doc, 'success'); formModal._dirty = true; focusFirst(); return; }
                 }
                 ERP.hideModal(formModal);
                 if (back.pathname + back.search === from.pathname + from.search) {

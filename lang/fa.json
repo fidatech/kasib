@@ -3335,5 +3335,6 @@
     ":count items are low in stock.": ":count جنس رو به اتمام است.",
     "Paid in": "واریز",
     "Receipts": "دریافت‌ها",
-    "Paid out": "پرداخت شده"
+    "Paid out": "پرداخت شده",
+    "The amount is in the currency of this account.": "مبلغ به اسعار همین حساب است."
 }

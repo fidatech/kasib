@@ -139,8 +139,8 @@ class PartyController extends CrudController
     {
         return [
             ['label' => __('Statement'), 'url' => route('accounts.statement', $this->routeParams() + ['id' => $record->id])],
-            ['label' => __('Notes'), 'url' => route('accounts.notes', $this->routeParams() + ['id' => $record->id])],
-            ['label' => __('Files'), 'url' => route('attachments.index', ['type' => 'party', 'id' => $record->id])],
+            ['label' => __('Notes'), 'url' => route('accounts.notes', $this->routeParams() + ['id' => $record->id]), 'modal' => true],
+            ['label' => __('Files'), 'url' => route('attachments.index', ['type' => 'party', 'id' => $record->id]), 'modal' => true],
         ];
     }
 

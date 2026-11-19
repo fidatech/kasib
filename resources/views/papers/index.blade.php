@@ -70,7 +70,7 @@
                             <td class="text-end text-nowrap no-print">
                                 <div class="act-group">
                                     @if ($row->isCancelled())<span class="badge bg-secondary-subtle text-secondary">{{ __('Cancelled') }}</span>@endif
-                                    @if (! empty($attach))<a class="btn btn-sm btn-light-secondary" href="{{ route('attachments.index', ['type' => 'voucher', 'id' => $row->getKey()]) }}" title="{{ __('Files') }}" aria-label="{{ __('Files') }}"><x-icon name="paperclip" /></a>@endif
+                                    @if (! empty($attach))<a data-modal class="btn btn-sm btn-light-secondary" href="{{ route('attachments.index', ['type' => 'voucher', 'id' => $row->getKey()]) }}" title="{{ __('Files') }}" aria-label="{{ __('Files') }}"><x-icon name="paperclip" /></a>@endif
                                     <x-act kind="receipt" :href="route($route.'.receipt', ['id' => $row->getKey()])" blank />
                                     @if ($canManage && ! $row->isCancelled())
                                         <form method="POST" action="{{ route($route.'.destroy', ['id' => $row->getKey()]) }}" class="d-inline" data-confirm="{{ __('Cancel this? It stays on the list, crossed out.') }}" data-confirm-ok="{{ __('Cancel it') }}">

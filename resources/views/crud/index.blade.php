@@ -69,7 +69,7 @@
                                         @if (! empty($link['post']))
                                             <form method="POST" action="{{ $link['url'] }}" class="d-inline" @isset($link['confirm']) data-confirm="{{ $link['confirm'] }}" data-confirm-ok="{{ $link['label'] }}" @endisset>@csrf<button type="submit" class="btn btn-sm btn-light-secondary">{{ $link['label'] }}</button></form>
                                         @else
-                                            <a class="btn btn-sm btn-light-secondary" href="{{ $link['url'] }}">{{ $link['label'] }}</a>
+                                            <a class="btn btn-sm btn-light-secondary" href="{{ $link['url'] }}" @if (! empty($link['modal'])) data-modal @endif>{{ $link['label'] }}</a>
                                         @endif
                                     @endforeach
                                     @if ($canManage && $editable($row))

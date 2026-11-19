@@ -1,9 +1,10 @@
 @extends('layouts.app', ['title' => __('Notes and promises')])
 
 @section('content')
+<div data-modal-stay hidden></div>
 <x-page-header :title="$party->name" :icon="$group->icon" :crumbs="[[$group->label(), route('accounts.index', ['group' => $group->key])], [__('Notes and promises')]]" :subtitle="__('Notes and promises').($party->phone ? ' · '.$party->phone : '')">
     <a class="btn btn-outline-soft" href="{{ route('accounts.statement', ['group' => $group->key, 'id' => $party->id]) }}">{{ __('Statement') }}</a>
-    <a class="btn btn-outline-soft" href="{{ route('attachments.index', ['type' => 'party', 'id' => $party->id]) }}"><x-icon name="paperclip" class="me-1" /> {{ __('Files') }}</a>
+    <a class="btn btn-outline-soft" href="{{ route('attachments.index', ['type' => 'party', 'id' => $party->id]) }}" data-modal><x-icon name="paperclip" class="me-1" /> {{ __('Files') }}</a>
 </x-page-header>
 
 @if ($canManage)

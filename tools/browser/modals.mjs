@@ -66,6 +66,24 @@ for (const [label, viewport, locale] of [['desktop', { width: 1440, height: 900 
     check(`${label}: the new customer is on the page`, listed.includes(name));
     await page.screenshot({ path: `shots/${label}-5-after-save.png` });
 
+    // the notes of an account: a list with its own form, which stays open after a note is added
+    const notes = page.locator('.app-content a[data-modal]', { hasText: /Notes|یادداشت|یادښت/ }).first();
+    if (await notes.count()) {
+        await notes.click();
+        await page.waitForTimeout(2500);
+        check(`${label}: Notes open in a modal`, await modal.isVisible());
+        await page.screenshot({ path: `shots/${label}-5b-notes.png` });
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(400);
+    }
+    // the profile, from the menu of the user
+    await page.evaluate(() => window.ERP && window.ERP.openForm('/profile'));
+    await page.waitForTimeout(2500);
+    check(`${label}: the profile opens in a modal`, await modal.isVisible());
+    await page.screenshot({ path: `shots/${label}-5c-profile.png` });
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(400);
+
     // a paper: money in, and a sale with its lines in a wide modal
     for (const [step, path] of [['6-money-in', '/money-in/create'], ['7-sale', '/trade/sales/create'], ['8-purchase', '/trade/purchases/create']]) {
         await page.goto(site + '/');

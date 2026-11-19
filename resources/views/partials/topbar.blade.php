@@ -78,8 +78,8 @@
             <ul class="dropdown-menu dropdown-menu-end user-menu">
                 <li class="user-menu-head"><span class="avatar avatar-md avatar-soft-primary">{{ $user->initials() }}</span><div><strong>{{ $user->name }}</strong><small>{{ $user->email }}</small></div></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><x-icon name="user" /> {{ __('My Profile') }}</a></li>
-                <li><a class="dropdown-item" href="{{ route('password.edit') }}"><x-icon name="key" /> {{ __('Change Password') }}</a></li>
+                <li><a class="dropdown-item" href="{{ route('profile.edit') }}" data-modal><x-icon name="user" /> {{ __('My Profile') }}</a></li>
+                <li><a class="dropdown-item" href="{{ route('password.edit') }}" data-modal><x-icon name="key" /> {{ __('Change Password') }}</a></li>
                 @can('settings.manage')
                     <li><button class="dropdown-item" type="submit" form="refreshForm"><x-icon name="rotate" /> {{ __('Refresh the System') }}</button></li>
                 @endcan

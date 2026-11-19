@@ -131,7 +131,7 @@ body.classList.add('modal-open');
 void modal.offsetWidth;
 modal.classList.add('show');
 back.classList.add('show');
-var focus = $('[autofocus], input:not([type="hidden"]), .btn-primary, .btn', modal);
+var focus = $('[autofocus]', modal) || $('input:not([type="hidden"]), .btn-primary, .btn', modal);
 if (focus) focus.focus();
 modal.dispatchEvent(new CustomEvent('erp:shown'));
 };
@@ -1405,7 +1405,12 @@ formModal.innerHTML = '<div class="modal-dialog modal-dialog-scrollable modal-fu
 + '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="' + ERP.escape(T.cancel || 'Cancel') + '"></button></div>'
 + '<div class="modal-body"></div></div></div>';
 formModal.setAttribute('aria-labelledby', 'erpFormTitle');
-formModal.addEventListener('erp:hidden', function () { formAt = null; ERP.modalFormUrl = null; $('.modal-body', formModal).innerHTML = ''; });
+formModal.addEventListener('erp:hidden', function () {
+formAt = null;
+ERP.modalFormUrl = null;
+$('.modal-body', formModal).innerHTML = '';
+if (formModal._dirty) { formModal._dirty = false; go(location.href, false, window.scrollY); }
+});
 formModal.addEventListener('click', function (e) {
 var a = e.target.closest('a[href]');
 if (!a || a.target || a.hasAttribute('download') || a.hasAttribute('data-bs-toggle') || a.getAttribute('href').charAt(0) === '#') return;
@@ -1415,7 +1420,7 @@ if (url.origin !== location.origin) return;
 e.preventDefault();
 e.stopPropagation();
 ERP.hideModal(formModal);
-if (/\/(create|\d+\/edit)$/.test(url.pathname)) setTimeout(function () { formOpen(url.href); }, 200);
+if (a.hasAttribute('data-modal') || /\/(create|\d+\/edit)$/.test(url.pathname)) setTimeout(function () { formOpen(url.href); }, 200);
 else if (url.pathname !== location.pathname) go(url.href, true);
 });
 body.appendChild(formModal);
@@ -1430,6 +1435,11 @@ $('.modal-title', formModal).textContent = heading ? heading.textContent.trim() 
 var icon = header ? header.querySelector('.page-header-icon') : null;
 $('.erp-form-icon', formModal).innerHTML = icon ? icon.innerHTML : '';
 if (header) header.remove();
+Array.prototype.slice.call(content.querySelectorAll('[data-page-only]')).forEach(function (el) { el.remove(); });
+Array.prototype.slice.call(content.querySelectorAll('[autofocus]')).forEach(function (el) { el.removeAttribute('autofocus'); });
+var phone = window.matchMedia && window.matchMedia('(max-width: 575.98px)').matches;
+var start = content.querySelector('.is-invalid') || (phone ? null : content.querySelector('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="date"]):not([data-shamsi-date]):not([readonly]):not([disabled]), textarea:not([readonly])'));
+if (start) start.setAttribute('autofocus', '');
 var ids = {};
 Array.prototype.slice.call(content.querySelectorAll('[id]')).forEach(function (el) { ids[el.id] = 'mf-' + el.id; el.id = ids[el.id]; });
 ['for', 'aria-describedby', 'aria-labelledby', 'aria-controls', 'list', 'form'].forEach(function (attr) {
@@ -1454,9 +1464,10 @@ return true;
 };
 var focusFirst = function () {
 var box = $('.modal-body', formModal);
-var wrong = $('.is-invalid', box);
-var first = wrong || $('[autofocus], input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([readonly]), select, textarea', box);
-if (first) { try { first.focus({ preventScroll: !!wrong }); } catch (err) { first.focus(); } if (wrong) wrong.scrollIntoView({ block: 'center' }); }
+var first = $('[autofocus]', box);
+if (!first) { $('.btn-close', formModal).focus(); return; }
+try { first.focus({ preventScroll: true }); } catch (err) { first.focus(); }
+if (first.classList.contains('is-invalid')) first.scrollIntoView({ block: 'center' });
 };
 var formOpen = function (href) {
 var mine = ++formTurn;
@@ -1495,6 +1506,9 @@ toastsOf(page.doc, 'danger');
 toastsOf(page.doc, 'warning');
 focusFirst();
 return;
+}
+if (back.pathname + back.search === from.pathname + from.search && page.doc.querySelector('[data-modal-stay]')) {
+if (fill(page)) { toastsOf(page.doc, 'success'); formModal._dirty = true; focusFirst(); return; }
 }
 ERP.hideModal(formModal);
 if (back.pathname + back.search === from.pathname + from.search) {

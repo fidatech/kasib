@@ -1,6 +1,7 @@
 @extends('layouts.app', ['title' => __('Files')])
 
 @section('content')
+<div data-modal-stay hidden></div>
 <x-page-header :title="$title" icon="paperclip" :crumbs="[[__('Back'), $back], [__('Files')]]" :subtitle="__('Photos and PDFs kept with this record: a receipt, a contract, an identity card.')" />
 
 @if ($canManage)

@@ -15,8 +15,8 @@
         @include('partials.quickbar')
         <main class="app-content">
             <div class="content-container">
-                @if (\App\Services\Demo::is(tenant()))<div class="alert alert-info py-2 mb-3" role="note">{{ __('This is the demo. Everything recorded here is erased at midnight (12:00 AM).') }}</div>@endif
-                @include('partials.service-notices')
+                @if (\App\Services\Demo::is(tenant()))<div class="alert alert-info py-2 mb-3" role="note" data-page-only>{{ __('This is the demo. Everything recorded here is erased at midnight (12:00 AM).') }}</div>@endif
+                <div data-page-only>@include('partials.service-notices')</div>
                 @yield('content')
             </div>
         </main>

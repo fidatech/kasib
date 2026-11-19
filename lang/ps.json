@@ -3335,5 +3335,6 @@
     ":count items are low in stock.": ":count جنسونه په ختمېدو دي.",
     "Paid in": "جمع شوي",
     "Receipts": "رسیدونه",
-    "Paid out": "ورکړل شوي"
+    "Paid out": "ورکړل شوي",
+    "The amount is in the currency of this account.": "مبلغ د همدې حساب په اسعارو دی."
 }

@@ -23,7 +23,7 @@
         </div>
     </div>
     <div class="card-footer d-flex gap-2 justify-content-end">
-        <a class="btn btn-light-secondary" href="{{ route('password.edit') }}">{{ __('Change Password') }}</a>
+        <a class="btn btn-light-secondary" href="{{ route('password.edit') }}" data-modal>{{ __('Change Password') }}</a>
         <button type="submit" class="btn btn-primary"><x-icon name="check" class="me-1" /> {{ __('Save') }}</button>
     </div>
 </form>
