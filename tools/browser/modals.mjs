@@ -17,7 +17,11 @@ for (const [label, viewport, locale] of [['desktop', { width: 1440, height: 900 
     await page.click('button[type="submit"]');
     await page.waitForLoadState('networkidle');
     // the guide of the screen starts by itself in the demo: it is put away
-    await page.evaluate((u) => { try { Object.keys(localStorage).forEach((k) => { if (k.indexOf('tour') > -1) localStorage.setItem(k, 'done'); }); } catch (e) {} }, '');
+    await page.evaluate(() => { try { localStorage.setItem('hb.tour.' + window.ERP_TOUR.user, '1'); } catch (e) {} });
+    const setLocale = (l) => page.evaluate(async (l) => {
+            const t = document.querySelector('meta[name="csrf-token"]')?.content;
+            await fetch('/language', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: '_token=' + encodeURIComponent(t) + '&locale=' + l, credentials: 'same-origin' });
+        }, l);
     if (locale !== 'en') {
         await page.evaluate(async (l) => {
             const t = document.querySelector('meta[name="csrf-token"]')?.content || document.querySelector('input[name="_token"]')?.value;
@@ -72,6 +76,8 @@ for (const [label, viewport, locale] of [['desktop', { width: 1440, height: 900 
         await page.waitForTimeout(400);
     }
     check(`${label}: no script errors`, errors.length === 0, errors.slice(0, 3).join(' | '));
+    // the demo user is shared: its language goes back to English
+    if (locale !== 'en') await setLocale('en');
     await page.close();
 }
 await browser.close();
