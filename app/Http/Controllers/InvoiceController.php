@@ -28,7 +28,7 @@ class InvoiceController extends Controller
         $f = $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date'], 'party' => ['nullable', 'integer'], 'q' => ['nullable', 'string', 'max:100'], 'status' => ['nullable', 'in:open,cancelled']]);
 
         $rows = Invoice::with(['party', 'currency', 'creator'])->where('kind', $kind)
-            ->when($f['from'] ?? null, fn ($q, $v) => $q->whereDay('date', '>=', $v))->when($f['to'] ?? null, fn ($q, $v) => $q->whereDay('date', '<=', $v))
+            ->when($f['from'] ?? null, fn ($q, $v) => $q->whereDayOf('date', '>=', $v))->when($f['to'] ?? null, fn ($q, $v) => $q->whereDayOf('date', '<=', $v))
             ->when($f['party'] ?? null, fn ($q, $v) => $q->where('party_id', $v))
             ->when(($f['status'] ?? null) === 'cancelled', fn ($q) => $q->whereNotNull('cancelled_at'))->when(($f['status'] ?? null) === 'open', fn ($q) => $q->whereNull('cancelled_at'))
             ->when(trim((string) ($f['q'] ?? '')) !== '', fn ($q) => $q->where(fn ($w) => $w->where('number', 'like', '%'.trim($f['q']).'%')->orWhere('note', 'like', '%'.trim($f['q']).'%')))

@@ -91,7 +91,7 @@ class AssetService
         }
 
         return DB::transaction(function () use ($branch, $period, $end, $only, $auto) {
-            $assets = FixedAsset::where('branch_id', $branch->id)->whereNull('cancelled_at')->whereDay('purchase_date', '<=', $end)
+            $assets = FixedAsset::where('branch_id', $branch->id)->whereNull('cancelled_at')->whereDayOf('purchase_date', '<=', $end)
                 ->when($only, fn ($q) => $q->whereKey($only->id))
                 ->when($auto, fn ($q) => $q->where('auto_depreciate', true))
                 ->orderBy('id')->lockForUpdate()->get();

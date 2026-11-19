@@ -123,7 +123,7 @@ class Assistant
             foreach (['This month' => [now()->startOfMonth(), now()], 'Last month' => [now()->subMonthNoOverflow()->startOfMonth(), now()->subMonthNoOverflow()->endOfMonth()]] as $label => [$from, $to]) {
                 $rows = DB::table('journal_lines as l')->join('journal_entries as e', 'e.id', '=', 'l.journal_entry_id')->join('accounts as a', 'a.id', '=', 'l.account_id')
                     ->join('account_categories as c', 'c.id', '=', 'a.account_category_id')->where('l.is_void', false)->whereIn('c.nature', ['income', 'expense'])->where('e.type', '!=', 'closing')
-                    ->whereIn('l.branch_id', $ids)->whereDay('l.date', '>=', $from->toDateString())->whereDay('l.date', '<=', $to->toDateString())
+                    ->whereIn('l.branch_id', $ids)->whereDayOf('l.date', '>=', $from->toDateString())->whereDayOf('l.date', '<=', $to->toDateString())
                     ->groupBy('c.id', 'c.name', 'c.nature')->selectRaw('c.name as name, c.nature as nature, SUM(l.base_debit) as debit, SUM(l.base_credit) as credit')->get();
                 $totals = ['income' => '0', 'expense' => '0'];
                 $parts = [];
@@ -138,10 +138,10 @@ class Assistant
                     .', profit '.Num::money(Num::sub($totals['income'], $totals['expense'])).($parts ? '. By category: '.implode('; ', array_slice($parts, 0, 25)) : '');
             }
 
-            $today = Voucher::whereNull('cancelled_at')->whereDay('date', today_iso())->selectRaw('kind, COUNT(*) as papers, SUM(base_amount) as total')->groupBy('kind')->get()
+            $today = Voucher::whereNull('cancelled_at')->whereDayOf('date', today_iso())->selectRaw('kind, COUNT(*) as papers, SUM(base_amount) as total')->groupBy('kind')->get()
                 ->map(fn ($row) => Voucher::KINDS[$row->kind][0].' '.$row->papers.' ('.Num::money($row->total).')')->implode('; ');
             $out[] = 'Papers recorded today: '.($today ?: 'none');
-            $due = Voucher::with(['party', 'currency'])->where('kind', Voucher::MONEY_IN)->whereNull('cancelled_at')->whereDay('due_date', '>=', today_iso())->whereDay('due_date', '<=', now()->addDays(7)->toDateString())->orderBy('due_date')->limit(15)->get()
+            $due = Voucher::with(['party', 'currency'])->where('kind', Voucher::MONEY_IN)->whereNull('cancelled_at')->whereDayOf('due_date', '>=', today_iso())->whereDayOf('due_date', '<=', now()->addDays(7)->toDateString())->orderBy('due_date')->limit(15)->get()
                 ->map(fn (Voucher $v) => $v->due_date?->toDateString().' '.$v->party?->name.' '.Num::money($v->amount).' '.$v->currency?->code)->implode('; ');
             $out[] = 'To be paid back in the next 7 days: '.($due ?: 'nothing');
 

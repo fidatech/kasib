@@ -52,7 +52,7 @@ class DashboardController extends Controller
         $recent = collect();
         $due = 0;
         if ($seesPapers) {
-            $papers = Voucher::whereNull('cancelled_at')->whereDay('date', today_iso())->get(['kind', 'profit']);
+            $papers = Voucher::whereNull('cancelled_at')->whereDayOf('date', today_iso())->get(['kind', 'profit']);
             $today = [
                 'in' => $papers->where('kind', Voucher::MONEY_IN)->count(),
                 'out' => $papers->where('kind', Voucher::MONEY_OUT)->count(),
@@ -60,7 +60,7 @@ class DashboardController extends Controller
                 'profit' => Num::sum($papers->where('kind', Voucher::EXCHANGE)->pluck('profit')),
             ];
             $recent = Voucher::with(['party', 'currency', 'otherCurrency', 'account'])->orderByDesc('id')->limit(10)->get();
-            $due = Voucher::where('kind', Voucher::MONEY_IN)->whereNull('cancelled_at')->whereNotNull('due_date')->whereDay('due_date', '<=', now()->addDays(7)->toDateString())->count();
+            $due = Voucher::where('kind', Voucher::MONEY_IN)->whereNull('cancelled_at')->whereNotNull('due_date')->whereDayOf('due_date', '<=', now()->addDays(7)->toDateString())->count();
         }
 
         // what the business earned and spent, the money of the last days, and who stands where

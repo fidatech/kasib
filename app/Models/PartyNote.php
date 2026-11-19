@@ -25,6 +25,6 @@ class PartyNote extends Model
     /** Notes that are not done and whose day has come. */
     public function scopeDue($query)
     {
-        return $query->whereNull('done_at')->whereNotNull('remind_on')->whereDay('remind_on', '<=', today_iso());
+        return $query->whereNull('done_at')->whereNotNull('remind_on')->whereDayOf('remind_on', '<=', today_iso());
     }
 }

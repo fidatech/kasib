@@ -38,7 +38,7 @@ class JournalController extends Controller
 
         $lines = JournalLine::with(['account.currency', 'entry.creator'])
             ->where('journal_lines.branch_id', $branch?->id)
-            ->whereDay('journal_lines.date', '>=', $from)->whereDay('journal_lines.date', '<=', $to)
+            ->whereDayOf('journal_lines.date', '>=', $from)->whereDayOf('journal_lines.date', '<=', $to)
             ->when(empty($f['cancelled']), fn ($q) => $q->where('is_void', false))
             ->when($f['account'] ?? null, fn ($q, $id) => $q->where('account_id', $id))
             ->when($f['currency'] ?? null, fn ($q, $id) => $q->where('currency_id', $id))
@@ -81,7 +81,7 @@ class JournalController extends Controller
         if ($accounts->isEmpty()) {
             return [];
         }
-        $sum = fn (string $operator, string $date) => JournalLine::whereIn('account_id', $accounts->pluck('id'))->where('is_void', false)->whereDay('date', $operator, $date)
+        $sum = fn (string $operator, string $date) => JournalLine::whereIn('account_id', $accounts->pluck('id'))->where('is_void', false)->whereDayOf('date', $operator, $date)
             ->groupBy('currency_id')->selectRaw('currency_id, COALESCE(SUM(debit),0) - COALESCE(SUM(credit),0) as amount')->toBase()->pluck('amount', 'currency_id');
         if ($to >= today_iso() && ! JournalLine::whereIn('account_id', $accounts->pluck('id'))->where('date', '>', $to.' 23:59:59')->exists()) {
             // up to today: what every account holds is already known, and only the days shown are added up

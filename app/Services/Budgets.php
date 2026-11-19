@@ -31,7 +31,7 @@ class Budgets
     {
         $row = DB::table('journal_lines as l')->join('accounts as a', 'a.id', '=', 'l.account_id')
             ->where('a.account_category_id', $categoryId)->where('l.is_void', false)->whereIn('l.branch_id', \App\Models\Branch::reading())
-            ->whereDay('l.date', '>=', $from)->whereDay('l.date', '<=', $to)
+            ->whereDayOf('l.date', '>=', $from)->whereDayOf('l.date', '<=', $to)
             ->selectRaw('COALESCE(SUM(l.base_debit),0) as debit, COALESCE(SUM(l.base_credit),0) as credit')->first();
 
         return Num::money(Num::sub($row->debit ?? 0, $row->credit ?? 0));

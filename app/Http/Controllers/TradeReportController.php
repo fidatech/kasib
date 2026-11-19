@@ -20,7 +20,7 @@ class TradeReportController extends Controller
         Gate::authorize('reports.view');
         [$from, $to] = $this->dates($request);
         $sums = DB::table('invoice_lines as l')->join('invoices as i', 'i.id', '=', 'l.invoice_id')->join('items as t', 't.id', '=', 'l.item_id')
-            ->whereNull('i.cancelled_at')->where('i.branch_id', (int) current_branch()?->id)->whereIn('i.kind', [Invoice::SALE, Invoice::SALE_RETURN])->whereDay('i.date', '>=', $from)->whereDay('i.date', '<=', $to)
+            ->whereNull('i.cancelled_at')->where('i.branch_id', (int) current_branch()?->id)->whereIn('i.kind', [Invoice::SALE, Invoice::SALE_RETURN])->whereDayOf('i.date', '>=', $from)->whereDayOf('i.date', '<=', $to)
             ->groupBy('t.id', 't.name', 't.unit', 'i.kind')->selectRaw('t.id as id, t.name as name, t.unit as unit, i.kind as kind, SUM(l.qty) as qty, SUM(l.base_amount) as value, SUM(l.base_cost) as cost')->get()->groupBy('id');
 
         $list = [];
@@ -86,7 +86,7 @@ class TradeReportController extends Controller
         [$from, $to] = $this->dates($request);
         $side = $request->query('side') === 'purchases' ? 'purchases' : 'sales';
         [$main, $back] = $side === 'sales' ? [Invoice::SALE, Invoice::SALE_RETURN] : [Invoice::PURCHASE, Invoice::PURCHASE_RETURN];
-        $sums = Invoice::with('party')->whereNull('cancelled_at')->whereIn('kind', [$main, $back])->whereDay('date', '>=', $from)->whereDay('date', '<=', $to)
+        $sums = Invoice::with('party')->whereNull('cancelled_at')->whereIn('kind', [$main, $back])->whereDayOf('date', '>=', $from)->whereDayOf('date', '<=', $to)
             ->groupBy('party_id', 'kind')->selectRaw('party_id, kind, COUNT(*) as papers, SUM(base_total) as total')->get()->groupBy('party_id');
         $list = [];
         foreach ($sums as $group) {

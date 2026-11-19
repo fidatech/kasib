@@ -19,9 +19,9 @@ class AppServiceProvider extends ServiceProvider
         // The connection the application starts on holds the list of businesses (the central database).
         config(['tenancy.central_connection' => config('tenancy.central_connection') ?: config('database.default')]);
 
-        // whereDay('date', '<=', $day): a filter by day that compares the column itself, so its index is used.
+        // whereDayOf('date', '<=', $day): a filter by day that compares the column itself, so its index is used.
         // (whereDate wraps the column in DATE(), which makes the database read every row of a large table.)
-        \Illuminate\Database\Query\Builder::macro('whereDay', function (string $column, mixed $operator, mixed $value = null) {
+        \Illuminate\Database\Query\Builder::macro('whereDayOf', function (string $column, mixed $operator, mixed $value = null) {
             if (func_num_args() === 2) {
                 [$value, $operator] = [$operator, '='];
             }

@@ -152,7 +152,7 @@ class ReportController extends Controller
         [$from, $to] = [$f['from'] ?? now()->subDays(30)->toDateString(), $f['to'] ?? today_iso()];
         $kind = $request->query('kind');
         $rows = \App\Models\Alert::with('user')->when(isset(\App\Services\Alerts::KINDS[$kind]), fn ($q) => $q->where('kind', $kind))
-            ->whereDay('created_at', '>=', $from)->whereDay('created_at', '<=', $to)->orderByDesc('id')->limit(2000)->get()
+            ->whereDayOf('created_at', '>=', $from)->whereDayOf('created_at', '<=', $to)->orderByDesc('id')->limit(2000)->get()
             ->map(fn ($alert) => ['cells' => [fmt_date($alert->created_at).' '.$alert->created_at->timezone(config('app.timezone'))->format('H:i'), __(\App\Services\Alerts::KINDS[$alert->kind] ?? $alert->kind), $alert->text, (string) $alert->user?->name]])->all();
 
         return $this->sheet('Unusual Activity', 'triangle-exclamation', [['Date'], ['What'], ['Details'], ['User']], $rows, $from, $to,
@@ -173,7 +173,7 @@ class ReportController extends Controller
         $overdue = $due = $recurring = [];
         $left = [];   // what is still owed on each party account, so two papers never count the same money twice
         $vouchers = Voucher::with(['party.accounts.total'])->where('kind', Voucher::MONEY_IN)->whereNull('cancelled_at')->whereNotNull('due_date')
-            ->whereDay('due_date', '<=', $until)->orderBy('due_date')->limit(5000)->get();
+            ->whereDayOf('due_date', '<=', $until)->orderBy('due_date')->limit(5000)->get();
         foreach ($vouchers as $voucher) {
             $account = $voucher->party?->accounts->firstWhere('currency_id', $voucher->currency_id);
             if (! $account) {
@@ -268,7 +268,7 @@ class ReportController extends Controller
             : DB::table('journal_lines as l')
                 ->join('accounts as a', 'a.id', '=', 'l.account_id')
                 ->join('account_categories as c', 'c.id', '=', 'a.account_category_id')
-                ->where('l.is_void', false)->whereDay('l.date', '<=', $to)->whereIn('l.branch_id', $branches)
+                ->where('l.is_void', false)->whereDayOf('l.date', '<=', $to)->whereIn('l.branch_id', $branches)
                 ->groupBy('a.id', 'c.id', 'c.name', 'c.name_local', 'c.nature', 'c.sort')
                 ->selectRaw('a.id as account, c.id as category, c.name as name, c.name_local as name_local, c.nature as nature, c.sort as sort, SUM(l.base_debit) as debit, SUM(l.base_credit) as credit')
                 ->orderBy('c.sort')->get();
@@ -354,7 +354,7 @@ class ReportController extends Controller
 
         $rows = [];
         $vouchers = Voucher::with(['party.group', 'party.accounts.total', 'currency'])->where('kind', Voucher::MONEY_IN)
-            ->whereNull('cancelled_at')->whereNotNull('due_date')->whereDay('due_date', '<=', $until)->orderBy('due_date')->limit(5000)->get();
+            ->whereNull('cancelled_at')->whereNotNull('due_date')->whereDayOf('due_date', '<=', $until)->orderBy('due_date')->limit(5000)->get();
         foreach ($vouchers as $voucher) {
             // nothing is due to a party the business no longer owes in that currency
             $account = $voucher->party?->accounts->firstWhere('currency_id', $voucher->currency_id);
@@ -383,7 +383,7 @@ class ReportController extends Controller
         [$from, $to] = [$f['from'] ?? now()->subDays(90)->toDateString(), $f['to'] ?? today_iso()];
         $currencies = Currency::where('id', '!=', Currency::base()->id)->orderBy('code')->pluck('code', 'id');
         $written = \App\Models\ExchangeRate::where('branch_id', current_branch()->id)->when($f['currency'] ?? null, fn ($q, $id) => $q->where('currency_id', $id))
-            ->whereDay('created_at', '<=', $to)->orderBy('id')->limit(20000)->get();
+            ->whereDayOf('created_at', '<=', $to)->orderBy('id')->limit(20000)->get();
         $users = \App\Models\User::pluck('name', 'id');
 
         $rows = [];
@@ -418,7 +418,7 @@ class ReportController extends Controller
         Gate::authorize('reports.view');
         [$from, $to] = $this->dates($request);
         $moves = Voucher::whereIn('kind', [Voucher::MONEY_IN, Voucher::MONEY_OUT])->whereNull('cancelled_at')->whereNotNull('party_id')
-            ->whereDay('date', '>=', $from)->whereDay('date', '<=', $to)->groupBy('party_id', 'kind')
+            ->whereDayOf('date', '>=', $from)->whereDayOf('date', '<=', $to)->groupBy('party_id', 'kind')
             ->selectRaw('party_id, kind, COUNT(*) as papers, SUM(base_amount) as total')->toBase()->get()->groupBy('party_id');
         $last = Voucher::whereNull('cancelled_at')->whereNotNull('party_id')->groupBy('party_id')->selectRaw('party_id, MAX(date) as last')->toBase()->pluck('last', 'party_id');
 
@@ -561,7 +561,7 @@ class ReportController extends Controller
             ->join('accounts as a', 'a.id', '=', 'l.account_id')
             ->join('account_categories as c', 'c.id', '=', 'a.account_category_id')
             ->where('l.is_void', false)->whereIn('c.nature', ['income', 'expense'])->where('e.type', '!=', 'closing')->whereIn('l.branch_id', Branch::reading())
-            ->whereDay('l.date', '>=', $from)->whereDay('l.date', '<=', $to)
+            ->whereDayOf('l.date', '>=', $from)->whereDayOf('l.date', '<=', $to)
             ->groupBy('c.id', 'c.name', 'c.name_local', 'c.nature', 'c.sort')->orderBy('c.sort')
             ->selectRaw('c.id as id, c.name as name, c.name_local as name_local, c.nature as nature, SUM(l.base_debit) as debit, SUM(l.base_credit) as credit')->get();
     }

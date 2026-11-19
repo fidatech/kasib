@@ -40,13 +40,13 @@ class Summary
                     $lines[] = $row['currency']->code.': '.money($row['closing']).' ('.__('in').' '.money($row['in']).', '.__('out').' '.money($row['out']).')';
                 }
             }
-            $profit = Voucher::where('kind', Voucher::EXCHANGE)->whereNull('cancelled_at')->whereDay('date', $today)->sum('profit');
+            $profit = Voucher::where('kind', Voucher::EXCHANGE)->whereNull('cancelled_at')->whereDayOf('date', $today)->sum('profit');
             $lines[] = __('Exchange profit today').': '.money($profit, Currency::base()->code);
 
-            $due = Voucher::with('currency')->where('kind', Voucher::MONEY_IN)->whereNull('cancelled_at')->whereDay('due_date', now()->addDay()->toDateString())->get();
+            $due = Voucher::with('currency')->where('kind', Voucher::MONEY_IN)->whereNull('cancelled_at')->whereDayOf('due_date', now()->addDay()->toDateString())->get();
             $sums = $due->groupBy(fn (Voucher $v) => $v->currency->code)->map(fn ($group, $code) => money(Num::sum($group->pluck('amount')), $code))->implode(', ');
             $lines[] = __('To be paid back tomorrow').': '.$due->count().($sums ? ' ('.$sums.')' : '');
-            $lines[] = __('Unusual activity today').': '.Alert::whereDay('created_at', $today)->count();
+            $lines[] = __('Unusual activity today').': '.Alert::whereDayOf('created_at', $today)->count();
 
             return implode("\n", $lines);
         } finally {

@@ -75,7 +75,7 @@ class Schedules
     public static function expiring(): int
     {
         $told = 0;
-        foreach (Document::whereNull('warned_at')->whereNotNull('expires_on')->whereDay('expires_on', '<=', now()->addDays(30)->toDateString())->get() as $document) {
+        foreach (Document::whereNull('warned_at')->whereNotNull('expires_on')->whereDayOf('expires_on', '<=', now()->addDays(30)->toDateString())->get() as $document) {
             $document->update(['warned_at' => now()]);
             Alerts::raise('document', $document->title.' · '.fmt_date($document->expires_on), $document, true);
             $told++;
