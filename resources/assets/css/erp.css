@@ -727,7 +727,8 @@ body.modal-open .app-tabbar { visibility: hidden; }
 .erp-form-in { animation: erp-form-in .18s ease-out; }
 @keyframes erp-form-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 /* the cards of a form page lose their frame inside the modal; its buttons stay in sight at the bottom */
-.erp-form-in > .card, .erp-form-in > form.card, .erp-form-in > form > .card { border: 0; box-shadow: none; background: transparent; margin-bottom: 0; border-radius: 0; }
+.erp-form-in > .card, .erp-form-in > form.card, .erp-form-in > form > .card, .erp-form-in > .card::before, .erp-form-in > form.card::after { border: 0 !important; box-shadow: none !important; background: transparent !important; margin-bottom: 0 !important; border-radius: 0; overflow: visible; }
+.erp-form-in > form:last-child, .erp-form-in > .card:last-child { margin-bottom: 0 !important; }
 .erp-form-in .card > .card-body, .erp-form-in form.card > .card-body { padding: 0 0 22px; }
 .erp-form-in .card > .card-header { padding: 0 0 12px; background: transparent; border: 0; }
 .erp-form-in .card + .card { border-top: 1px solid var(--border); padding-top: 20px; }
