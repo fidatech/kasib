@@ -61,6 +61,7 @@ class PlanTest extends TestCase
         $main = \App\Models\Branch::main();
         $afn = \App\Models\Currency::base();
         $usd = \App\Models\Currency::where('code', 'USD')->firstOrFail();
+        \App\Services\Rates::set($main, $usd, '70');
         $ahmad = \App\Models\Party::create(['account_group_id' => \App\Models\AccountGroup::byKey('customers')->id, 'name' => 'Ahmad Zia'])->fresh();
         \App\Services\Vouchers::moneyIn($ahmad, \App\Services\Accounts::cash($main, $afn), today_iso(), '5000');
         \App\Services\Vouchers::moneyIn($ahmad, \App\Services\Accounts::cash($main, $usd), today_iso(), '300');

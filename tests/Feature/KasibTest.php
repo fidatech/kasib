@@ -138,7 +138,7 @@ class KasibTest extends TestCase
         $this->assertSame('-50.00', $this->owed($ahmad, 'USD'));
         $this->booksBalance();
 
-        $this->get('/accounts/customers')->assertOk()->assertSee('1,000.00 AFN')->assertSee('50.00 USD');
+        $this->get('/accounts/customers')->assertOk()->assertSeeInOrder(['AFN', '1,000.00', 'we owe', 'USD', '50.00', 'owes us']);
         $this->get('/accounts/customers/'.$ahmad->id.'/statement?currency='.$usd)->assertOk()->assertSee('Ahmad Trading')->assertSee('USD');
         $this->get('/reports/balances')->assertOk()->assertSee('Ahmad Trading');
         $this->get('/reports/balance-sheet')->assertOk()->assertSee('Customer accounts');
