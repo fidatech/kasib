@@ -826,10 +826,17 @@ body.modal-open .app-tabbar { visibility: hidden; }
 .bal-tag.is-zero { background: var(--hover); color: var(--muted); }
 [data-bs-theme="dark"] .bal-tag.is-in { color: #4ade80; }
 [data-bs-theme="dark"] .bal-tag.is-out { color: #f87171; }
-@media (max-width: 767.98px) {
-    .table-split.table-cards > tbody.split-group { display: block; margin-bottom: 12px; }
-    .table-split.table-cards > tbody.split-group > tr.split-more { margin-top: -14px; border-top: 0; }
-}
+/* on a phone an account is one card: its name and phone, then a line for each currency, then the buttons */
+table.table-split.table-cards > tbody.split-group { display: grid !important; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 12px 14px; margin-bottom: 12px; box-shadow: var(--shadow-sm); }
+table.table-split.table-cards > tbody.split-group > tr { display: contents !important; }
+table.table-split.table-cards > tbody.split-group > tr > td { grid-column: 1 / -1; order: 1; }
+table.table-split.table-cards > tbody.split-group > tr > td.cell-primary { order: 0; }
+table.table-split.table-cards > tbody.split-group > tr > td.cur-cell, table.table-split.table-cards > tbody.split-group > tr > td.bal-cell { order: 2; padding: 5px 0 !important; }
+table.table-split.table-cards > tbody.split-group > tr > td.cur-cell { grid-column: 1; justify-content: flex-start; }
+table.table-split.table-cards > tbody.split-group > tr > td.bal-cell { grid-column: 2; }
+table.table-split.table-cards > tbody.split-group > tr > td.cur-cell::before, table.table-split.table-cards > tbody.split-group > tr > td.bal-cell::before { display: none; }
+table.table-split.table-cards > tbody.split-group > tr > td[data-label]:not(.cell-primary):not(.cur-cell):not(.bal-cell):not(.cell-actions) { order: 3; }
+table.table-split.table-cards > tbody.split-group > tr > td.cell-actions { order: 4; }
 
 /* ------------------------------------------------------------------ the filter bar
    One strip above a list: the search and the first choices in sight, the rest behind "More filters",
