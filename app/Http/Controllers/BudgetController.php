@@ -33,11 +33,12 @@ class BudgetController extends CrudController
         $categories = AccountCategory::where('nature', 'expense')->where('key', '!=', 'depreciation')->orderBy('sort')->get();
 
         return [
-            ['name' => 'account_category_id', 'label' => 'Expense category', 'type' => 'select',
+            ['name' => 'account_category_id', 'label' => 'Expense category', 'type' => 'select', 'search' => true, 'col' => 12,
+                'help' => __('One budget for each category. A category that already has one is edited from the list.'),
                 'options' => $categories->mapWithKeys(fn (AccountCategory $c) => [$c->id => $c->label()])->all(),
                 'rules' => ['required', Rule::in($categories->pluck('id')->all()), Rule::unique('budgets', 'account_category_id')->ignore($record?->id)]],
-            ['name' => 'amount', 'label' => 'Budget for a month', 'type' => 'decimal', 'rules' => ['required', 'numeric', 'gt:0'],
-                'help' => __('In :currency. The owner is warned when 80% is used, and again when it is all used.', ['currency' => Currency::base()->code])],
+            ['name' => 'amount', 'label' => __('Budget for a month').' ('.Currency::base()->code.')', 'type' => 'decimal', 'col' => 12, 'rules' => ['required', 'numeric', 'gt:0'],
+                'help' => __('The owner is warned when 80% is used, and again when it is all used.')],
         ];
     }
 

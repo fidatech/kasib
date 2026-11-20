@@ -71,7 +71,7 @@ class Alerts
         $title = __(self::KINDS[$kind]).': '.$text;
         $by = auth()->user()?->name;
         foreach (User::role(User::ADMIN_ROLE)->when(! $always, fn ($q) => $q->where('id', '!=', (int) auth()->id()))->where('is_active', true)->pluck('id') as $id) {
-            Notice::send((int) $id, $title, $by, route('reports.alerts', [], false));
+            Notice::send((int) $id, $title, $by, \App\Services\Billing::allows(tenant(), 'reports.alerts') ? route('reports.alerts', [], false) : route('dashboard', [], false));
         }
         if (setting('alerts_whatsapp') === '1' && filled(setting('owner_phone'))) {
             $message = (setting('company_name') ?: tenant()?->name)."\n".$title.($by ? "\n".$by : '');

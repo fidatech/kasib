@@ -29,6 +29,26 @@ class Billing
     /** plan => [name, key of its first-year price, key of its yearly price] */
     public const PLANS = ['starter' => ['Starter', 'main_first', 'main_renewal'], 'pro' => ['Pro', 'pro_first', 'pro_renewal']];
 
+    /**
+     * Pages that belong to the Pro plan besides version 2 (whose routes sit in the 'pro' group), by the
+     * name of their route. A business on Starter does not see them in the menu and cannot open them.
+     * Starter has one user, so the screens that manage users and roles are Pro too.
+     */
+    public const PRO_PAGES = [
+        'deals.*', 'recurring-expenses.*', 'budgets.*',
+        'assets.*', 'depreciation.*', 'liabilities.*', 'closing.*',
+        'shareholders.*', 'capital.*', 'distributions.*',
+        'reports.rates', 'reports.alerts', 'export.*', 'schedules.*',
+        'users.*', 'roles.*', 'permissions.*',
+        'documents.*',
+    ];
+
+    /** Whether a business may open the page of this route. */
+    public static function allows(?Tenant $tenant, ?string $route): bool
+    {
+        return ! $tenant || ! $route || self::plan($tenant) === 'pro' || ! \Illuminate\Support\Str::is(self::PRO_PAGES, $route);
+    }
+
     /** The plan a business is on. Anything that is not "pro" is the Starter plan. */
     public static function plan(Tenant $tenant): string
     {

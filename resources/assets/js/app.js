@@ -429,7 +429,29 @@
         select.hidden = true;
         var focus = 0;
         var current = function () { var o = select.options[select.selectedIndex]; return o && o.value ? o.text : ''; };
-        var close = function () { wrap.classList.remove('open', 'up'); };
+        var close = function () { wrap.classList.remove('open', 'up'); list.removeAttribute('style'); };
+        // in a modal the list floats above it, so the edge of the modal does not cut it off
+        var place = function () {
+            var holder = wrap.closest('.modal-body');
+            if (!holder) return false;
+            if (!wrap._scrollWatch) {
+                wrap._scrollWatch = true;
+                holder.addEventListener('scroll', function () { if (wrap.classList.contains('open')) close(); }, { passive: true });
+                window.addEventListener('resize', function () { if (wrap.classList.contains('open')) close(); });
+            }
+            var r = box.getBoundingClientRect(), below = window.innerHeight - r.bottom, above = r.top;
+            var up = below < 240 && above > below;
+            var rtl = getComputedStyle(wrap).direction === 'rtl';
+            list.style.position = 'fixed';
+            list.style.minWidth = r.width + 'px';
+            list.style.maxWidth = Math.max(r.width, Math.min(420, window.innerWidth - 16)) + 'px';
+            list.style.left = rtl ? 'auto' : Math.max(8, r.left) + 'px';
+            list.style.right = rtl ? Math.max(8, window.innerWidth - r.right) + 'px' : 'auto';
+            list.style.top = up ? 'auto' : (r.bottom + 6) + 'px';
+            list.style.bottom = up ? (window.innerHeight - r.top + 6) + 'px' : 'auto';
+            list.style.maxHeight = Math.max(150, Math.min(320, (up ? above : below) - 18)) + 'px';
+            return true;
+        };
         var mark = function () { wrap.classList.toggle('has-value', !!select.value); };
         var show = function (all) {
             var q = all ? '' : box.value.trim().toLowerCase();
@@ -445,8 +467,10 @@
             focus = 0;
             wrap.classList.add('open');
             // open upwards when there is no room under the box
-            var rect = wrap.getBoundingClientRect();
-            wrap.classList.toggle('up', window.innerHeight - rect.bottom < 280 && rect.top > 280);
+            if (!place()) {
+                var rect = wrap.getBoundingClientRect();
+                wrap.classList.toggle('up', window.innerHeight - rect.bottom < 280 && rect.top > 280);
+            }
             var chosen = $('.ss-item.selected', list);
             if (chosen && all) chosen.scrollIntoView({ block: 'nearest' });
         };
@@ -1654,7 +1678,7 @@
             // date (its calendar would cover the form); on a phone none, so the keyboard does not jump up
             Array.prototype.slice.call(content.querySelectorAll('[autofocus]')).forEach(function (el) { el.removeAttribute('autofocus'); });
             var phone = window.matchMedia && window.matchMedia('(max-width: 575.98px)').matches;
-            var start = content.querySelector('.is-invalid') || (phone ? null : content.querySelector('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="date"]):not([data-shamsi-date]):not([readonly]):not([disabled]), textarea:not([readonly])'));
+            var start = content.querySelector('input.is-invalid, textarea.is-invalid') || (phone ? null : content.querySelector('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="date"]):not([data-shamsi-date]):not([readonly]):not([disabled]), textarea:not([readonly])'));
             if (start) start.setAttribute('autofocus', '');
             // with nothing to start in, the close button takes the focus (never a date box: its calendar would open)
             if (!formModal) buildModal();

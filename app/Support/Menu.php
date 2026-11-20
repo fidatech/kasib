@@ -139,6 +139,9 @@ class Menu
         if (! empty($item['pro']) && (! tenant() || \App\Services\Billing::plan(tenant()) !== 'pro')) {
             return false;
         }
+        if (! empty($item['route']) && ! \App\Services\Billing::allows(tenant(), $item['route'])) {
+            return false;
+        }
 
         return empty($item['advanced']) || setting('simple_mode', '0') !== '1';
     }

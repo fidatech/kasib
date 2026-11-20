@@ -3348,5 +3348,8 @@
     "This is the Starter demo.": "دا د Starter ډیمو ده.",
     "This is the Pro demo.": "دا د Pro ډیمو ده.",
     "This is the Starter demo. Everything recorded here is erased at midnight (12:00 AM).": "دا د Starter ډیمو ده. هر څه چې دلته ثبت شي د شپې په ۱۲ بجو پاکېږي.",
-    "This is the Pro demo. Everything recorded here is erased at midnight (12:00 AM).": "دا د Pro ډیمو ده. هر څه چې دلته ثبت شي د شپې په ۱۲ بجو پاکېږي."
+    "This is the Pro demo. Everything recorded here is erased at midnight (12:00 AM).": "دا د Pro ډیمو ده. هر څه چې دلته ثبت شي د شپې په ۱۲ بجو پاکېږي.",
+    "This belongs to the Pro plan.": "دا برخه د Pro پلان ده.",
+    "One budget for each category. A category that already has one is edited from the list.": "د هرې کټګورۍ لپاره یوه بودیجه. هغه کټګوري چې بودیجه لري له لېست څخه سمېږي.",
+    "The owner is warned when 80% is used, and again when it is all used.": "کله چې ۸۰٪ ولګول شي مالک ته خبرتیا ورکول کېږي، او بیا کله چې ټول ولګول شي."
 }

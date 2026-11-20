@@ -76,7 +76,6 @@ return [
     ['label' => 'Accounting', 'icon' => 'landmark', 'advanced' => true, 'children' => [
         ['label' => 'Chart of Accounts', 'route' => 'chart.index', 'can' => 'accounts.view'],
         ['label' => 'Opening Balances', 'route' => 'opening.index', 'active' => 'opening.*', 'can' => 'accounts.view'],
-        ['label' => 'Journal Entries', 'route' => 'journal.create', 'can' => 'journal.manage'],
         ['label' => 'Assets', 'route' => 'assets.index', 'active' => 'assets.*', 'can' => 'assets.view'],
         ['label' => 'Depreciation', 'route' => 'depreciation.index', 'active' => 'depreciation.*', 'can' => 'assets.view'],
         ['label' => 'Liabilities', 'route' => 'liabilities.index', 'active' => 'liabilities.*', 'can' => 'liabilities.view'],
