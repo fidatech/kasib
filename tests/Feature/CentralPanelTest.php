@@ -65,7 +65,7 @@ class CentralPanelTest extends TestCase
         $this->post('/login', ['email' => 'owner@acme.test', 'password' => 'password123'])->assertRedirect(route('dashboard'));
 
         // the owner lands on the dashboard, with the account categories in the menu
-        $this->get('/')->assertOk()->assertSee('quickbar-item', false)->assertSee('Cash Accounts')->assertSee('Customers')->assertSee('Period Closing');
+        $this->get('/')->assertOk()->assertSee('quickbar-item', false)->assertSee('Cash Accounts')->assertSee('Customers')->assertSee('Daily Cash Count')->assertDontSee('Period Closing');
     }
 
     public function test_the_short_name_is_checked(): void

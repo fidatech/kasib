@@ -48,7 +48,7 @@ class InsightTest extends TestCase
 
     public function test_the_owner_is_told_about_unusual_papers(): void
     {
-        $this->business();
+        $this->business(['plan' => 'pro']);
         $this->owner();
         $settings = ['alerts_enabled' => 1, 'alert_large' => '50000', 'alert_backdate' => 2, 'summary_hour' => 20, 'confirm_day' => 0];
         $this->put('/owner', $settings)->assertSessionHasNoErrors()->assertRedirect('/owner');
@@ -141,7 +141,7 @@ class InsightTest extends TestCase
 
     public function test_an_expense_budget_warns_at_eighty_percent_and_when_it_is_used_up(): void
     {
-        $this->business();
+        $this->business(['plan' => 'pro']);
         $this->owner();
         $this->openingCash('AFN', '100000');
         $category = $this->expenseCategory();
@@ -250,7 +250,7 @@ class InsightTest extends TestCase
 
     public function test_a_rate_alert_speaks_once_and_the_history_of_rates_is_kept(): void
     {
-        $this->business();
+        $this->business(['plan' => 'pro']);
         $owner = $this->owner();
         $this->rates(['USD' => '70']);
         $usd = Currency::where('code', 'USD')->firstOrFail();
@@ -314,7 +314,7 @@ class InsightTest extends TestCase
     public function test_voice_notes_and_the_document_vault(): void
     {
         \Illuminate\Support\Facades\Storage::fake('local');
-        $this->business();
+        $this->business(['plan' => 'pro']);
         $this->owner();
         $ahmad = $this->party('Ahmad');
         $fake = fn (string $name, string $mime) => \Illuminate\Http\UploadedFile::fake()->create($name, 100, $mime);
@@ -346,7 +346,7 @@ class InsightTest extends TestCase
     public function test_a_scheduled_report_leaves_by_email_on_its_day(): void
     {
         \Illuminate\Support\Facades\Mail::fake();
-        $this->business();
+        $this->business(['plan' => 'pro']);
         $this->owner();
         $this->openingCash('AFN', '1000');
         $this->post('/schedules', ['name' => 'Daily papers', 'email' => 'owner@example.com', 'content' => 'papers', 'frequency' => 'daily', 'day' => 1, 'hour' => now()->hour, 'is_active' => 1])->assertSessionHasNoErrors();

@@ -55,7 +55,7 @@ class KasibTest extends TestCase
 
     public function test_a_new_business_starts_with_its_account_categories_and_every_page_opens(): void
     {
-        $this->business();
+        $this->business(['plan' => 'pro']);
         $this->owner();
 
         $this->assertSame(['cash', 'bank', 'saraf', 'customers', 'suppliers'], AccountGroup::orderBy('sort')->pluck('key')->all());
@@ -307,7 +307,7 @@ class KasibTest extends TestCase
 
     public function test_a_deal_works_out_its_own_profit_or_loss(): void
     {
-        $this->business();
+        $this->business(['plan' => 'pro']);
         $this->owner();
         $this->openingCash('AFN', '100000');
         $cash = $this->cash();
@@ -428,7 +428,7 @@ class KasibTest extends TestCase
 
     public function test_the_export_center_makes_one_workbook_with_a_sheet_for_every_module(): void
     {
-        $this->business();
+        $this->business(['plan' => 'pro']);
         $this->owner();
         $this->rates(['USD' => '70']);
         $this->openingCash('AFN', '50000');
@@ -567,7 +567,7 @@ class KasibTest extends TestCase
 
     public function test_a_recurring_expense_is_recorded_once_a_month_by_itself(): void
     {
-        $this->business();
+        $this->business(['plan' => 'pro']);
         $owner = $this->owner();
         $this->openingCash('AFN', '5000');
         $cash = $this->cash();
@@ -598,7 +598,7 @@ class KasibTest extends TestCase
 
     public function test_a_role_can_be_given_one_account_category_alone(): void
     {
-        $this->business();
+        $this->business(['plan' => 'pro']);
         $user = $this->userWith(['group-customers.view', 'group-customers.manage']);
         $ahmad = $this->party('customers', 'Ahmad');
 
