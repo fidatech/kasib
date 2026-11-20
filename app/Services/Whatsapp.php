@@ -245,4 +245,10 @@ class Whatsapp
 
         return $lines ? implode("\n", $lines) : '• '.__('Settled, nothing is owed');
     }
+
+    /** Whether a text made by balance() says that nothing is owed. */
+    public static function settled(string $balance): bool
+    {
+        return $balance === '• '.__('Settled, nothing is owed');
+    }
 }

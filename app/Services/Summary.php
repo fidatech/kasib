@@ -86,7 +86,7 @@ class Summary
         $sent = 0;
         foreach ($parties as $party) {
             $balance = Whatsapp::balance($party);
-            if ($balance === '0' || in_array($party->id, $asked) || ! filled($party->phone)) {
+            if (Whatsapp::settled($balance) || in_array($party->id, $asked) || ! filled($party->phone)) {
                 continue;
             }
             $message = strtr((string) (setting('whatsapp_tpl_confirm') ?: self::CONFIRM), [
