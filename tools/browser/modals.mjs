@@ -183,6 +183,16 @@ check(`${label}: the form carries no frame of its own`, await page.evaluate(() =
     await page.goto(starter + '/');
     await page.waitForLoadState('networkidle');
     await page.screenshot({ path: 'shots/starter-1-dashboard.png', fullPage: true });
+    for (const [name, path] of [['cash', '/accounts/cash'], ['customers', '/accounts/customers'], ['saraf', '/accounts/saraf']]) {
+        await page.goto(starter + path);
+        await page.waitForLoadState('networkidle');
+        check(`starter: ${name} shows a line for each currency`, (await page.locator('table.table-split tbody.split-group').count()) > 0);
+        await page.screenshot({ path: `shots/starter-2-${name}.png` });
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(starter + '/accounts/customers');
+    await page.waitForLoadState('networkidle');
+    await page.screenshot({ path: 'shots/starter-3-customers-phone.png' });
     await page.close();
 }
 await browser.close();
