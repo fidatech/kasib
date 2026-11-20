@@ -139,8 +139,50 @@ check(`${label}: the form carries no frame of its own`, await page.evaluate(() =
         await page.waitForTimeout(400);
     }
     check(`${label}: no script errors`, errors.length === 0, errors.slice(0, 3).join(' | '));
+    // the budget form: its list of categories opens whole above the modal, and a choice is taken
+    await page.goto(site + '/budgets');
+    await page.waitForLoadState('networkidle');
+    await page.evaluate(() => window.ERP && window.ERP.openForm('/budgets/create'));
+    await modal.locator('.erp-form-in').waitFor({ timeout: 15000 }).catch(() => {});
+    await page.waitForTimeout(400);
+    const pickBox = modal.locator('.ss > input.form-control').first();
+    await pickBox.click();
+    await page.waitForTimeout(400);
+    const box = await modal.locator('.ss.open .ss-list').boundingBox().catch(() => null);
+    const vh = (page.viewportSize() || { height: 800 }).height;
+    check(`${label}: the budget's category list opens`, !!box && box.height > 100, box ? Math.round(box.height) + ' px high' : 'not open');
+    check(`${label}: the list lies inside the screen`, !!box && box.y >= 0 && box.y + box.height <= vh);
+    await page.screenshot({ path: `shots/${label}-9-budget-list.png` });
+    await modal.locator('.ss.open .ss-item').nth(2).click().catch(() => {});
+    await page.waitForTimeout(300);
+    check(`${label}: a category is chosen from the list`, (await modal.locator('select[name="account_category_id"]').inputValue().catch(() => '')) !== '');
+    await page.screenshot({ path: `shots/${label}-9b-budget-chosen.png` });
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    if (await page.locator('.erp-confirm.show').count()) { await page.locator('.erp-confirm.show [data-ok]').click(); await page.waitForTimeout(400); }
+
     // the demo user is shared: its language goes back to English
     if (locale !== 'en') await setLocale('en');
+    await page.close();
+}
+// the Starter demo: the same business without the pages of Pro
+{
+    const starter = site.replace('://demo.', '://starter.');
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+    await page.goto(starter + '/login');
+    await page.click('button[type="submit"]');
+    await page.waitForLoadState('networkidle');
+    await page.evaluate(() => { try { localStorage.setItem('hb.tour.' + window.ERP_TOUR.user, '1'); } catch (e) {} });
+    await page.goto(starter + '/');
+    await page.waitForLoadState('networkidle');
+    const menu = await page.locator('.app-sidebar').innerText();
+    for (const gone of ['Deals', 'Recurring Expenses', 'Expense Budgets', 'Depreciation', 'Liabilities', 'Partners', 'Analysis', 'Document Vault', 'Journal Entries', 'Sales & Purchases', 'Stock & Warehouses']) {
+        check(`starter: "${gone}" is not in the menu`, !menu.includes(gone));
+    }
+    check('starter: the deals page answers with the upgrade page', (await page.goto(starter + '/deals')).status() === 403);
+    await page.goto(starter + '/');
+    await page.waitForLoadState('networkidle');
+    await page.screenshot({ path: 'shots/starter-1-dashboard.png', fullPage: true });
     await page.close();
 }
 await browser.close();
