@@ -189,6 +189,18 @@ check(`${label}: the form carries no frame of its own`, await page.evaluate(() =
         check(`starter: ${name} shows a line for each currency`, (await page.locator('table.table-split tbody.split-group').count()) > 0);
         await page.screenshot({ path: `shots/starter-2-${name}.png` });
     }
+    // the statement of a customer: its WhatsApp button and menu
+    await page.goto(starter + '/accounts/customers');
+    await page.waitForLoadState('networkidle');
+    await page.locator('.app-content a', { hasText: 'Statement' }).first().click();
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(800);
+    const wa = page.locator('.page-header .btn-wa').first();
+    check('starter: the statement has a WhatsApp button', await wa.count() > 0);
+    if (await wa.isEnabled()) { await wa.click(); await page.waitForTimeout(400); }
+    const href = await page.locator('.page-header .dropdown-menu a[href^="https://wa.me/"]').first().getAttribute('href').catch(() => null);
+    check('starter: it opens WhatsApp with the statement written', !!href && decodeURIComponent(href).includes('Closing balance'), href ? decodeURIComponent(href).slice(0, 120) : 'no link');
+    await page.screenshot({ path: 'shots/starter-4-statement-whatsapp.png' });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(starter + '/accounts/customers');
     await page.waitForLoadState('networkidle');
