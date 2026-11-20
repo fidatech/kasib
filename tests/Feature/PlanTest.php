@@ -64,6 +64,8 @@ class PlanTest extends TestCase
         \App\Services\Rates::set($main, $usd, '70');
         $ahmad = \App\Models\Party::create(['account_group_id' => \App\Models\AccountGroup::byKey('customers')->id, 'name' => 'Ahmad Zia'])->fresh();
         \App\Services\Vouchers::moneyIn($ahmad, \App\Services\Accounts::cash($main, $afn), today_iso(), '5000');
+        $funder = \App\Models\Party::create(['account_group_id' => \App\Models\AccountGroup::byKey('suppliers')->id, 'name' => 'Funder'])->fresh();
+        \App\Services\Vouchers::moneyIn($funder, \App\Services\Accounts::cash($main, $usd), today_iso(), '1000');
         \App\Services\Vouchers::moneyIn($ahmad, \App\Services\Accounts::cash($main, $usd), today_iso(), '300');
         \App\Services\Vouchers::moneyOut($ahmad, \App\Services\Accounts::cash($main, $usd), today_iso(), '500');
 
