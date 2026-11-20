@@ -186,38 +186,6 @@ class InsightTest extends TestCase
         $this->get('/reports')->assertOk()->assertSee('Cash Forecast');
     }
 
-    public function test_a_hawala_is_followed_until_it_is_delivered(): void
-    {
-        $this->business();
-        $this->owner();
-        $this->openingCash('AFN', '50000');
-        $cash = $this->cash();
-        $ahmad = $this->party('Ahmad');
-        $this->get('/hawalas')->assertOk();
-        $this->get('/hawalas/create')->assertOk();
-
-        $form = ['date' => today_iso(), 'account_id' => $cash->id, 'receiver' => 'Yusuf', 'destination' => 'Herat'];
-        $this->post('/hawalas', $form + ['number' => 'HW-778', 'amount' => '3000', 'party_id' => $ahmad->id])->assertSessionHasNoErrors();
-        $this->post('/hawalas', $form + ['number' => 'HW-779', 'amount' => '500'])->assertSessionHasNoErrors();
-        [$first, $second] = \App\Models\Hawala::orderBy('id')->get()->all();
-        // sent for Ahmad: the money out is on his account; the other one is only followed
-        $this->assertNotNull($first->voucher_id);
-        $this->assertNull($second->voucher_id);
-        $this->assertSame('-3000.00', Vouchers::balances($ahmad->fresh())[0]['amount']);
-
-        $this->post('/hawalas/'.$second->id.'/deliver')->assertSessionHas('success');
-        $this->assertSame('delivered', $second->fresh()->status);
-        $this->post('/hawalas/'.$second->id.'/deliver')->assertNotFound();
-        $this->post('/hawalas/'.$first->id.'/cancel')->assertSessionHas('success');
-        $this->assertSame('cancelled', $first->fresh()->status);
-        $this->assertSame([], Vouchers::balances($ahmad->fresh()));
-
-        // never deleted
-        $this->delete('/hawalas/'.$first->id);
-        $this->assertNotNull(\App\Models\Hawala::find($first->id));
-        $this->get('/hawalas?status=delivered')->assertOk()->assertSee('HW-779')->assertDontSee('HW-778');
-    }
-
     public function test_the_lines_of_a_bank_account_are_ticked_against_the_statement(): void
     {
         $this->business();

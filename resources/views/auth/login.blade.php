@@ -8,7 +8,7 @@
     @php($demo = \App\Services\Demo::is(tenant()) ? config('tenancy.demo') : null)
     @if ($demo)
         <div class="alert alert-info text-start" role="note">
-            <strong>{{ __('This is the demo.') }}</strong> {{ __('Sign in with:') }}
+            <strong>{{ \App\Services\Demo::planOf(tenant()) === 'starter' ? __('This is the Starter demo.') : __('This is the Pro demo.') }}</strong> {{ __('Sign in with:') }}
             <div dir="ltr" class="mt-1"><span class="user-select-all">{{ $demo['email'] }}</span> · <span class="user-select-all">{{ $demo['password'] }}</span></div>
         </div>
     @endif

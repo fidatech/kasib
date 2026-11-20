@@ -17,52 +17,88 @@ use App\Tenancy\TenantManager;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * The demo: one business anybody may open. Its address, user and password are shown on the
- * website and on its own sign-in page. It never runs out. It is filled with example papers and rebuilt every midnight,
- * so whatever a visitor records in it is gone the next day.
+ * The demos: two businesses anybody may open, one on the Pro plan and one on Starter, with the same
+ * story so the two can be compared. Their addresses, user and password are shown on the website and
+ * on their own sign-in pages. They never run out. They are filled with example papers and rebuilt every
+ * midnight, so whatever a visitor records in them is gone the next day.
  */
 class Demo
 {
+    /** @return array<string, string> plan => address of its demo, Pro first; a demo without an address is left out */
+    public static function slugs(): array
+    {
+        return array_filter(['pro' => (string) config('tenancy.demo.slug'), 'starter' => (string) config('tenancy.demo.starter_slug')], fn ($slug) => $slug !== '');
+    }
+
+    /** The address of the Pro demo (kept for the commands that time it). */
     public static function slug(): string
     {
-        return (string) config('tenancy.demo.slug');
+        return self::slugs()['pro'] ?? '';
     }
 
     public static function is(?Tenant $tenant): bool
     {
-        return $tenant !== null && self::slug() !== '' && $tenant->slug === self::slug();
+        return $tenant !== null && in_array($tenant->slug, self::slugs(), true);
     }
 
-    /** What the website shows: where the demo is and how to get in. Null while there is no demo. */
-    public static function info(): ?array
+    /** The plan a demo shows, or null for a business that is not a demo. */
+    public static function planOf(?Tenant $tenant): ?string
     {
-        static $info = false;
-        if ($info === false || app()->runningUnitTests()) {
-            $tenant = self::slug() !== '' ? Tenant::where('slug', self::slug())->where('status', Tenant::ACTIVE)->first() : null;
+        return $tenant ? (array_search($tenant->slug, self::slugs(), true) ?: null) : null;
+    }
+
+    /**
+     * What the website shows: where each demo is and how to get in, by plan. Empty while there is none.
+     *
+     * @return array<string, array{plan: string, host: string, url: string, email: string, password: string}>
+     */
+    public static function info(): array
+    {
+        static $info = null;
+        if ($info === null || app()->runningUnitTests()) {
             $scheme = request()->isSecure() || app()->environment('production') ? 'https://' : 'http://';
-            $info = $tenant ? ['host' => $tenant->domain, 'url' => $scheme.$tenant->domain.'/login', 'email' => (string) config('tenancy.demo.email'), 'password' => (string) config('tenancy.demo.password')] : null;
+            $found = self::slugs() ? Tenant::whereIn('slug', self::slugs())->where('status', Tenant::ACTIVE)->get()->keyBy('slug') : collect();
+            $info = [];
+            foreach (self::slugs() as $plan => $slug) {
+                if ($tenant = $found[$slug] ?? null) {
+                    $info[$plan] = ['plan' => $plan, 'host' => $tenant->domain, 'url' => $scheme.$tenant->domain.'/login', 'email' => (string) config('tenancy.demo.email'), 'password' => (string) config('tenancy.demo.password')];
+                }
+            }
         }
 
         return $info;
     }
 
-    /** Make the demo, or empty it and fill it again. */
-    public static function refresh(): Tenant
+    /** Make a demo, or empty it and fill it again: the one of the plan named, or both. */
+    public static function refresh(?string $plan = null): array
+    {
+        $made = [];
+        foreach (self::slugs() as $which => $slug) {
+            if ($plan === null || $plan === $which) {
+                $made[$which] = self::build($which, $slug);
+            }
+        }
+
+        return $made;
+    }
+
+    private static function build(string $plan, string $slug): Tenant
     {
         $manager = app(TenantManager::class);
-        $data = ['name' => 'Demo Trading Company', 'name_local' => 'شرکت تجارتی نمونه', 'slug' => self::slug(), 'plan' => 'pro',
+        $name = $plan === 'pro' ? ['Demo Trading Company', 'شرکت تجارتی نمونه'] : ['Demo Shop', 'دکان نمونه'];
+        $data = ['name' => $name[0], 'name_local' => $name[1], 'slug' => $slug, 'plan' => $plan,
             'owner_name' => 'Demo User', 'owner_email' => config('tenancy.demo.email'), 'owner_password' => config('tenancy.demo.password')];
 
-        $tenant = Tenant::where('slug', self::slug())->first();
+        $tenant = Tenant::where('slug', $slug)->first();
         if ($tenant) {
             $manager->rebuild($tenant, $data);
         } else {
             $tenant = $manager->create($data);
         }
-        $tenant->forceFill(['name' => $data['name'], 'name_local' => $data['name_local'], 'plan' => 'pro', 'status' => Tenant::ACTIVE, 'locked_reason' => null,
-            'licence_expires_on' => null, 'notes' => 'The demo of the website: no end date, never locked. Rebuilt every midnight by demo:refresh.'])->save();
+        $tenant->forceFill(['name' => $data['name'], 'name_local' => $data['name_local'], 'plan' => $plan, 'status' => Tenant::ACTIVE, 'locked_reason' => null,
+            'licence_expires_on' => null, 'notes' => 'The '.ucfirst($plan).' demo of the website: no end date, never locked. Rebuilt every midnight by demo:refresh.'])->save();
 
-        app(Tenancy::class)->run($tenant, fn () => self::fill());
+        app(Tenancy::class)->run($tenant, fn () => self::fill($plan === 'pro'));
 
         return $tenant;
     }
@@ -71,9 +107,11 @@ class Demo
      * Two months of a food wholesaler in Kabul: the partners' capital, a bank account, purchases from
      * suppliers, sales over the counter and on credit, customers paying, suppliers paid, dollars
      * exchanged, the rent, the salaries and the small daily expenses. The same story is written every
-     * night, moved to end on the day itself.
+     * night, moved to end on the day itself. Without $trade (the Starter plan, which has no invoices,
+     * items or warehouses) the takings of the day are booked as sales income and customers and
+     * suppliers are paid with ordinary money in and money out.
      */
-    private static function fill(): void
+    private static function fill(bool $trade = true): void
     {
         $before = Auth::guard('web')->user();
         Auth::guard('web')->setUser(User::orderBy('id')->firstOrFail());
@@ -132,7 +170,7 @@ class Demo
 
             // name, code, unit, sale price, cost, the supplier it comes from
             $items = [];
-            foreach ([
+            foreach (! $trade ? [] : [
                 ['Flour 50 kg', 'FLR-50', 'bag', 1650, 1520, 1], ['Rice Sela 25 kg', 'RIC-25', 'bag', 2750, 2480, 0], ['Sugar 50 kg', 'SGR-50', 'bag', 3350, 3100, 0],
                 ['Cooking oil 16 L', 'OIL-16', 'can', 1780, 1620, 2], ['Cooking oil 5 L', 'OIL-05', 'bottle', 590, 525, 2], ['Green tea 1 kg', 'TEA-G1', 'pack', 430, 360, 2],
                 ['Black tea 500 g', 'TEA-B5', 'pack', 260, 215, 2], ['Chickpeas 50 kg', 'CHK-50', 'bag', 5200, 4750, 0], ['Red beans 50 kg', 'BNS-50', 'bag', 5600, 5150, 0],
@@ -146,6 +184,9 @@ class Demo
 
             // a delivery from one supplier: what is short is filled up; part is paid from the bank, the rest stays owed
             $buy = function (int $supplier, int $ago, int $upTo) use (&$items, &$owed, &$money, $suppliers, $afn, $bank, $cash, $day) {
+                if (! $items) {
+                    return;
+                }
                 $lines = [];
                 $total = 0;
                 foreach ($items as $index => $row) {
@@ -175,7 +216,10 @@ class Demo
                 $owed[$supplier] += $total - $paid;
             };
             // a sale of a few items that are in stock
-            $sell = function (Party $to, int $ago, int $lines, int $most, float $paidShare, ?int $customer = null) use (&$items, &$due, &$money, $afn, $cash, $day) {
+            $sell = function (?Party $to, int $ago, int $lines, int $most, float $paidShare, ?int $customer = null) use (&$items, &$due, &$money, $afn, $cash, $day) {
+                if (! $items) {
+                    return;
+                }
                 $rows = [];
                 $total = 0;
                 $picked = (array) array_rand($items, min($lines, count($items)));
@@ -202,7 +246,7 @@ class Demo
             foreach (array_keys($suppliers) as $supplier) {
                 $buy($supplier, 60, 60);
             }
-            $walkIn = Trade::walkIn();
+            $walkIn = $trade ? Trade::walkIn() : null;
             for ($ago = 59; $ago >= 0; $ago--) {
                 $date = now()->subDays($ago);
                 if ($date->isFriday()) {
@@ -211,6 +255,25 @@ class Demo
                 // over the counter, paid in cash
                 for ($n = mt_rand(1, 3); $n > 0; $n--) {
                     $sell($walkIn, $ago, mt_rand(1, 3), 4, 1);
+                }
+                if (! $trade) {
+                    // Starter: the takings of the counter are booked once a day, customers bring money in,
+                    // and the suppliers are paid from the bank
+                    $takings = mt_rand(18, 60) * 500;
+                    Vouchers::income($category('sales_income'), $cash, $day($ago), $takings, 'Cash sales of the day');
+                    $money['cash'] += $takings;
+                    if ($ago % 2 === 0) {
+                        $who = mt_rand(0, count($customers) - 1);
+                        $amount = mt_rand(6, 40) * 1000;
+                        Vouchers::moneyIn($customers[$who], $cash, $day($ago), $amount, null, ['Paid on account', 'Deposit', 'Advance for an order'][mt_rand(0, 2)]);
+                        $money['cash'] += $amount;
+                    }
+                    if ($date->isSaturday() && $money['bank'] > 300000) {
+                        $who = mt_rand(0, count($suppliers) - 1);
+                        $amount = mt_rand(40, 120) * 1000;
+                        Vouchers::moneyOut($suppliers[$who], $bank, $day($ago), $amount, 'Paid for goods');
+                        $money['bank'] -= $amount;
+                    }
                 }
                 // a shop or a restaurant takes a larger order and pays part of it
                 if ($ago % 2 === 0) {
@@ -271,6 +334,8 @@ class Demo
             }
 
             // a store room and a second shop: some of the goods are taken there
+            $store = null;
+            if ($trade) {
             $store = \App\Models\Warehouse::create(['name' => 'Store room, Sarai Haji Zaman', 'address' => 'Mandawi, Kabul']);
             $shop = \App\Models\Warehouse::create(['name' => 'Shop no. 2, Khair Khana', 'address' => 'Khair Khana, Kabul']);
             foreach ($items as $index => $row) {
@@ -278,11 +343,12 @@ class Demo
                     Trade::move($row['item'], \App\Models\Warehouse::main($main), $index % 2 ? $shop : $store, (int) floor($row['stock'] / 3), $day(1 + $index % 5), 'Sent to '.($index % 2 ? 'the second shop' : 'the store room'));
                 }
             }
+            }
 
             // dollars: a customer leaves a deposit, part of it is sold, and some is kept with the saraf
             Vouchers::moneyIn($customers[1], $dollars, $day(34), '4000', null, 'Deposit for the wedding season orders');
             Vouchers::exchange($dollars, $cash, $day(33), '1500', '106050', 'Dollars sold at 70.70');
-            Vouchers::transfer($dollars, $saraf, $day(20), '1500', 0, 'Left with the saraf for a hawala to Dubai');
+            Vouchers::transfer($dollars, $saraf, $day(20), '1500', 0, 'Left with the saraf, to be sent to the importer in Dubai');
             Vouchers::transfer($saraf, $dollars, $day(12), '500', 0, 'Taken back from the saraf');
             Vouchers::exchange($dollars, $cash, $day(4), '800', '56480', 'Dollars sold at 70.60');
             Vouchers::income($category('other_income'), $cash, $day(16), '7500', 'Delivery charge, Popal Restaurant');

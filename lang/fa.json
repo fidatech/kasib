@@ -3338,5 +3338,15 @@
     "Paid out": "پرداخت شده",
     "The amount is in the currency of this account.": "مبلغ به اسعار همین حساب است.",
     "Close without saving?": "بدون ثبت بسته شود؟",
-    "What you typed will be lost.": "آنچه نوشته‌اید از بین می‌رود."
+    "What you typed will be lost.": "آنچه نوشته‌اید از بین می‌رود.",
+    "Once a year: the profit of each branch moves to previous years or to capital, and the books carry on with the same balances. Nothing is deleted; the closed period stays to be read and reported for as long as the law asks (five years).": "سالی یک بار: مفاد هر شعبه به سال‌های گذشته یا سرمایه منتقل می‌شود و دفاتر با همان بیلانس‌ها ادامه می‌یابد. چیزی حذف نمی‌شود؛ دوره بسته‌شده تا زمانی که قانون می‌خواهد (پنج سال) برای خواندن و گزارش باقی می‌ماند.",
+    "Period :number is closed.": "دوره :number بسته شد.",
+    "Try the demos": "دموها را امتحان کنید",
+    "Compare the two plans: the same business on Starter and on Pro.": "دو پلان را مقایسه کنید: همان کسب‌وکار در Starter و در Pro.",
+    "Open the Pro demo": "باز کردن دموی Pro",
+    "Open the Starter demo": "باز کردن دموی Starter",
+    "This is the Starter demo.": "این دموی Starter است.",
+    "This is the Pro demo.": "این دموی Pro است.",
+    "This is the Starter demo. Everything recorded here is erased at midnight (12:00 AM).": "این دموی Starter است. هر چه اینجا ثبت شود ساعت ۱۲ شب پاک می‌شود.",
+    "This is the Pro demo. Everything recorded here is erased at midnight (12:00 AM).": "این دموی Pro است. هر چه اینجا ثبت شود ساعت ۱۲ شب پاک می‌شود."
 }

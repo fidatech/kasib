@@ -26,21 +26,24 @@ class DemoTest extends TestCase
 
         $this->artisan('demo:refresh')->assertSuccessful();
         $demo = Tenant::where('slug', 'demo')->sole();
+        $starter = Tenant::where('slug', 'starter')->sole();
         $this->assertSame(['pro', true, null], [$demo->plan, $demo->isActive(), $demo->licence_expires_on]);
+        $this->assertSame(['starter', true, null], [$starter->plan, $starter->isActive(), $starter->licence_expires_on]);
 
         // its address, user and password are on the home page and beside the registration form
         $this->central();
-        $this->get('/')->assertOk()->assertSee('Try the demo')->assertSee($demo->domain)->assertSee('demo@kasib.af')->assertSee('demo1234');
-        $this->get('/register')->assertOk()->assertSee('Open the demo')->assertSee('demo1234');
+        $this->get('/')->assertOk()->assertSee('Try the demos')->assertSee($demo->domain)->assertSee($starter->domain)->assertSee('demo@kasib.af')->assertSee('demo1234');
+        $this->get('/register')->assertOk()->assertSee('Open the Pro demo')->assertSee('Open the Starter demo')->assertSee('demo1234');
         // nobody registers the address of the demo for himself
         $this->getJson('/register/check?slug=demo')->assertJsonPath('free', false);
+        $this->getJson('/register/check?slug=starter')->assertJsonPath('free', false);
 
         // on its own sign-in page they are written and already in the boxes
         $this->enter($demo);
-        $this->get('/login')->assertOk()->assertSee('This is the demo.')->assertSee('value="demo@kasib.af"', false)->assertSee('value="demo1234"', false);
+        $this->get('/login')->assertOk()->assertSee('This is the Pro demo.')->assertSee('value="demo@kasib.af"', false)->assertSee('value="demo1234"', false);
         $this->post('/login', ['email' => 'demo@kasib.af', 'password' => 'demo1234'])->assertRedirect();
         $this->assertAuthenticated();
-        $this->get('/')->assertOk()->assertSee('Everything recorded here is erased at midnight (12:00 AM).');
+        $this->get('/')->assertOk()->assertSee('This is the Pro demo. Everything recorded here is erased at midnight (12:00 AM).');
 
         // it holds a month of example papers
         // it holds two months of a food wholesaler: partners, a bank, customers, suppliers, stock, sales, expenses
@@ -88,7 +91,7 @@ class DemoTest extends TestCase
         Party::create(['account_group_id' => \App\Models\AccountGroup::byKey('customers')->id, 'name' => 'A visitor was here']);
         auth()->logout();
         $this->central();
-        Demo::refresh();
+        Demo::refresh('pro');
         $this->enter($demo->fresh());
         $this->assertSame([0, $papers], [Party::where('name', 'A visitor was here')->count(), Invoice::count()]);
         $this->assertNull($demo->fresh()->licence_expires_on);
@@ -109,10 +112,35 @@ class DemoTest extends TestCase
         $this->get('/journal')->assertOk();
     }
 
+    public function test_the_starter_demo_shows_the_same_business_without_the_pro_parts(): void
+    {
+        config(['tenancy.demo.transactions' => 300]);
+        $this->central();
+        $this->artisan('demo:refresh starter')->assertSuccessful();
+        $this->assertSame(0, Tenant::where('slug', 'demo')->count());
+        $starter = Tenant::where('slug', 'starter')->sole();
+
+        $this->enter($starter);
+        $this->get('/login')->assertOk()->assertSee('This is the Starter demo.');
+        $this->post('/login', ['email' => 'demo@kasib.af', 'password' => 'demo1234'])->assertRedirect();
+        $this->get('/')->assertOk()->assertSee('This is the Starter demo.')->assertDontSee('Sales & Purchases')->assertDontSee('Stock & Warehouses');
+        // the same accounts and years of papers, the takings of the counter as sales income, and nothing of the Pro plan
+        $sections = \App\Models\AccountGroup::withCount(['parties' => fn ($q) => $q->where('is_system', false)])->pluck('parties_count', 'key');
+        $this->assertSame([50, 50, 50, 50], [$sections['bank'], $sections['saraf'], $sections['customers'], $sections['suppliers']]);
+        $this->assertSame([0, 0, 1], [Invoice::count(), \App\Models\Item::count(), \App\Models\Warehouse::count() ?: 1]);
+        $this->assertGreaterThan(30, Voucher::where('kind', 'income')->count());
+        $this->assertSame(0, (int) round((float) \Illuminate\Support\Facades\DB::table('journal_lines')->selectRaw('SUM(base_debit) - SUM(base_credit) as d')->value('d') * 100));
+        $this->get('/trade/sales')->assertForbidden();
+        $this->get('/reports/profit-and-loss')->assertOk()->assertSee('Sales');
+        $this->get(route('money-in.index'))->assertOk();
+        // and Hawala is no longer part of the system
+        $this->get('/hawalas')->assertNotFound();
+    }
+
     public function test_an_ordinary_business_is_not_a_demo(): void
     {
         $this->business();
-        $this->get('/login')->assertOk()->assertDontSee('This is the demo.');
+        $this->get('/login')->assertOk()->assertDontSee('This is the Pro demo.')->assertDontSee('This is the Starter demo.');
         $this->owner();
         $this->get('/')->assertOk()->assertDontSee('erased at midnight')->assertSee('auto\u0022:true', false);
         $this->get('/reports/profit-and-loss')->assertOk()->assertSee('auto\u0022:false', false);

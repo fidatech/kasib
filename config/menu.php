@@ -37,7 +37,6 @@ return [
         ['label' => 'Money Out', 'route' => 'money-out.index', 'active' => 'money-out.*', 'can' => 'transactions.view'],
         ['label' => 'Transfers', 'route' => 'transfers.index', 'active' => 'transfers.*', 'can' => 'transactions.view'],
         ['label' => 'Exchanges', 'route' => 'exchanges.index', 'active' => 'exchanges.*', 'can' => 'transactions.view'],
-        ['label' => 'Hawala Tracking', 'route' => 'hawalas.index', 'active' => 'hawalas.*', 'can' => 'transactions.view'],
         ['label' => 'Money Between Branches', 'route' => 'branch-transfers.index', 'active' => 'branch-transfers.*', 'can' => 'transactions.view', 'pro' => true],
         ['label' => 'Deals', 'route' => 'deals.index', 'active' => 'deals.*', 'can' => 'transactions.view'],
     ]],

@@ -6,7 +6,7 @@
 <form method="POST" action="{{ route('closing.store') }}" class="card mb-3" data-confirm="{{ __('Close the period for the whole business? This cannot be undone.') }}" data-confirm-ok="{{ __('Close the period') }}">
     @csrf
     <div class="card-body">
-        <p>{{ __('Every year, or after the reports are cleared with the bank: the profit of each branch moves to previous years or to capital, the books carry on with the same balances, and hawala numbers start from 1 again. Nothing is deleted; the closed period stays to be read and reported for as long as the law asks (five years).') }}</p>
+        <p>{{ __('Once a year: the profit of each branch moves to previous years or to capital, and the books carry on with the same balances. Nothing is deleted; the closed period stays to be read and reported for as long as the law asks (five years).') }}</p>
         <table class="table w-100">
             <thead><tr><th>{{ __('Branch') }}</th><th class="text-end">{{ __('Profit or loss of the period (AFN)') }}</th><th>{{ __('Where the profit goes') }}</th></tr></thead>
             <tbody>

@@ -3338,5 +3338,15 @@
     "Paid out": "ورکړل شوي",
     "The amount is in the currency of this account.": "مبلغ د همدې حساب په اسعارو دی.",
     "Close without saving?": "پرته له ثبت وتړل شي؟",
-    "What you typed will be lost.": "هغه څه چې مو لیکلي له منځه ځي."
+    "What you typed will be lost.": "هغه څه چې مو لیکلي له منځه ځي.",
+    "Once a year: the profit of each branch moves to previous years or to capital, and the books carry on with the same balances. Nothing is deleted; the closed period stays to be read and reported for as long as the law asks (five years).": "کال کې یو ځل: د هرې څانګې ګټه پخوانیو کلونو یا پانګې ته لېږدول کېږي او دفترونه په همغو بیلانسونو دوام کوي. هېڅ نه لرې کېږي؛ تړل شوې موده تر هغه چې قانون غواړي (پنځه کاله) د لوستلو او راپور لپاره پاتې کېږي.",
+    "Period :number is closed.": "موده :number وتړل شوه.",
+    "Try the demos": "ډیموګانې وازمویئ",
+    "Compare the two plans: the same business on Starter and on Pro.": "دواړه پلانونه پرتله کړئ: همدا کاروبار په Starter او Pro کې.",
+    "Open the Pro demo": "د Pro ډیمو پرانیزئ",
+    "Open the Starter demo": "د Starter ډیمو پرانیزئ",
+    "This is the Starter demo.": "دا د Starter ډیمو ده.",
+    "This is the Pro demo.": "دا د Pro ډیمو ده.",
+    "This is the Starter demo. Everything recorded here is erased at midnight (12:00 AM).": "دا د Starter ډیمو ده. هر څه چې دلته ثبت شي د شپې په ۱۲ بجو پاکېږي.",
+    "This is the Pro demo. Everything recorded here is erased at midnight (12:00 AM).": "دا د Pro ډیمو ده. هر څه چې دلته ثبت شي د شپې په ۱۲ بجو پاکېږي."
 }

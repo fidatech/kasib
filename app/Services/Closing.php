@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
  * business at once. In every branch the income and expense accounts are emptied into
  * "profit or loss of previous years"; for each branch the business says whether that profit
  * stays there or is added to capital. Nothing is deleted: the old period stays to be read,
- * balances carry on, unpaid remittances stay payable, and hawala numbers start from 1 again.
+ * balances carry on.
  */
 class Closing
 {

@@ -63,7 +63,6 @@ Built on top of version 1, each part with its tests (`tests/Feature/InsightTest.
 | Expense budgets | Transactions → Expense Budgets | A monthly limit per category (in the month of the business calendar), a warning at 80% and at 100% |
 | Cash forecast | Reports → Cash Forecast | Money of now less paybacks and recurring expenses of the days ahead, per currency |
 | Period comparison | Reports → Profit & Loss | Against the period before or the same period a year before |
-| Hawala tracking | Transactions → Hawala Tracking | Number, receiver, city and status until delivered; the money out is recorded when it is sent for an account |
 | Bank reconciliation | Finance → Bank Reconciliation | Lines of a bank or saraf account ticked against the statement |
 | Cash boxes and handover | Transactions → Cash Boxes & Handover | A box per cashier, counted and handed over at the end of the shift |
 | Rate alerts and history | Configuration → Rate Alerts, Reports → Rate History | "Tell me when the dollar reaches 71"; every rate written, with its change |
@@ -159,7 +158,9 @@ Code: `App\Services\Assistant`.
 
 ### The demo
 
-`php artisan demo:refresh` makes (or empties and refills) the business `demo`: about fifty accounts a section,
+`php artisan demo:refresh [pro|starter]` makes (or empties and refills) the two demo businesses: `demo` on the Pro plan and
+`starter` on Starter (`DEMO_SLUG`, `DEMO_STARTER_SLUG`; the Starter one has no invoices, items or warehouses and books
+its takings as sales income). Each holds about fifty accounts a section,
 `DEMO_TRANSACTIONS` papers of two earlier years written in blocks by `DemoBulk` (default 100,000, under a minute)
 and two months of a food wholesaler recorded through the services. It runs every midnight and on every deploy,
 has no licence end, and its address, user and password are shown on the website.

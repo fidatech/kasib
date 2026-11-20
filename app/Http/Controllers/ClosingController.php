@@ -37,6 +37,6 @@ class ClosingController extends Controller
         }
         $period = Closing::close($data['to'] ?? [], $request->user());
 
-        return back()->with('success', __('Period :number is closed. Hawala numbers start from 1 again.', ['number' => $period->number]));
+        return back()->with('success', __('Period :number is closed.', ['number' => $period->number]));
     }
 }

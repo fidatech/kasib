@@ -28,7 +28,6 @@ use App\Http\Controllers\DealController;
 use App\Http\Controllers\DepreciationController;
 use App\Http\Controllers\ExchangeController;
 use App\Http\Controllers\HandoverController;
-use App\Http\Controllers\HawalaController;
 use App\Http\Controllers\InvoiceController as TradeInvoiceController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\TradeReportController;
@@ -296,9 +295,6 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
         Route::post('recurring-expenses/run', [RecurringExpenseController::class, 'run'])->name('recurring-expenses.run');
         $crud('recurring-expenses', RecurringExpenseController::class, 'recurring-expenses');
         $crud('budgets', BudgetController::class, 'budgets');
-        Route::post('hawalas/{id}/deliver', [HawalaController::class, 'deliver'])->name('hawalas.deliver')->whereNumber('id');
-        Route::post('hawalas/{id}/cancel', [HawalaController::class, 'cancel'])->name('hawalas.cancel')->whereNumber('id');
-        $crud('hawalas', HawalaController::class, 'hawalas');
         $crud('rate-alerts', RateAlertController::class, 'rate-alerts');
         // version 2, the Pro plan: items, sales, purchases and their returns
         Route::middleware('pro')->group(function () use ($crud) {

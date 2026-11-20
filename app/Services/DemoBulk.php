@@ -35,9 +35,9 @@ class DemoBulk
 
     private const MARKETS = ['Sarai Shahzada, Kabul', 'Khorasan Market, Herat', 'Kefayat Market, Mazar-i-Sharif', 'Shahidan Chowk, Kandahar', 'Sarai Shahzada, Kabul', 'Talashi Chowk, Jalalabad'];
 
-    private const IN = ['Paid on account', 'Deposit (amanat)', 'Cash received', 'Received against invoice', 'Hawala received', 'Advance for an order', 'Returned loan'];
+    private const IN = ['Paid on account', 'Deposit (amanat)', 'Cash received', 'Received against invoice', 'Payment for goods', 'Advance for an order', 'Returned loan'];
 
-    private const OUT = ['Payment on account', 'Deposit paid back', 'Paid for goods', 'Advance', 'Hawala paid', 'Loan', 'Paid against invoice'];
+    private const OUT = ['Payment on account', 'Deposit paid back', 'Paid for goods', 'Advance', 'Refund', 'Loan', 'Paid against invoice'];
 
     private const MOVE = ['Deposit to the bank', 'Cash taken from the bank', 'Sent to the saraf', 'Taken back from the saraf', 'Between accounts'];
 
