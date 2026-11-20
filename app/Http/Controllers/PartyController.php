@@ -122,17 +122,40 @@ class PartyController extends CrudController
         return [
             'Name' => fn (Party $p) => $p->name,
             'Phone' => fn (Party $p) => $p->phone,
-            'Balance' => function (Party $p) use ($money) {
-                $parts = [];
-                foreach (Vouchers::balances($p) as $row) {
-                    $owed = Num::isPositive($row['amount']);
-                    $parts[] = money(Num::abs($row['amount']), $row['currency']->code).($money ? ($owed ? '' : ' ('.__('overdrawn').')') : ' · '.($owed ? __('we owe') : __('owes us')));
-                }
-
-                return $parts ? implode('  |  ', $parts) : '—';
-            },
+            'Currency' => fn (Party $p) => '—',
+            'Balance' => fn (Party $p) => '—',
             'In use' => fn (Party $p) => $p->is_active ? __('Yes') : __('No'),
         ];
+    }
+
+    protected array $splitColumns = ['Currency', 'Balance'];
+
+    /** One line for each currency the account keeps, its balance in the colour of what it means. */
+    protected function splitRows(Model $record, Request $request): array
+    {
+        $record->loadMissing(['accounts.total', 'accounts.currency', 'group']);
+        $money = $record->group->isMoney();
+        $only = (int) $request->query('currency');
+        $lines = [];
+        foreach ($record->accounts->sortBy(fn ($a) => [$a->currency?->sort, $a->currency_id]) as $account) {
+            if ($only && (int) $account->currency_id !== $only) {
+                continue;
+            }
+            $balance = Num::money($account->total?->balance ?? 0);
+            // a money account holds a debit balance; a party we owe holds a credit balance
+            $shown = $money ? $balance : Num::money(Num::neg($balance));
+            [$tag, $tone] = match (true) {
+                Num::isZero($shown) => [__('settled'), 'zero'],
+                $money => Num::isPositive($shown) ? [null, 'in'] : [__('overdrawn'), 'out'],
+                default => Num::isPositive($shown) ? [__('we owe'), 'out'] : [__('owes us'), 'in'],
+            };
+            $lines[] = [
+                'Currency' => ['text' => $account->currency->code, 'class' => 'cur-cell', 'url' => route('accounts.statement', $this->routeParams() + ['id' => $record->id, 'currency' => $account->currency_id])],
+                'Balance' => ['text' => money(Num::abs($shown)), 'class' => 'num bal-cell amt-'.$tone, 'tag' => $tag, 'tone' => $tone],
+            ];
+        }
+
+        return $lines;
     }
 
     protected function rowLinks(Model $record): array

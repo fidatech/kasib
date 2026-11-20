@@ -53,4 +53,31 @@ class PlanTest extends TestCase
         // the budget form: the category is a searchable list and the amount names the currency
         $this->get('/budgets/create')->assertOk()->assertSee('data-search', false)->assertSee('Budget for a month (AFN)');
     }
+
+    public function test_an_account_shows_a_line_for_each_currency_with_its_balance_coloured(): void
+    {
+        $this->business();
+        $this->owner();
+        $main = \App\Models\Branch::main();
+        $afn = \App\Models\Currency::base();
+        $usd = \App\Models\Currency::where('code', 'USD')->firstOrFail();
+        $ahmad = \App\Models\Party::create(['account_group_id' => \App\Models\AccountGroup::byKey('customers')->id, 'name' => 'Ahmad Zia'])->fresh();
+        \App\Services\Vouchers::moneyIn($ahmad, \App\Services\Accounts::cash($main, $afn), today_iso(), '5000');
+        \App\Services\Vouchers::moneyIn($ahmad, \App\Services\Accounts::cash($main, $usd), today_iso(), '300');
+        \App\Services\Vouchers::moneyOut($ahmad, \App\Services\Accounts::cash($main, $usd), today_iso(), '500');
+
+        $page = $this->get('/accounts/customers')->assertOk()->assertSee('table-split', false)->assertSee('rowspan="2"', false);
+        // AFN: we owe him 5,000 (red); USD: he owes us 200 (green); each currency on its own line, leading to its statement
+        $html = $page->getContent();
+        $this->assertMatchesRegularExpression('~class="num bal-cell amt-out"[^>]*>\s*<span dir="ltr">5,000\.00</span>\s*<span class="bal-tag is-out">we owe</span>~', $html);
+        $this->assertMatchesRegularExpression('~class="num bal-cell amt-in"[^>]*>\s*<span dir="ltr">200\.00</span>\s*<span class="bal-tag is-in">owes us</span>~', $html);
+        $this->assertSame(1, substr_count($html, 'class="split-more"'));
+        $page->assertSee('statement?currency='.$usd->id, false);
+        // the cash box: one line for every currency, what it holds in green
+        $this->get('/accounts/cash')->assertOk()->assertSee('class="num bal-cell amt-in"', false);
+        // only the currency asked for
+        $this->get('/accounts/customers?currency='.$usd->id)->assertOk()->assertDontSee('5,000.00')->assertSee('200.00');
+        // the export to Excel keeps the lines under their columns
+        $this->get('/accounts/customers?export=csv')->assertOk();
+    }
 }

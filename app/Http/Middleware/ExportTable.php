@@ -77,15 +77,29 @@ class ExportTable
             }
             $body = [];
             $skip = [];
+            $carry = [];                                     // column => lines a cell above still covers (rowspan)
             foreach ($xpath->query('.//tr', $table) as $tr) {
                 $cells = [];
                 $isHead = false;
                 $column = 0;
+                $fill = function () use (&$carry, &$column, &$cells, &$skip) {
+                    while (! empty($carry[$column])) {
+                        $carry[$column]--;
+                        if (empty($skip[$column])) {
+                            $cells[] = '';
+                        }
+                        $column++;
+                    }
+                };
                 foreach ($tr->childNodes as $cell) {
                     if (! $cell instanceof DOMElement || ! in_array($cell->tagName, ['td', 'th'], true)) {
                         continue;
                     }
+                    $fill();
                     $span = max(1, (int) $cell->getAttribute('colspan'));
+                    if (($down = (int) $cell->getAttribute('rowspan')) > 1) {
+                        $carry[$column] = $down - 1;
+                    }
                     $isHead = $isHead || ($cell->tagName === 'th' && $tr->parentNode instanceof DOMElement && $tr->parentNode->tagName === 'thead');
                     $buttons = $this->has($cell, 'no-print') || $xpath->query('.//form | .//*[contains(concat(" ",normalize-space(@class)," ")," btn ")]', $cell)->length > 0;
                     if ($isHead && $buttons) {
@@ -99,6 +113,7 @@ class ExportTable
                     }
                     $column += $span;
                 }
+                $fill();
                 if (array_filter($cells, fn ($cell) => $cell !== '')) {
                     $body[] = ['cells' => $cells] + ($isHead ? ['bold' => true] : []);
                 }

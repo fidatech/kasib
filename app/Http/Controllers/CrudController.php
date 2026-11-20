@@ -105,6 +105,18 @@ abstract class CrudController extends Controller
         return parent::callAction($method, $parameters);
     }
 
+    /**
+     * Columns that take a line of their own for each part of a record (an account in each currency):
+     * the record shows on as many lines as splitRows() gives, the other columns spread over all of them.
+     */
+    protected array $splitColumns = [];
+
+    /** @return array<int, array<string, array{text: string, class?: string, tag?: ?string, tone?: string, url?: string}>> one entry per line, by column */
+    protected function splitRows(Model $record, Request $request): array
+    {
+        return [];
+    }
+
     public function index(Request $request): View
     {
         Gate::authorize($this->permission.'.view');
@@ -131,6 +143,8 @@ abstract class CrudController extends Controller
             'canManage' => $request->user()->can($this->permission.'.manage'),
             'links' => fn (Model $record) => $this->rowLinks($record),
             'editable' => fn (Model $record) => $this->canEdit($record),
+            'splitColumns' => $this->splitColumns,
+            'split' => fn (Model $record) => $this->splitRows($record, $request),
         ]);
     }
 

@@ -806,6 +806,31 @@ body.modal-open .app-tabbar { visibility: hidden; }
 .kind-badge.is-swap { background: rgba(124, 92, 214, .13); color: #7c5cd6; }
 @media print { .table thead th { position: static; } .table td.num { color: #000 !important; } }
 
+/* ------------------------------------------------------------------ a record over several lines (an account in each currency) */
+.table-split > tbody.split-group > tr > td { border-bottom: 0; }
+.table-split > tbody.split-group > tr:last-child > td, .table-split > tbody.split-group > tr > td[rowspan] { border-bottom: 1px solid var(--border); }
+.table-split > tbody.split-group > tr.split-more > td { padding-top: .25rem; }
+.table-split > tbody.split-group > tr:not(:last-child) > td:not([rowspan]) { padding-bottom: .25rem; }
+.table.table-split.table-hover tbody tr:nth-child(even) > * { background: transparent; }
+.table.table-split > tbody.split-group:nth-of-type(even) > tr > * { background: color-mix(in srgb, var(--hover) 45%, transparent); }
+.table.table-split.table-hover > tbody.split-group:hover > tr > * { background: color-mix(in srgb, var(--primary) 7%, var(--card)); }
+.table-split td[rowspan] { vertical-align: middle; }
+.table-split td.cur-cell { width: 1%; white-space: nowrap; }
+.cur-link { display: inline-block; min-width: 46px; padding: 3px 9px; border-radius: 7px; background: var(--hover); border: 1px solid var(--border); color: var(--heading); font-weight: 800; font-size: 12px; letter-spacing: .4px; text-align: center; text-decoration: none; }
+.cur-link:hover { border-color: var(--primary); color: var(--primary); }
+.table-split td.bal-cell { white-space: nowrap; font-size: 14.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+[dir="rtl"] .table-split td.bal-cell > span[dir="ltr"] { unicode-bidi: isolate; }
+.bal-tag { display: inline-block; margin-inline-start: 8px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; vertical-align: 1px; }
+.bal-tag.is-in { background: rgba(15, 138, 85, .12); color: #0f8a55; }
+.bal-tag.is-out { background: rgba(217, 45, 58, .11); color: #d92d3a; }
+.bal-tag.is-zero { background: var(--hover); color: var(--muted); }
+[data-bs-theme="dark"] .bal-tag.is-in { color: #4ade80; }
+[data-bs-theme="dark"] .bal-tag.is-out { color: #f87171; }
+@media (max-width: 767.98px) {
+    .table-split.table-cards > tbody.split-group { display: block; margin-bottom: 12px; }
+    .table-split.table-cards > tbody.split-group > tr.split-more { margin-top: -14px; border-top: 0; }
+}
+
 /* ------------------------------------------------------------------ the filter bar
    One strip above a list: the search and the first choices in sight, the rest behind "More filters",
    and what is switched on shown as chips that are taken off with one tap. */

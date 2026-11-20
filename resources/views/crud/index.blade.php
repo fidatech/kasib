@@ -48,7 +48,7 @@
                 @endif
             </div>
         @else
-            <table class="table table-hover w-100">
+            <table class="table table-hover w-100 {{ $splitColumns ? 'table-split' : '' }}">
                 <thead>
                     <tr>
                         @foreach (array_keys($columns) as $label)
@@ -57,13 +57,20 @@
                         <th class="text-end no-print">{{ __('Actions') }}</th>
                     </tr>
                 </thead>
-                <tbody>
+                @unless ($splitColumns)<tbody>@endunless
                     @foreach ($rows as $row)
+                        @php($lines = $splitColumns ? $split($row) : [])
+                        @php($span = max(1, count($lines)))
+                        @if ($splitColumns)<tbody class="split-group">@endif
                         <tr>
-                            @foreach ($columns as $column)
-                                <td>{{ $column($row) }}</td>
+                            @foreach ($columns as $label => $column)
+                                @if (in_array($label, $splitColumns, true))
+                                    @include('crud.split-cell', ['cell' => $lines[0][$label] ?? null, 'label' => __($label)])
+                                @else
+                                    <td @if ($span > 1) rowspan="{{ $span }}" @endif @if ($splitColumns) data-label="{{ __($label) }}" data-keep-label @endif>{{ $column($row) }}</td>
+                                @endif
                             @endforeach
-                            <td class="text-end text-nowrap no-print">
+                            <td class="text-end text-nowrap no-print" @if ($span > 1) rowspan="{{ $span }}" @endif @if ($splitColumns) data-label="" data-keep-label @endif>
                                 <div class="act-group">
                                     @foreach ($links($row) as $link)
                                         @if (! empty($link['post']))
@@ -83,8 +90,16 @@
                                 </div>
                             </td>
                         </tr>
+                        @foreach (array_slice($lines, 1) as $line)
+                            <tr class="split-more">
+                                @foreach ($splitColumns as $label)
+                                    @include('crud.split-cell', ['cell' => $line[$label] ?? null, 'label' => __($label)])
+                                @endforeach
+                            </tr>
+                        @endforeach
+                        @if ($splitColumns)</tbody>@endif
                     @endforeach
-                </tbody>
+                @unless ($splitColumns)</tbody>@endunless
             </table>
             {{ $rows->links('partials.pagination') }}
         @endif

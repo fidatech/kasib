@@ -1022,10 +1022,11 @@ if (!phone()) { table.classList.remove('table-cards'); return; }
 var heads = $$('thead tr:first-child th', table).map(function (th) { return th.textContent.trim(); });
 $$('tbody > tr', table).forEach(function (tr) {
 var cells = Array.prototype.slice.call(tr.children);
+var more = tr.classList.contains('split-more');
 cells.forEach(function (td, i) {
 if (td.tagName !== 'TD') return;
-td.setAttribute('data-label', heads[i] || '');
-td.classList.toggle('cell-primary', i === 0);
+if (!td.hasAttribute('data-keep-label')) td.setAttribute('data-label', heads[i] || '');
+td.classList.toggle('cell-primary', i === 0 && !more);
 td.classList.toggle('cell-actions', i === cells.length - 1 && !!$('.btn, .btn-act, .dropdown', td));
 });
 });
