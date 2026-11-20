@@ -3352,5 +3352,21 @@
     "This belongs to the Pro plan.": "دا برخه د Pro پلان ده.",
     "One budget for each category. A category that already has one is edited from the list.": "د هرې کټګورۍ لپاره یوه بودیجه. هغه کټګوري چې بودیجه لري له لېست څخه سمېږي.",
     "The owner is warned when 80% is used, and again when it is all used.": "کله چې ۸۰٪ ولګول شي مالک ته خبرتیا ورکول کېږي، او بیا کله چې ټول ولګول شي.",
-    "settled": "تصفیه"
+    "settled": "تصفیه",
+    "WhatsApp": "واټساپ",
+    "Send this statement": "دا صورت حساب ولېږه",
+    "Send the balance of every currency": "د هرو اسعارو بیلانس ولېږه",
+    "Opens WhatsApp with the message written. With a WhatsApp sender in the settings it is sent from here at once.": "واټساپ له لیکل شوي پیغام سره پرانیزي. که په تنظیماتو کې د واټساپ لېږونکی وي، پیغام له همدې ځایه سمدستي لېږل کېږي.",
+    "Add a phone number to the account to send it on WhatsApp.": "په واټساپ کې د لېږلو لپاره حساب ته د تلیفون شمېره ورزیاته کړئ.",
+    ":name has no phone number. Add it to the account first.": ":name د تلیفون شمېره نه لري. لومړی یې حساب ته ورزیاته کړئ.",
+    "The message could not be sent. Check the WhatsApp settings, or open it in WhatsApp yourself.": "پیغام ونه لېږل شو. د واټساپ تنظیمات وګورئ یا یې پخپله په واټساپ کې پرانیزئ.",
+    "Sent to :name on WhatsApp.": "په واټساپ کې :name ته ولېږل شو.",
+    "Balance of :name on :date": "د :name بیلانس په :date نېټه",
+    "we owe you": "موږ ستاسو پوروړي یو",
+    "you owe us": "تاسو زموږ پوروړي یاست",
+    "Settled, nothing is owed": "تصفیه دی، هېڅ پور نشته",
+    "(the last :count of :all lines)": "(له :all کرښو وروستۍ :count کرښې)",
+    "Balance of every currency": "د هرو اسعارو بیلانس",
+    "Your balance with us:": "زموږ سره ستاسو بیلانس:",
+    "Message after any other paper or invoice": "له هر بل سند یا بل وروسته پیغام"
 }

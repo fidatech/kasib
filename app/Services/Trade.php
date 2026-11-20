@@ -78,6 +78,23 @@ class Trade
             throw new UserError(__('app.errors.negative_amount'));
         }
 
+        // the payment on an invoice sends no message of its own: the invoice tells it
+        $quiet = Whatsapp::$quiet;
+        Whatsapp::$quiet = true;
+        try {
+            $invoice = self::write($kind, $party, $currency, $date, $lines, $discount, $paid, $money, $due, $note, $costs, $warehouse);
+        } finally {
+            Whatsapp::$quiet = $quiet;
+        }
+        if (! $quiet) {
+            DB::afterCommit(fn () => Whatsapp::invoice($invoice));
+        }
+
+        return $invoice;
+    }
+
+    private static function write(string $kind, Party $party, Currency $currency, string $date, array $lines, mixed $discount, mixed $paid, ?Account $money, ?string $due, ?string $note, array $costs, ?Warehouse $warehouse): Invoice
+    {
         return DB::transaction(function () use ($kind, $party, $currency, $date, $lines, $discount, $paid, $money, $due, $note, $costs, $warehouse) {
             $branch = current_branch();
             $warehouse ??= Warehouse::main($branch);

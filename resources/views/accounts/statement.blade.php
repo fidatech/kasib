@@ -2,6 +2,28 @@
 
 @section('content')
 <x-page-header :title="$party->name" :icon="$group->icon" :crumbs="[[$group->label(), route('accounts.index', ['group' => $group->key])], [__('Statement')]]" :subtitle="trim($group->label().' · '.$account->currency->code.($party->phone ? ' · '.$party->phone : ''))">
+    @unless (request()->boolean('print'))
+        @php($params = ['group' => $group->key, 'id' => $party->id])
+        @php($query = ['currency' => $account->currency_id, 'from' => $from, 'to' => $to])
+        @if (! filled($party->phone))
+            <span class="d-inline-block" tabindex="0" title="{{ __('Add a phone number to the account to send it on WhatsApp.') }}"><button type="button" class="btn btn-wa" disabled><x-icon name="comment-dots" /> {{ __('WhatsApp') }}</button></span>
+        @else
+            <div class="dropdown">
+                <button type="button" class="btn btn-wa dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><x-icon name="comment-dots" /> {{ __('WhatsApp') }}</button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    @if ($whatsapp['sender'])
+                        <li><form method="POST" action="{{ route('accounts.statement.whatsapp', $params + $query) }}">@csrf<input type="hidden" name="what" value="statement"><button type="submit" class="dropdown-item"><x-icon name="file-lines" /> {{ __('Send this statement') }}</button></form></li>
+                        <li><form method="POST" action="{{ route('accounts.statement.whatsapp', $params + $query) }}">@csrf<input type="hidden" name="what" value="balance"><button type="submit" class="dropdown-item"><x-icon name="scale-balanced" /> {{ __('Send the balance of every currency') }}</button></form></li>
+                    @else
+                        <li><a class="dropdown-item" href="{{ $whatsapp['link'] }}" target="_blank" rel="noopener"><x-icon name="file-lines" /> {{ __('Send this statement') }}</a></li>
+                        <li><a class="dropdown-item" href="{{ $whatsapp['balanceLink'] }}" target="_blank" rel="noopener"><x-icon name="scale-balanced" /> {{ __('Send the balance of every currency') }}</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><span class="dropdown-item-text small text-muted" style="max-width:280px;white-space:normal">{{ __('Opens WhatsApp with the message written. With a WhatsApp sender in the settings it is sent from here at once.') }}</span></li>
+                    @endif
+                </ul>
+            </div>
+        @endif
+    @endunless
 </x-page-header>
 
 @if (! request()->boolean('print') && ! $group->isMoney() && \App\Support\Permissions::group(auth()->user(), $group->key, 'manage'))

@@ -78,9 +78,6 @@ class Vouchers
 
             return $voucher;
         });
-        // the receipt on WhatsApp, once the paper is safely in the books
-        Whatsapp::paper($voucher);
-
         return $voucher;
     }
 
@@ -275,6 +272,8 @@ class Vouchers
             'number' => Sequence::next(Voucher::KINDS[$kind][1]), 'created_by' => auth()->id(),
         ]);
         audit('created', $voucher, Voucher::KINDS[$kind][0].' '.$voucher->number.' '.$voucher->amount);
+        // the message of the paper on WhatsApp, once it is safely in the books
+        Whatsapp::afterPaper($voucher);
         Alerts::entry(fn () => __(Voucher::KINDS[$kind][0]).' '.$voucher->number.' · '.money($voucher->amount, $voucher->currency?->code), $date, $data['base_amount'] ?? 0, $voucher);
 
         return $voucher;

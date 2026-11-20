@@ -13,7 +13,7 @@ use Illuminate\View\View;
 /** WhatsApp messages: the sender of the business, the messages it sends, and a test. */
 class WhatsappController extends Controller
 {
-    private const KEYS = ['whatsapp_url', 'whatsapp_token', 'whatsapp_phone_field', 'whatsapp_message_field', 'whatsapp_country', 'whatsapp_tpl_money_in', 'whatsapp_tpl_money_out', 'whatsapp_tpl_due'];
+    private const KEYS = ['whatsapp_url', 'whatsapp_token', 'whatsapp_phone_field', 'whatsapp_message_field', 'whatsapp_country', 'whatsapp_tpl_money_in', 'whatsapp_tpl_money_out', 'whatsapp_tpl_paper', 'whatsapp_tpl_due'];
 
     public function index(): View
     {
@@ -33,6 +33,7 @@ class WhatsappController extends Controller
             'whatsapp_country' => ['required', 'digits_between:1,4'],
             'whatsapp_tpl_money_in' => ['nullable', 'string', 'max:1000'],
             'whatsapp_tpl_money_out' => ['nullable', 'string', 'max:1000'],
+            'whatsapp_tpl_paper' => ['nullable', 'string', 'max:1000'],
             'whatsapp_tpl_due' => ['nullable', 'string', 'max:1000'],
         ]);
         // an empty key box keeps the key that is there

@@ -37,13 +37,13 @@
             </div>
             <div class="col-12"><div class="form-text">{{ __('The system sends a POST request with these two fields as JSON, and the key as a Bearer token. A number written as 0700123456 is sent as 93700123456.') }}</div></div>
 
-            @foreach (['money_in' => 'Message after Money In', 'money_out' => 'Message after Money Out', 'due' => 'Reminder before the payback date'] as $kind => $label)
-                <div class="col-12 col-lg-4">
+            @foreach (['money_in' => 'Message after Money In', 'money_out' => 'Message after Money Out', 'paper' => 'Message after any other paper or invoice', 'due' => 'Reminder before the payback date'] as $kind => $label)
+                <div class="col-12 col-md-6 col-xl-3">
                     <label class="form-label" for="w-t-{{ $kind }}">{{ __($label) }}</label>
                     <textarea class="form-control" id="w-t-{{ $kind }}" name="whatsapp_tpl_{{ $kind }}" rows="5" dir="auto" placeholder="{{ $templates[$kind] }}">{{ $text('whatsapp_tpl_'.$kind) }}</textarea>
                 </div>
             @endforeach
-            <div class="col-12"><div class="form-text" dir="ltr">{business} {name} {amount} {currency} {number} {date} {due} {balance}</div><div class="form-text">{{ __('These words are replaced in a message. A message left empty uses the one shown in grey.') }}</div></div>
+            <div class="col-12"><div class="form-text" dir="ltr">{business} {name} {what} {amount} {currency} {number} {date} {due} {balance}</div><div class="form-text">{{ __('These words are replaced in a message. A message left empty uses the one shown in grey.') }}</div></div>
         </div>
     </div>
     @if ($canManage)

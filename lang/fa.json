@@ -3352,5 +3352,21 @@
     "This belongs to the Pro plan.": "این بخش مربوط به پلان Pro است.",
     "One budget for each category. A category that already has one is edited from the list.": "برای هر کتگوری یک بودجه. کتگوری‌ای که بودجه دارد از لیست ویرایش می‌شود.",
     "The owner is warned when 80% is used, and again when it is all used.": "وقتی ۸۰٪ مصرف شود به مالک هشدار داده می‌شود، و بار دیگر وقتی همه مصرف شود.",
-    "settled": "تصفیه"
+    "settled": "تصفیه",
+    "WhatsApp": "واتساپ",
+    "Send this statement": "ارسال این صورت حساب",
+    "Send the balance of every currency": "ارسال بیلانس هر اسعار",
+    "Opens WhatsApp with the message written. With a WhatsApp sender in the settings it is sent from here at once.": "واتساپ را با پیام نوشته‌شده باز می‌کند. اگر فرستنده واتساپ در تنظیمات باشد، پیام از همین‌جا فوراً ارسال می‌شود.",
+    "Add a phone number to the account to send it on WhatsApp.": "برای ارسال در واتساپ، شماره تلفن را به حساب اضافه کنید.",
+    ":name has no phone number. Add it to the account first.": ":name شماره تلفن ندارد. اول آن را به حساب اضافه کنید.",
+    "The message could not be sent. Check the WhatsApp settings, or open it in WhatsApp yourself.": "پیام ارسال نشد. تنظیمات واتساپ را بررسی کنید یا آن را خودتان در واتساپ باز کنید.",
+    "Sent to :name on WhatsApp.": "در واتساپ به :name ارسال شد.",
+    "Balance of :name on :date": "بیلانس :name به تاریخ :date",
+    "we owe you": "ما به شما بدهکاریم",
+    "you owe us": "شما به ما بدهکارید",
+    "Settled, nothing is owed": "تصفیه است، هیچ بدهی نیست",
+    "(the last :count of :all lines)": "(:count سطر آخر از :all سطر)",
+    "Balance of every currency": "بیلانس هر اسعار",
+    "Your balance with us:": "بیلانس شما نزد ما:",
+    "Message after any other paper or invoice": "پیام بعد از هر سند دیگر یا بل"
 }

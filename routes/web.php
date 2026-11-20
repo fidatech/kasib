@@ -268,6 +268,7 @@ Route::middleware('tenant')->group(function () use ($crud, $paper) {
         // accounts: one page for every account category, and the statement of one account
         $crud('accounts/{group}', PartyController::class, 'accounts');
         Route::get('accounts/{group}/{id}/statement', [PartyController::class, 'statement'])->name('accounts.statement')->whereNumber('id');
+        Route::post('accounts/{group}/{id}/statement/whatsapp', [PartyController::class, 'whatsapp'])->name('accounts.statement.whatsapp')->whereNumber('id')->middleware('throttle:20,1');
         Route::post('accounts/{group}/{id}/link', [StatementLinkController::class, 'store'])->name('accounts.link')->whereNumber('id');
         Route::delete('accounts/{group}/{id}/link', [StatementLinkController::class, 'destroy'])->name('accounts.unlink')->whereNumber('id');
         Route::get('accounts/{group}/{id}/notes', [PartyFileController::class, 'notes'])->name('accounts.notes')->whereNumber('id');

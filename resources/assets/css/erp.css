@@ -838,6 +838,9 @@ table.table-split.table-cards > tbody.split-group > tr > td.cur-cell::before, ta
 table.table-split.table-cards > tbody.split-group > tr > td[data-label]:not(.cell-primary):not(.cur-cell):not(.bal-cell):not(.cell-actions) { order: 3; }
 table.table-split.table-cards > tbody.split-group > tr > td.cell-actions { order: 4; }
 
+/* the button that sends to WhatsApp */
+.btn-wa { --bs-btn-color: #fff; --bs-btn-bg: #1fa855; --bs-btn-border-color: #1fa855; --bs-btn-hover-color: #fff; --bs-btn-hover-bg: #178c46; --bs-btn-hover-border-color: #178c46; --bs-btn-active-bg: #137a3c; --bs-btn-active-color: #fff; --bs-btn-disabled-bg: #9fd8b5; --bs-btn-disabled-border-color: #9fd8b5; --bs-btn-disabled-color: #fff; display: inline-flex; align-items: center; gap: 7px; font-weight: 700; }
+
 /* ------------------------------------------------------------------ the filter bar
    One strip above a list: the search and the first choices in sight, the rest behind "More filters",
    and what is switched on shown as chips that are taken off with one tap. */

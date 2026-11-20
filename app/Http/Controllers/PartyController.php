@@ -231,9 +231,9 @@ class PartyController extends CrudController
 
 
     /** Every line of one account in one currency between two dates, with the balance after each. */
-    public function statement(Request $request): View
+    /** @return array<string, mixed> the account, its currency, the period and its lines with the balance after each */
+    private function statementData(Request $request): array
     {
-        Gate::authorize($this->permission.'.view');
 
         $party = Party::with(['group', 'accounts.currency', 'accounts.total'])->where('account_group_id', $this->group()->id)->findOrFail($request->route('id'));
         $filters = $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date'], 'currency' => ['nullable', 'integer']]);
@@ -265,9 +265,45 @@ class PartyController extends CrudController
             $rows[] = ['line' => $line, 'balance' => $running];
         }
 
-        return view('accounts.statement', [
+        return [
             'party' => $party, 'group' => $party->group, 'account' => $account, 'accounts' => $accounts,
             'from' => $from, 'to' => $to, 'opening' => $opening, 'rows' => $rows, 'closing' => $running,
+        ];
+    }
+
+    public function statement(Request $request): View
+    {
+        Gate::authorize($this->permission.'.view');
+        $data = $this->statementData($request);
+        $message = \App\Services\Whatsapp::statement($data['party'], $data['account'], $data['from'], $data['to'], $data['opening'], $data['rows'], $data['closing']);
+
+        return view('accounts.statement', $data + [
+            'whatsapp' => ['phone' => $data['party']->phone, 'sender' => \App\Services\Whatsapp::enabled(), 'link' => \App\Services\Whatsapp::link($data['party']->phone, $message),
+                'balanceLink' => \App\Services\Whatsapp::link($data['party']->phone, $this->balanceMessage($data['party']))],
         ]);
+    }
+
+    /** The statement, or the balance of every currency alone, sent to the account on WhatsApp by the sender of the business. */
+    public function whatsapp(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        Gate::authorize($this->permission.'.view');
+        $data = $this->statementData($request);
+        $party = $data['party'];
+        if (! filled($party->phone)) {
+            return back()->with('danger', __(':name has no phone number. Add it to the account first.', ['name' => $party->name]));
+        }
+        $message = $request->input('what') === 'balance' ? $this->balanceMessage($party)
+            : \App\Services\Whatsapp::statement($party, $data['account'], $data['from'], $data['to'], $data['opening'], $data['rows'], $data['closing']);
+        if (! \App\Services\Whatsapp::send($party->phone, $message)) {
+            return back()->with('danger', __('The message could not be sent. Check the WhatsApp settings, or open it in WhatsApp yourself.'));
+        }
+        audit('sent', $party, ($request->input('what') === 'balance' ? 'Balance' : 'Statement').' on WhatsApp to '.$party->phone);
+
+        return back()->with('success', __('Sent to :name on WhatsApp.', ['name' => $party->name]));
+    }
+
+    private function balanceMessage(\App\Models\Party $party): string
+    {
+        return (setting('company_name') ?: tenant()?->name)."\n".__('Balance of :name on :date', ['name' => $party->name, 'date' => fmt_date(today_iso())]).":\n".\App\Services\Whatsapp::balance($party);
     }
 }
